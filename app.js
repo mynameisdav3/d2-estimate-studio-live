@@ -54,6 +54,11 @@ const fields = [
   "finishLevel",
   "widthFeet",
   "heightFeet",
+  "linearFeet",
+  "linearRate",
+  "squareLength",
+  "squareWidth",
+  "squareRate",
   "flatTotal",
   "discount",
   "discountType",
@@ -85,6 +90,26 @@ function formatDate(value) {
 
 function numberValue(id) {
   return Number.parseFloat($(id).value) || 0;
+}
+
+function calculateLinearTotal() {
+  return numberValue("linearFeet") * numberValue("linearRate");
+}
+
+function calculateSquareTotal() {
+  return numberValue("squareLength") * numberValue("squareWidth") * numberValue("squareRate");
+}
+
+function updateCalculationPanel() {
+  $("linearCalcTotal").textContent = currency.format(calculateLinearTotal());
+  $("squareCalcTotal").textContent = currency.format(calculateSquareTotal());
+}
+
+function useCalculatedTotal(type) {
+  const total = type === "linear" ? calculateLinearTotal() : calculateSquareTotal();
+  $("flatTotal").value = total ? total.toFixed(2) : "";
+  updateCalculationPanel();
+  updatePreview();
 }
 
 function createId() {
@@ -619,7 +644,7 @@ function escapeHtml(value) {
 
 function calculateTotals() {
   const finishMultiplier = $("projectType").value === "Other" ? 1 : numberValue("finishLevel") || 1;
-  const subtotal = state.lineItems.reduce((sum, item) => {
+  const lineSubtotal = state.lineItems.reduce((sum, item) => {
     if (item.type === "subline") return sum;
     return sum + (Number.parseFloat(item.qty) || 0) * (Number.parseFloat(item.price) || 0) * finishMultiplier;
   }, 0);
@@ -629,13 +654,14 @@ function calculateTotals() {
   const flatTotalInput = $("flatTotal").value.trim();
   const flatTotal = flatTotalInput ? numberValue("flatTotal") : 0;
   const hasFlatTotal = flatTotal > 0;
+  const subtotal = hasFlatTotal ? flatTotal : lineSubtotal;
   const discountValue = numberValue("discount");
   const discountType = $("discountType").value;
   const rawDiscount = discountType === "percent" ? subtotal * (discountValue / 100) : discountValue;
-  const discount = !hasFlatTotal && discountInput ? Math.min(rawDiscount, subtotal) : 0;
+  const discount = discountInput ? Math.min(rawDiscount, subtotal) : 0;
   const taxable = Math.max(subtotal - discount, 0);
-  const tax = !hasFlatTotal && taxInput ? taxable * (numberValue("taxRate") / 100) : 0;
-  const total = hasFlatTotal ? flatTotal : taxable + tax;
+  const tax = taxInput ? taxable * (numberValue("taxRate") / 100) : 0;
+  const total = taxable + tax;
   const depositRate = numberValue("depositRate");
   const deposit = depositInput ? total * (depositRate / 100) : 0;
 
@@ -650,14 +676,16 @@ function calculateTotals() {
     discountType,
     discountValue,
     depositRate,
-    showDiscount: !hasFlatTotal && discount > 0,
-    showTax: !hasFlatTotal && tax > 0,
+    lineSubtotal,
+    showDiscount: discount > 0,
+    showTax: tax > 0,
     showDeposit: deposit > 0,
-    showSubtotal: !hasFlatTotal && (discount > 0 || tax > 0),
+    showSubtotal: discount > 0 || tax > 0,
   };
 }
 
 function updatePreview() {
+  updateCalculationPanel();
   const totals = calculateTotals();
   const materialCost = calculateMaterialCost();
   $("materialCostTotal").textContent = currency.format(materialCost);
@@ -822,6 +850,12 @@ function saveEstimate(options = {}) {
   }
 }
 
+function generateEstimatePreview() {
+  ensureEstimateNumber();
+  updatePreview();
+  $("estimatePreview").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function hasWorkInProgress() {
   const changedFields = [
     "clientName",
@@ -959,6 +993,7 @@ function loadEstimate() {
   renderMaterialItems();
   renderPhotos();
   syncProjectMode();
+  updateCalculationPanel();
   updatePreview();
   return true;
 }
@@ -1009,6 +1044,11 @@ function resetEstimate() {
   $("finishLevel").value = "";
   $("widthFeet").value = "";
   $("heightFeet").value = "";
+  $("linearFeet").value = "";
+  $("linearRate").value = "500";
+  $("squareLength").value = "";
+  $("squareWidth").value = "";
+  $("squareRate").value = "75";
   $("flatTotal").value = "";
   $("discount").value = "";
   $("discountType").value = "dollar";
@@ -1022,6 +1062,7 @@ function resetEstimate() {
   renderMaterialItems();
   renderPhotos();
   syncProjectMode();
+  updateCalculationPanel();
   updatePreview();
 }
 
@@ -1029,6 +1070,14 @@ fields.forEach((field) => {
   $(field).addEventListener("input", updatePreview);
   $(field).addEventListener("change", updatePreview);
 });
+
+["linearFeet", "linearRate", "squareLength", "squareWidth", "squareRate"].forEach((field) => {
+  $(field).addEventListener("input", updateCalculationPanel);
+  $(field).addEventListener("change", updateCalculationPanel);
+});
+
+$("useLinearTotal").addEventListener("click", () => useCalculatedTotal("linear"));
+$("useSquareTotal").addEventListener("click", () => useCalculatedTotal("square"));
 
 $("estimateNumber").addEventListener("input", () => {
   state.autoEstimateNumber = false;
@@ -1072,6 +1121,7 @@ $("projectType").addEventListener("change", () => {
 $("newEstimate").addEventListener("click", () => startNewEstimate().catch(() => {}));
 $("saveEstimate").addEventListener("click", () => saveEstimate().catch(() => {}));
 $("submitEstimate").addEventListener("click", () => submitEstimateToGoogle().catch(() => {}));
+$("generateEstimate").addEventListener("click", () => generateEstimatePreview());
 $("printEstimate").addEventListener("click", () => window.print());
 document.querySelectorAll("[data-copy-mode]").forEach((button) => {
   button.addEventListener("click", () => setCopyMode(button.dataset.copyMode));
@@ -1082,6 +1132,7 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
     if (action === "new") startNewEstimate().catch(() => {});
     if (action === "save") saveEstimate().catch(() => {});
     if (action === "submit") submitEstimateToGoogle().catch(() => {});
+    if (action === "generate") generateEstimatePreview();
     if (action === "print") window.print();
   });
 });

@@ -28,6 +28,7 @@
           <button class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
           <button class="icon-button" id="saveEstimate" title="Save estimate" aria-label="Save estimate">Save</button>
           <button class="icon-button" id="submitEstimate" title="Submit estimate" aria-label="Submit estimate">Submit</button>
+          <button class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
           <button class="icon-button" id="printEstimate" title="Print estimate" aria-label="Print estimate">PDF</button>
         </div>
       </header>
@@ -175,6 +176,76 @@
             <div class="photo-editor-list" id="photoEditorList"></div>
           </section>
 
+          <section class="panel calculations-panel">
+            <div class="panel-header">
+              <h2>Calculations</h2>
+            </div>
+            <div class="calculation-grid">
+              <div class="calculation-card">
+                <div class="calculation-title">
+                  <strong>Linear Feet</strong>
+                  <span>$500 / linear ft</span>
+                </div>
+                <div class="field-grid two-tight">
+                  <label>
+                    Length
+                    <div class="unit-input">
+                      <input id="linearFeet" type="number" min="0" step="0.01">
+                      <span>ft</span>
+                    </div>
+                  </label>
+                  <label>
+                    Rate
+                    <div class="unit-input">
+                      <input id="linearRate" type="number" min="0" step="0.01" value="500">
+                      <span>$/ft</span>
+                    </div>
+                  </label>
+                </div>
+                <div class="calculation-result">
+                  <span>Linear foot total</span>
+                  <strong id="linearCalcTotal">$0.00</strong>
+                </div>
+                <button type="button" id="useLinearTotal">Use as Total</button>
+              </div>
+
+              <div class="calculation-card">
+                <div class="calculation-title">
+                  <strong>Square Feet</strong>
+                  <span>$75 / sq ft</span>
+                </div>
+                <div class="field-grid three-tight">
+                  <label>
+                    Length
+                    <div class="unit-input">
+                      <input id="squareLength" type="number" min="0" step="0.01">
+                      <span>ft</span>
+                    </div>
+                  </label>
+                  <label>
+                    Width/Height
+                    <div class="unit-input">
+                      <input id="squareWidth" type="number" min="0" step="0.01">
+                      <span>ft</span>
+                    </div>
+                  </label>
+                  <label>
+                    Rate
+                    <div class="unit-input">
+                      <input id="squareRate" type="number" min="0" step="0.01" value="75">
+                      <span>$/sf</span>
+                    </div>
+                  </label>
+                </div>
+                <div class="calculation-result">
+                  <span>Square foot total</span>
+                  <strong id="squareCalcTotal">$0.00</strong>
+                </div>
+                <button type="button" id="useSquareTotal">Use as Total</button>
+              </div>
+            </div>
+          </section>
+
           <section class="panel">
             <div class="panel-header">
               <h2>Adjustments</h2>
@@ -220,7 +291,14 @@
           </section>
         </form>
 
-        <aside class="preview" aria-live="polite">
+        <aside class="preview" id="estimatePreview" aria-live="polite">
+          <div class="preview-heading">
+            <div>
+              <p class="eyebrow">Estimate Draft</p>
+              <h2>Review Copy</h2>
+            </div>
+            <button class="icon-button" type="button" data-action-button="print" title="Print estimate" aria-label="Print estimate">PDF</button>
+          </div>
           <div class="estimate-sheet" id="estimateSheet">
             <div class="simple-sheet-header">
               <div class="logo-card">
@@ -318,6 +396,7 @@
           <button class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
           <button class="icon-button" data-action-button="save" title="Save estimate" aria-label="Save estimate">Save</button>
           <button class="icon-button" data-action-button="submit" title="Submit estimate" aria-label="Submit estimate">Submit</button>
+          <button class="icon-button primary-action" data-action-button="generate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
           <button class="icon-button" data-action-button="print" title="Print estimate" aria-label="Print estimate">PDF</button>
         </div>
       </footer>
