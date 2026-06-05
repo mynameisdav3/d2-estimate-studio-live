@@ -27,9 +27,12 @@
           </div>
           <button class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
           <button class="icon-button" id="saveEstimate" title="Save estimate" aria-label="Save estimate">Save</button>
+          <button class="icon-button" id="saveEditableEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
+          <button class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
           <button class="icon-button" id="submitEstimate" title="Submit estimate" aria-label="Submit estimate">Submit</button>
           <button class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
           <button class="icon-button" id="printEstimate" title="Print estimate" aria-label="Print estimate">PDF</button>
+          <input id="editableEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
         </div>
       </header>
 
@@ -84,19 +87,19 @@
             <div class="field-grid">
               <label>
                 Client Name
-                <input id="clientName" placeholder="Jane Smith">
+                <input id="clientName">
               </label>
               <label>
                 Phone
-                <input id="clientPhone" placeholder="(555) 555-0123">
+                <input id="clientPhone">
               </label>
               <label>
                 Email
-                <input id="clientEmail" type="email" placeholder="client@email.com">
+                <input id="clientEmail" type="email">
               </label>
               <label class="wide">
                 Address
-                <input id="projectAddress" placeholder="123 Main Street, City, ST">
+                <input id="projectAddress">
               </label>
             </div>
           </section>
@@ -395,6 +398,8 @@
           </div>
           <button class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
           <button class="icon-button" data-action-button="save" title="Save estimate" aria-label="Save estimate">Save</button>
+          <button class="icon-button" data-action-button="save-file" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
+          <button class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
           <button class="icon-button" data-action-button="submit" title="Submit estimate" aria-label="Submit estimate">Submit</button>
           <button class="icon-button primary-action" data-action-button="generate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
           <button class="icon-button" data-action-button="print" title="Print estimate" aria-label="Print estimate">PDF</button>

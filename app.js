@@ -24,6 +24,13 @@ const PROJECT_PREFIXES = {
   "Custom carpentry": "C",
 };
 
+const COPY_MODE_LABELS = {
+  customer: "Customer",
+  internal: "Office",
+  team: "Team",
+  supply: "Supplies",
+};
+
 const OLD_LINE_EXAMPLES = new Set([
   "Custom shelf tower",
   "Customer shelf tower",
@@ -75,6 +82,8 @@ const state = {
   estimateNumberCommitted: false,
   estimateSequence: {},
 };
+
+let editableDownloadUrl = "";
 
 const $ = (id) => document.getElementById(id);
 
@@ -810,9 +819,51 @@ function setCopyMode(mode) {
   });
 }
 
+function buildEstimateHtmlCopy(label) {
+  const stylesheetUrl = new URL("styles.css", window.location.href).href;
+  const logoUrl = new URL("assets/d2-logo.png", window.location.href).href;
+  const sheetHtml = $("estimateSheet").outerHTML.replaceAll("assets/d2-logo.png", logoUrl);
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml($("estimateNumber").value || "Estimate")} - ${escapeHtml(label)}</title>
+    <link rel="stylesheet" href="${stylesheetUrl}">
+  </head>
+  <body data-copy-mode="${document.body.dataset.copyMode || "customer"}">
+    <main class="app-shell">
+      <section class="workspace">
+        <aside class="preview">
+          ${sheetHtml}
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function buildSubmittedCopies() {
+  const currentMode = document.body.dataset.copyMode || "customer";
+  const copies = {};
+  Object.entries(COPY_MODE_LABELS).forEach(([mode, label]) => {
+    setCopyMode(mode);
+    updatePreview();
+    copies[mode] = {
+      label,
+      html: buildEstimateHtmlCopy(label),
+    };
+  });
+  setCopyMode(currentMode);
+  updatePreview();
+  return copies;
+}
+
 function serializeEstimate() {
   const totals = calculateTotals();
   const data = {
+    fileType: "D2_ESTIMATE_EDITABLE",
+    fileVersion: 1,
     lineItems: state.lineItems,
     materialItems: state.materialItems,
     photos: state.photos,
@@ -830,6 +881,142 @@ function serializeEstimate() {
   });
   data.showEstimateNumber = $("showEstimateNumber").checked;
   return data;
+}
+
+function fileSafeName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[\\/:*?"<>|#%{}~&]/g, "-")
+    .replace(/\s+/g, " ")
+    .slice(0, 80);
+}
+
+function getEditableEstimateFileName() {
+  const client = fileSafeName($("clientName").value) || "Unnamed Client";
+  const estimateNumber = fileSafeName($("estimateNumber").value) || "Estimate";
+  return `${client} - ${estimateNumber}.d2estimate`;
+}
+
+function createEditableDownloadLink(blob, fileName) {
+  if (editableDownloadUrl) URL.revokeObjectURL(editableDownloadUrl);
+  editableDownloadUrl = URL.createObjectURL(blob);
+  const status = $("submitStatus");
+  status.innerHTML = "";
+  const message = document.createElement("span");
+  message.textContent = "Editable estimate is ready. ";
+  const link = document.createElement("a");
+  link.href = editableDownloadUrl;
+  link.download = fileName;
+  link.textContent = "Download editable file";
+  link.style.fontWeight = "900";
+  link.style.color = "var(--pine)";
+  status.appendChild(message);
+  status.appendChild(link);
+  return link;
+}
+
+async function downloadEditableEstimate() {
+  ensureEstimateNumber();
+  updatePreview();
+  const estimate = serializeEstimate();
+  const fileName = getEditableEstimateFileName();
+  const estimateText = JSON.stringify(estimate, null, 2);
+  if (!estimateText || estimateText.length < 10) {
+    window.alert("The editable estimate file could not be prepared. Please try again.");
+    return;
+  }
+  const blob = new Blob([estimateText], { type: "application/octet-stream" });
+
+  try {
+    const link = createEditableDownloadLink(blob, fileName);
+    link.click();
+  } catch (error) {
+    window.alert("The editable estimate file is ready, but this browser blocked the automatic download. Use the download link shown near the Notes/Adjustments area.");
+  }
+}
+
+function applyEstimateData(data) {
+  if (!data || typeof data !== "object") return false;
+  const looksLikeEstimate =
+    data.fileType === "D2_ESTIMATE_EDITABLE" ||
+    Array.isArray(data.lineItems) ||
+    data.estimateNumber !== undefined ||
+    data.clientName !== undefined;
+  if (!looksLikeEstimate) return false;
+  fields.forEach((field) => {
+    if (data[field] !== undefined) $(field).value = data[field];
+  });
+  $("showEstimateNumber").checked = data.showEstimateNumber !== false;
+  applyCompanyDefaults();
+  $("companyAddress").value = normalizeCompanyAddress($("companyAddress").value);
+  if ($("showEstimateNumber").checked && !$("estimateNumber").value.trim()) {
+    $("estimateNumber").value = makeEstimateNumber(false);
+    state.autoEstimateNumber = true;
+  } else {
+    state.autoEstimateNumber = false;
+  }
+  state.lineItems = Array.isArray(data.lineItems)
+    ? data.lineItems.map((item) => ({ type: "item", ...item, name: cleanLineItemName(item.name) }))
+    : [];
+  state.materialItems = Array.isArray(data.materialItems)
+    ? data.materialItems.map((item) => ({ id: item.id || createId(), ...item }))
+    : [];
+  if (state.materialItems.length === 0) {
+    state.materialItems = [{ id: createId(), name: "", qty: "", price: "", unit: "" }];
+  }
+  if (state.lineItems.length === 0) {
+    state.lineItems = [{ id: createId(), type: "item", name: "", qty: "", price: "" }];
+  }
+  state.photos = Array.isArray(data.photos) ? data.photos : [];
+  renderLineItems();
+  renderMaterialItems();
+  renderPhotos();
+  syncProjectMode();
+  updateCalculationPanel();
+  updatePreview();
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeEstimate()));
+  } catch (error) {
+    // Browser storage can be unavailable in some file previews.
+  }
+  return true;
+}
+
+function parseEditableEstimateText(text) {
+  const raw = String(text || "").trim().replace(/^\uFEFF/, "");
+  if (!raw) throw new Error("The file is empty.");
+  if (raw.startsWith("%PDF")) {
+    throw new Error("That is a PDF. Open the editable .d2estimate file instead.");
+  }
+  if (/^<!doctype html|^<html/i.test(raw)) {
+    throw new Error("That is an estimate copy, not the editable estimate file.");
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start >= 0 && end > start) {
+      return JSON.parse(raw.slice(start, end + 1));
+    }
+    throw error;
+  }
+}
+
+function openEditableEstimateFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const data = parseEditableEstimateText(reader.result);
+      if (!applyEstimateData(data)) throw new Error("Invalid estimate file");
+      $("submitStatus").textContent = "Editable estimate file opened.";
+    } catch (error) {
+      window.alert(`${error.message || "That file could not be opened."} Please choose the editable D2 estimate file saved with Save File.`);
+    }
+  });
+  reader.readAsText(file);
 }
 
 function saveEstimate(options = {}) {
@@ -914,13 +1101,15 @@ async function startNewEstimate() {
 async function submitEstimateToGoogle() {
   const status = $("submitStatus");
   if (!GOOGLE_SCRIPT_URL) {
-    status.textContent = "Email submit is not connected yet. Use PDF for now.";
-    window.alert("Submit/email is not connected yet. For now, use PDF to create the customer copy.");
+    status.textContent = "Google Drive submit is not connected yet.";
+    window.alert("Google Drive submit is not connected yet. I prepared the app for it, but we still need to deploy the Google Apps Script and paste its web app URL into the estimator.");
     return;
   }
 
   saveEstimate({ silent: true });
   status.textContent = "Submitting estimate...";
+  const payloadData = serializeEstimate();
+  payloadData.copies = buildSubmittedCopies();
 
   const iframeName = "googleSubmitFrame";
   let iframe = document.querySelector(`iframe[name="${iframeName}"]`);
@@ -940,7 +1129,7 @@ async function submitEstimateToGoogle() {
   const payload = document.createElement("input");
   payload.type = "hidden";
   payload.name = "payload";
-  payload.value = JSON.stringify(serializeEstimate());
+  payload.value = JSON.stringify(payloadData);
   form.appendChild(payload);
 
   document.body.appendChild(form);
@@ -966,36 +1155,7 @@ function loadEstimate() {
   } catch (error) {
     return false;
   }
-  fields.forEach((field) => {
-    if (data[field] !== undefined) $(field).value = data[field];
-  });
-  $("showEstimateNumber").checked = data.showEstimateNumber !== false;
-  applyCompanyDefaults();
-  $("companyAddress").value = normalizeCompanyAddress($("companyAddress").value);
-  if ($("showEstimateNumber").checked && !$("estimateNumber").value.trim()) {
-    $("estimateNumber").value = makeEstimateNumber(false);
-    state.autoEstimateNumber = true;
-  }
-  state.lineItems = Array.isArray(data.lineItems)
-    ? data.lineItems.map((item) => ({ type: "item", ...item, name: cleanLineItemName(item.name) }))
-    : [];
-  state.materialItems = Array.isArray(data.materialItems)
-    ? data.materialItems.map((item) => ({ id: createId(), ...item }))
-    : [];
-  if (state.materialItems.length === 0) {
-    state.materialItems = [{ id: createId(), name: "", qty: "", price: "", unit: "" }];
-  }
-  if (state.lineItems.length === 0) {
-    state.lineItems = [{ id: createId(), type: "item", name: "", qty: "", price: "" }];
-  }
-  state.photos = Array.isArray(data.photos) ? data.photos : [];
-  renderLineItems();
-  renderMaterialItems();
-  renderPhotos();
-  syncProjectMode();
-  updateCalculationPanel();
-  updatePreview();
-  return true;
+  return applyEstimateData(data);
 }
 
 function applyCompanyDefaults() {
@@ -1120,6 +1280,12 @@ $("projectType").addEventListener("change", () => {
 });
 $("newEstimate").addEventListener("click", () => startNewEstimate().catch(() => {}));
 $("saveEstimate").addEventListener("click", () => saveEstimate().catch(() => {}));
+$("saveEditableEstimate").addEventListener("click", () => downloadEditableEstimate().catch(() => {}));
+$("openEditableEstimate").addEventListener("click", () => $("editableEstimateUpload").click());
+$("editableEstimateUpload").addEventListener("change", (event) => {
+  openEditableEstimateFile(event.target.files[0]);
+  event.target.value = "";
+});
 $("submitEstimate").addEventListener("click", () => submitEstimateToGoogle().catch(() => {}));
 $("generateEstimate").addEventListener("click", () => generateEstimatePreview());
 $("printEstimate").addEventListener("click", () => window.print());
@@ -1131,6 +1297,8 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
     const action = button.dataset.actionButton;
     if (action === "new") startNewEstimate().catch(() => {});
     if (action === "save") saveEstimate().catch(() => {});
+    if (action === "save-file") downloadEditableEstimate().catch(() => {});
+    if (action === "open-file") $("editableEstimateUpload").click();
     if (action === "submit") submitEstimateToGoogle().catch(() => {});
     if (action === "generate") generateEstimatePreview();
     if (action === "print") window.print();
