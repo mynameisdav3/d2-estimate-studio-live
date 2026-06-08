@@ -4,6 +4,8 @@ const currency = new Intl.NumberFormat("en-US", {
 });
 
 const GOOGLE_SCRIPT_URL = "";
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/4gMdRagjk60Rdlw0xV7AI01";
+const ZELLE_ID = "D2carpentry";
 const MATERIAL_PERCENT = 0.25;
 const STORAGE_KEY = "d2EstimateStudio";
 const ESTIMATE_SEQUENCE_KEY = "d2EstimateSequence";
@@ -72,12 +74,20 @@ const fields = [
   "taxRate",
   "depositRate",
   "notes",
+  "assignmentLanguage",
+  "assignmentStartDate",
+  "assignmentArrivalTime",
+  "assignmentScope",
+  "useSpanishScope",
+  "assignmentScopeSpanish",
+  "assignmentNotes",
 ];
 
 const state = {
   lineItems: [],
   materialItems: [],
   photos: [],
+  assignmentPhotos: [],
   autoEstimateNumber: false,
   estimateNumberCommitted: false,
   estimateSequence: {},
@@ -169,6 +179,11 @@ function phoneHref(value) {
 function emailHref(value) {
   const email = value.trim();
   return email ? `mailto:${email}` : "";
+}
+
+function mapHref(value) {
+  const address = String(value || "").trim();
+  return address ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}` : "";
 }
 
 function getFinishLabel() {
@@ -511,10 +526,33 @@ function addPhotos(files) {
     });
 }
 
+function addAssignmentPhotos(files) {
+  Array.from(files)
+    .filter((file) => file.type.startsWith("image/"))
+    .forEach((file) => {
+      const reader = new FileReader();
+      reader.addEventListener("load", () => {
+        state.assignmentPhotos.push({
+          id: createId(),
+          name: file.name,
+          label: "",
+          dataUrl: reader.result,
+        });
+        renderAssignmentPhotos();
+      });
+      reader.readAsDataURL(file);
+    });
+}
+
 function removePhoto(id) {
   state.photos = state.photos.filter((photo) => photo.id !== id);
   renderPhotos();
   updatePreview();
+}
+
+function removeAssignmentPhoto(id) {
+  state.assignmentPhotos = state.assignmentPhotos.filter((photo) => photo.id !== id);
+  renderAssignmentPhotos();
 }
 
 function renderPhotos() {
@@ -543,6 +581,37 @@ function renderPhotos() {
 
     card.addEventListener("click", (event) => {
       if (event.target.dataset.action === "remove") removePhoto(photo.id);
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function renderAssignmentPhotos() {
+  const container = $("assignmentPhotoEditorList");
+  container.innerHTML = "";
+
+  state.assignmentPhotos.forEach((photo) => {
+    const card = document.createElement("div");
+    card.className = "photo-editor-card";
+    card.dataset.id = photo.id;
+    card.innerHTML = `
+      <img src="${photo.dataUrl}" alt="${escapeHtml(photo.label || photo.name)}">
+      <label>
+        Image Label
+        <input data-field="label" value="${escapeHtml(photo.label)}" placeholder="Example: Wall condition">
+      </label>
+      <button type="button" data-action="remove" title="Remove assignment photo" aria-label="Remove assignment photo">x</button>
+    `;
+
+    card.addEventListener("input", (event) => {
+      if (event.target.dataset.field !== "label") return;
+      const entry = state.assignmentPhotos.find((item) => item.id === photo.id);
+      if (entry) entry.label = event.target.value;
+    });
+
+    card.addEventListener("click", (event) => {
+      if (event.target.dataset.action === "remove") removeAssignmentPhoto(photo.id);
     });
 
     container.appendChild(card);
@@ -754,8 +823,11 @@ function updatePreview() {
   $("previewDate").textContent = $("estimateDate").value ? formatDate($("estimateDate").value) : "";
   $("previewClient").textContent = $("clientName").value || "Client name";
   $("previewPhone").textContent = formatPhone($("clientPhone").value);
+  $("previewPhone").href = phoneHref($("clientPhone").value);
   $("previewClientEmail").textContent = $("clientEmail").value;
+  $("previewClientEmail").href = emailHref($("clientEmail").value);
   $("previewAddress").textContent = $("projectAddress").value;
+  $("previewAddress").href = mapHref($("projectAddress").value);
   $("previewNotes").textContent = $("notes").value;
 
   const tbody = $("previewRows");
@@ -859,6 +931,928 @@ function buildSubmittedCopies() {
   return copies;
 }
 
+function getPaymentInvoiceDate() {
+  const dateValue = $("estimateDate").value;
+  const date = dateValue ? new Date(`${dateValue}T12:00:00`) : new Date();
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function getPaymentProjectDescription() {
+  const descriptions = state.lineItems
+    .filter((item) => item.type !== "subline")
+    .map((item) => String(item.name || "").trim())
+    .filter(Boolean);
+  if (descriptions.length) return descriptions.join(", ");
+  if ($("projectType").value && $("projectType").value !== "Other") return $("projectType").value;
+  return "Project payment";
+}
+
+function formatPaymentAddressHtml(value) {
+  return escapeHtml(normalizeCompanyAddress(value)).replace(" Cape Coral", "<br>Cape Coral");
+}
+
+function buildPaymentInvoiceHtml() {
+  const totals = calculateTotals();
+  const logoUrl = new URL("assets/d2-logo.png", window.location.href).href;
+  const companyPhone = $("companyPhone").value || COMPANY_DEFAULTS.phone;
+  const companyEmail = $("companyEmail").value || COMPANY_DEFAULTS.email;
+  const companyAddress = normalizeCompanyAddress($("companyAddress").value || COMPANY_DEFAULTS.address);
+  const clientName = $("clientName").value.trim() || "Client";
+  const clientPhone = formatPhone($("clientPhone").value || "");
+  const clientEmail = $("clientEmail").value.trim();
+  const projectAddress = $("projectAddress").value.trim();
+  const projectMapHref = mapHref(projectAddress);
+  const estimateNumber = $("showEstimateNumber").checked ? $("estimateNumber").value.trim() : "";
+  const invoiceTitle = estimateNumber ? `Payment Invoice ${estimateNumber}` : "Payment Invoice";
+  const projectDescription = getPaymentProjectDescription();
+  const paymentMemo = estimateNumber
+    ? `D2 Carpentry & Design payment for estimate ${estimateNumber}`
+    : "D2 Carpentry & Design project payment";
+  const amountDue = currency.format(totals.total);
+  const stripeButton = STRIPE_PAYMENT_LINK
+    ? `<a class="action-button" href="${escapeHtml(STRIPE_PAYMENT_LINK)}" target="_blank" rel="noopener">Pay With Stripe</a>`
+    : `<span class="action-button disabled">Stripe Link Needed</span>`;
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml(clientName)} - D2 Payment Invoice</title>
+    <style>
+      :root { color-scheme: light; --ink: #202124; --muted: #6b7280; --line: #d7dce5; --paper: #fff; --surface: #eef1f5; --blue: #0d4a91; --soft: #f8fafc; --green: #1f7a4c; --gold: #766022; --shadow: 0 18px 42px rgba(32,33,36,.14); }
+      * { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      body { margin: 0; min-width: 320px; background: var(--surface); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(820px, 100%); margin: 0 auto; padding: 24px; }
+      .invoice-sheet { min-height: 720px; border: 1px solid #c8d0dc; border-radius: 8px; background: var(--paper); box-shadow: var(--shadow); padding: 28px; }
+      .sheet-header { display: grid; grid-template-columns: 126px minmax(0, 1fr) 220px; gap: 12px; align-items: start; padding-bottom: 12px; border-bottom: 4px solid var(--blue); }
+      .logo-card { display: grid; width: 126px; height: 96px; place-items: center; }
+      .logo-card img { display: block; width: 100%; height: 100%; object-fit: contain; }
+      .brand-title-lockup { display: inline-grid; justify-items: center; align-self: center; width: max-content; }
+      .brand-title-lockup h1 { margin: 0; color: var(--blue); font-size: clamp(1.38rem, 2.4vw, 1.8rem); line-height: 1.05; letter-spacing: 0; }
+      .brand-title-lockup p { margin: 6px 0 0; color: var(--muted); font-size: .8rem; line-height: 1.25; text-align: center; width: 100%; }
+      .document-info { justify-self: end; width: 220px; display: grid; gap: 8px; }
+      .document-info h2 { margin: 0; color: var(--blue); font-size: 1.18rem; line-height: 1.08; text-align: right; text-transform: uppercase; }
+      .document-info dl { display: grid; gap: 4px; margin: 0; }
+      .document-info dl div { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; }
+      dt, .section-label { color: var(--muted); font-size: .68rem; font-weight: 900; line-height: 1.18; text-transform: uppercase; }
+      .document-info dt { color: var(--ink); text-align: right; }
+      dd { margin: 0; font-size: .74rem; line-height: 1.2; text-align: right; white-space: nowrap; }
+      .client-grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; margin-top: 42px; }
+      .client-card, .notes, .method-row { border: 1px solid var(--line); border-radius: 8px; background: var(--soft); }
+      .client-card { display: grid; gap: 7px; padding: 14px; }
+      .client-card strong { font-size: 1.08rem; }
+      .client-card p { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.35; }
+      .client-card a { color: var(--muted); text-decoration: none; }
+      .amount-due { display: grid; align-content: center; gap: 7px; border: 2px solid var(--blue); border-radius: 8px; padding: 16px; text-align: right; }
+      .amount-due span { color: var(--muted); font-size: .72rem; font-weight: 900; text-transform: uppercase; }
+      .amount-due strong { color: var(--blue); font-size: 2rem; line-height: 1; }
+      .payment-methods { display: grid; gap: 12px; margin-top: 22px; }
+      .method-row { display: grid; grid-template-columns: 128px minmax(0, 1fr) 170px; gap: 16px; align-items: center; min-height: 106px; padding: 14px; }
+      .method-heading { display: grid; gap: 6px; }
+      .method-heading h3 { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--blue); font-size: 1rem; }
+      .method-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--blue); }
+      .zelle .method-dot { background: var(--green); }
+      .cash .method-dot { background: var(--gold); }
+      .method-copy { display: grid; gap: 6px; }
+      .method-copy p, .notes p { margin: 0; color: var(--muted); font-size: .95rem; line-height: 1.42; }
+      .method-link { color: var(--blue); font-size: .82rem; font-weight: 900; overflow-wrap: anywhere; text-decoration: none; }
+      .inline-emphasis { color: var(--ink); font-size: 1.04rem; font-weight: 900; }
+      .action-button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; width: 100%; border-radius: 8px; background: var(--blue); color: #fff; font-size: .88rem; font-weight: 900; padding: 0 14px; text-decoration: none; white-space: nowrap; }
+      .action-button.zelle-button { background: var(--green); }
+      .action-button.cash-button { background: var(--gold); }
+      .action-button.disabled { background: var(--muted); }
+      .notes { display: grid; gap: 6px; margin: 24px 0 0; padding: 14px; }
+      .notes strong { color: var(--ink); }
+      .invoice-footer { display: grid; grid-template-columns: 132px minmax(0, 220px) minmax(0, 1fr); align-items: start; gap: 10px; margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: .56rem; }
+      .footer-contact { display: flex; align-items: flex-start; gap: 4px; min-width: 0; white-space: nowrap; }
+      .invoice-footer strong { color: var(--ink); }
+      .invoice-footer > span:nth-child(3) { justify-content: flex-end; text-align: right; }
+      @media (max-width: 760px) {
+        main { padding: 12px; }
+        .invoice-sheet { padding: 18px; }
+        .sheet-header, .client-grid, .method-row, .invoice-footer { grid-template-columns: 1fr; }
+        .document-info, .logo-card { width: 100%; justify-self: stretch; }
+        .logo-card { height: 90px; }
+        .brand-title-lockup, .document-info h2, .document-info dt, dd, .amount-due, .invoice-footer > span:nth-child(3) { justify-items: start; text-align: left; }
+      }
+      @media print {
+        @page { size: letter; margin: .35in; }
+        body { background: #fff; }
+        main { width: 100%; padding: 0; }
+        .invoice-sheet { border: 0; box-shadow: none; padding: 18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="invoice-sheet">
+        <header class="sheet-header">
+          <div class="logo-card"><img src="${escapeHtml(logoUrl)}" alt="D2 Carpentry and Design logo"></div>
+          <div class="brand-title-lockup">
+            <h1>${escapeHtml($("companyName").value || COMPANY_DEFAULTS.name)}</h1>
+            <p>-Crafting Your Vision One Nail At A Time-</p>
+          </div>
+          <div class="document-info">
+            <h2>${escapeHtml(invoiceTitle)}</h2>
+            <dl>
+              <div><dt>Date</dt><dd>${escapeHtml(getPaymentInvoiceDate())}</dd></div>
+              <div><dt>Due</dt><dd>Upon receipt</dd></div>
+            </dl>
+          </div>
+        </header>
+
+        <section class="client-grid" aria-label="Client and amount due">
+          <div class="client-card">
+            <span class="section-label">Client Information</span>
+            <strong>${escapeHtml(clientName)}</strong>
+            ${clientPhone ? `<p><a href="${escapeHtml(phoneHref($("clientPhone").value || ""))}">${escapeHtml(clientPhone)}</a></p>` : ""}
+            ${clientEmail ? `<p><a href="${escapeHtml(emailHref(clientEmail))}">${escapeHtml(clientEmail)}</a></p>` : ""}
+            ${projectAddress ? `<p><a href="${escapeHtml(projectMapHref)}" target="_blank" rel="noopener">${escapeHtml(projectAddress)}</a></p>` : ""}
+          </div>
+          <div class="amount-due">
+            <span>Amount Due</span>
+            <strong>${escapeHtml(amountDue)}</strong>
+          </div>
+        </section>
+
+        <section class="notes">
+          <p><strong>Summary:</strong> ${escapeHtml(projectDescription)} - ${escapeHtml(amountDue)}</p>
+          <p><strong>Memo:</strong> ${escapeHtml(paymentMemo)}</p>
+        </section>
+
+        <section class="payment-methods" aria-label="Payment methods">
+          <div class="method-row stripe">
+            <div class="method-heading">
+              <h3><span class="method-dot"></span>Stripe</h3>
+              <span class="section-label">Card Payment</span>
+            </div>
+            <div class="method-copy">
+              <p>Pay securely online using the Stripe payment page.</p>
+              <a class="method-link" href="https://support.stripe.com/questions/faq-for-customers-of-businesses-using-stripe#what-is-stripe" target="_blank" rel="noopener">What is Stripe?</a>
+            </div>
+            ${stripeButton}
+          </div>
+
+          <div class="method-row zelle">
+            <div class="method-heading">
+              <h3><span class="method-dot"></span>Zelle</h3>
+              <span class="section-label">Bank Transfer</span>
+            </div>
+            <div class="method-copy">
+              <p>Send payment to our Zelle ID <strong class="inline-emphasis">${escapeHtml(ZELLE_ID)}</strong>.</p>
+              <p>This Zelle ID is linked to our business bank legal name <strong class="inline-emphasis">PB II AU LLC</strong>.</p>
+            </div>
+            <a class="action-button zelle-button" href="mailto:${escapeHtml(companyEmail)}?subject=${encodeURIComponent(paymentMemo)}">Use Zelle ID</a>
+          </div>
+
+          <div class="method-row cash">
+            <div class="method-heading">
+              <h3><span class="method-dot"></span>Cash / Check</h3>
+              <span class="section-label">Pickup</span>
+            </div>
+            <div class="method-copy">
+              <p>Cash and check payments can be arranged at your convenience. Simply give us a call, and we will coordinate a time to stop by and collect the payment.</p>
+            </div>
+            <a class="action-button cash-button" href="${escapeHtml(phoneHref(companyPhone))}">Call To Schedule</a>
+          </div>
+        </section>
+
+        <section class="notes">
+          <p>Thank you for your prompt payment. We truly appreciate your business and are grateful for the opportunity to bring your project to life.</p>
+        </section>
+
+        <footer class="invoice-footer">
+          <span class="footer-contact"><strong>Office:</strong> <span>${escapeHtml(formatPhone(companyPhone))}</span></span>
+          <span class="footer-contact"><strong>Email:</strong> <span>${escapeHtml(companyEmail)}</span></span>
+          <span class="footer-contact"><strong>Address:</strong> <span>${formatPaymentAddressHtml(companyAddress)}</span></span>
+        </footer>
+      </article>
+    </main>
+  </body>
+</html>`;
+}
+
+function showPaymentInvoicePreview(html) {
+  const preview = $("paymentInvoicePreview");
+  const frame = $("paymentInvoiceFrame");
+  frame.srcdoc = html;
+  preview.hidden = false;
+  preview.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function setPaymentInvoiceStatus() {
+  const status = $("submitStatus");
+  status.innerHTML = "";
+  status.textContent = "Payment invoice is ready below.";
+}
+
+function generatePaymentInvoice() {
+  ensureEstimateNumber();
+  updatePreview();
+  const html = buildPaymentInvoiceHtml();
+  showPaymentInvoicePreview(html);
+  setPaymentInvoiceStatus();
+}
+
+function printPaymentInvoice() {
+  generatePaymentPdf().catch(() => printPaymentInvoiceFallback());
+}
+
+function printPaymentInvoiceFallback() {
+  const frame = $("paymentInvoiceFrame");
+  if (!frame.srcdoc) {
+    generatePaymentInvoice();
+    return;
+  }
+  if (frame.contentWindow) frame.contentWindow.print();
+}
+
+function buildAssignmentScopeHtml() {
+  const useSpanishScope = $("assignmentLanguage").value === "es" && $("useSpanishScope").checked;
+  const manualScope = useSpanishScope
+    ? $("assignmentScopeSpanish").value.trim()
+    : $("assignmentScope").value.trim();
+  if (manualScope) return `<p class="scope-text">${escapeHtml(manualScope)}</p>`;
+
+  const rows = state.lineItems
+    .map((item) => {
+      const name = String(item.name || "").trim();
+      if (!name) return "";
+      if (item.type === "subline") return `<li class="subline">${escapeHtml(name)}</li>`;
+      return `<li>${escapeHtml(name)}</li>`;
+    })
+    .filter(Boolean)
+    .join("");
+  return rows ? `<ul class="scope-list">${rows}</ul>` : `<div class="blank-box tall"></div>`;
+}
+
+function buildAssignmentPhotosHtml() {
+  const photos = state.assignmentPhotos.length ? state.assignmentPhotos : state.photos;
+  if (!photos.length) return "";
+  return `
+    <div class="assignment-image-grid">
+      ${photos.map((photo) => `
+        <figure>
+          <img src="${photo.dataUrl}" alt="${escapeHtml(photo.label || photo.name)}">
+          <figcaption>${escapeHtml(photo.label || photo.name)}</figcaption>
+        </figure>
+      `).join("")}
+    </div>
+  `;
+}
+
+function getAssignmentLabels() {
+  const spanish = $("assignmentLanguage").value === "es";
+  return spanish
+    ? {
+        htmlLang: "es",
+        pageTitle: "Asignación",
+        clientInfo: "Información del Cliente",
+        schedule: "Horario",
+        projectNumber: "Número de Proyecto",
+        dateToStart: "Fecha de Inicio",
+        expectedArrival: "Hora Estimada de Llegada",
+        workScope: "Alcance del Trabajo",
+        employeeNotes: "Notas para el Empleado",
+        assignmentImages: "Imágenes de la Asignación",
+        open: "Abierto",
+        office: "Oficina:",
+        email: "Email:",
+        address: "Dirección:",
+      }
+    : {
+        htmlLang: "en",
+        pageTitle: "Assignment",
+        clientInfo: "Client Information",
+        schedule: "Schedule",
+        projectNumber: "Project Number",
+        dateToStart: "Date to Start",
+        expectedArrival: "Expected Arrival",
+        workScope: "Work Scope",
+        employeeNotes: "Employee Notes",
+        assignmentImages: "Assignment Images",
+        open: "Open",
+        office: "Office:",
+        email: "Email:",
+        address: "Address:",
+      };
+}
+
+function buildAssignmentSheetHtml() {
+  const logoUrl = new URL("assets/d2-logo.png", window.location.href).href;
+  const labels = getAssignmentLabels();
+  const companyPhone = $("companyPhone").value || COMPANY_DEFAULTS.phone;
+  const companyEmail = $("companyEmail").value || COMPANY_DEFAULTS.email;
+  const companyAddress = normalizeCompanyAddress($("companyAddress").value || COMPANY_DEFAULTS.address);
+  const clientName = $("clientName").value.trim() || "Client";
+  const clientPhone = formatPhone($("clientPhone").value || "");
+  const clientEmail = $("clientEmail").value.trim();
+  const projectAddress = $("projectAddress").value.trim();
+  const assignmentMapHref = mapHref(projectAddress);
+  const estimateNumber = $("showEstimateNumber").checked ? $("estimateNumber").value.trim() : "";
+  const assignmentNotes = $("assignmentNotes").value.trim();
+  const startDate = $("assignmentStartDate").value ? formatDate($("assignmentStartDate").value) : "";
+  const arrivalTime = $("assignmentArrivalTime").value || "Open";
+  const displayArrivalTime = arrivalTime === "Open" ? labels.open : arrivalTime;
+  const assignmentPhotosHtml = buildAssignmentPhotosHtml();
+
+  return `<!doctype html>
+<html lang="${labels.htmlLang}">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escapeHtml(clientName)} - D2 ${escapeHtml(labels.pageTitle)}</title>
+    <style>
+      :root { color-scheme: light; --ink: #202124; --muted: #6b7280; --line: #d7dce5; --paper: #fff; --surface: #eef1f5; --blue: #0d4a91; --soft: #f8fafc; --shadow: 0 18px 42px rgba(32,33,36,.14); }
+      * { box-sizing: border-box; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      body { margin: 0; min-width: 320px; background: #fff; color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      main { width: min(760px, 100%); margin: 0 auto; padding: 0; }
+      .sheet { min-height: 720px; border: 0; border-radius: 0; background: var(--paper); box-shadow: none; padding: 28px; }
+      .sheet-header { display: grid; grid-template-columns: 110px minmax(0, 1fr) 170px; gap: 14px; align-items: center; padding-bottom: 12px; border-bottom: 4px solid var(--blue); overflow: hidden; }
+      .logo-card { display: block; width: 110px; height: 84px; overflow: hidden; }
+      .logo-card img, .assignment-logo { display: block !important; width: 110px !important; max-width: 110px !important; height: 84px !important; max-height: 84px !important; object-fit: contain !important; }
+      .brand-title-lockup { display: inline-grid; justify-items: center; align-self: center; width: max-content; max-width: 100%; }
+      .brand-title-lockup h1 { margin: 0; color: var(--blue); font-size: clamp(1.34rem, 2.15vw, 1.72rem); line-height: 1.05; letter-spacing: 0; white-space: nowrap; }
+      .brand-title-lockup p { margin: 5px 0 0; color: var(--muted); font-size: .76rem; line-height: 1.25; text-align: center; width: 100%; }
+      .document-info { justify-self: end; width: 170px; display: grid; align-content: start; }
+      .document-info h2 { margin: 0; color: var(--blue); font-size: 1.26rem; line-height: 1.08; text-align: right; text-transform: uppercase; }
+      .content-grid { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 16px; margin-top: 16px; }
+      .card { border: 1px solid var(--line); border-radius: 8px; background: var(--soft); padding: 14px; }
+      .section-label { display: block; margin-bottom: 8px; color: var(--blue); font-size: .72rem; font-weight: 900; text-transform: uppercase; }
+      .client-card strong { display: block; margin-bottom: 6px; font-size: 1.08rem; }
+      .client-card p { margin: 0 0 4px; color: #374151; font-size: .9rem; line-height: 1.35; }
+      .client-card a { color: #374151; text-decoration: none; }
+      .client-card a:hover { color: var(--blue); text-decoration: underline; }
+      .schedule-card { display: grid; align-content: start; gap: 10px; }
+      .schedule-card div { display: grid; gap: 3px; }
+      .schedule-card small { color: var(--muted); font-size: .68rem; font-weight: 900; text-transform: uppercase; }
+      .schedule-card strong { color: var(--ink); font-size: 1rem; line-height: 1.15; }
+      .notes-card, .scope-card, .image-card { margin-top: 18px; }
+      .notes-card p { min-height: 140px; margin: 0; color: var(--ink); font-size: .96rem; line-height: 1.45; white-space: pre-wrap; }
+      .blank-box { min-height: 140px; border: 1px dashed #b9c2cf; border-radius: 8px; background: #fff; }
+      .blank-box.tall { min-height: 150px; }
+      .scope-list { margin: 0; padding-left: 20px; color: var(--ink); font-size: .96rem; line-height: 1.45; }
+      .scope-list li { margin: 0 0 6px; }
+      .scope-list .subline { color: var(--muted); margin-left: 16px; }
+      .scope-text { min-height: 150px; margin: 0; color: var(--ink); font-size: .96rem; line-height: 1.45; white-space: pre-wrap; }
+      .assignment-image-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      figure { margin: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+      figure img { display: block; width: 100%; height: 210px; object-fit: cover; }
+      figcaption { padding: 8px; color: var(--muted); font-size: .78rem; font-weight: 800; }
+      .sheet-footer { display: grid; grid-template-columns: max-content minmax(0, 1fr) minmax(0, 1.25fr); align-items: start; gap: 14px; margin-top: 42px; padding-top: 16px; border-top: 1px solid var(--line); color: #4b5563; font-size: .58rem; }
+      .footer-contact { display: flex; align-items: flex-start; gap: 4px; min-width: 0; white-space: nowrap; }
+      .sheet-footer strong { color: var(--ink); }
+      .sheet-footer > span:nth-child(3) { justify-content: flex-end; text-align: right; }
+      .sheet-footer a { color: #4b5563; text-decoration: none; }
+      @media (max-width: 760px) {
+        main { padding: 12px; }
+        .sheet { padding: 18px; }
+        .assignment-image-grid { grid-template-columns: 1fr; }
+        .sheet-footer > span:nth-child(3) { justify-content: flex-start; text-align: left; }
+      }
+      @media (max-width: 520px) {
+        .sheet-header { grid-template-columns: 1fr; }
+        .content-grid { grid-template-columns: 1fr; }
+        .sheet-footer { grid-template-columns: 1fr; }
+        .document-info, .logo-card { width: 100%; justify-self: stretch; }
+        .logo-card { width: 110px; height: 84px; }
+        .brand-title-lockup, .document-info h2 { justify-items: start; text-align: left; }
+      }
+      @media print {
+        @page { size: letter; margin: .35in; }
+        body { background: #fff; }
+        main { width: 100%; padding: 0; }
+        .sheet { border: 0; box-shadow: none; padding: 18px; }
+        .logo-card { width: 110px !important; height: 84px !important; overflow: hidden !important; }
+        .logo-card img, .assignment-logo { width: 110px !important; max-width: 110px !important; height: 84px !important; max-height: 84px !important; object-fit: contain !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article class="sheet">
+        <header class="sheet-header">
+          <div class="logo-card"><img class="assignment-logo" src="${escapeHtml(logoUrl)}" width="110" height="84" alt="D2 Carpentry and Design logo"></div>
+          <div class="brand-title-lockup">
+            <h1>${escapeHtml($("companyName").value || COMPANY_DEFAULTS.name)}</h1>
+            <p>-Crafting Your Vision One Nail At A Time-</p>
+          </div>
+          <div class="document-info">
+            <h2>${escapeHtml(labels.pageTitle)}</h2>
+          </div>
+        </header>
+
+        <section class="content-grid">
+          <div class="card client-card">
+            <span class="section-label">${escapeHtml(labels.clientInfo)}</span>
+            <strong>${escapeHtml(clientName)}</strong>
+            ${clientPhone ? `<p><a href="${escapeHtml(phoneHref($("clientPhone").value || ""))}">${escapeHtml(clientPhone)}</a></p>` : ""}
+            ${clientEmail ? `<p><a href="${escapeHtml(emailHref(clientEmail))}">${escapeHtml(clientEmail)}</a></p>` : ""}
+            ${projectAddress ? `<p><a href="${escapeHtml(assignmentMapHref)}" target="_blank" rel="noopener">${escapeHtml(projectAddress)}</a></p>` : ""}
+          </div>
+          <div class="card schedule-card">
+            <span class="section-label">${escapeHtml(labels.schedule)}</span>
+            <div>
+              <small>${escapeHtml(labels.projectNumber)}</small>
+              <strong>${escapeHtml(estimateNumber || labels.open)}</strong>
+            </div>
+            <div>
+              <small>${escapeHtml(labels.dateToStart)}</small>
+              <strong>${escapeHtml(startDate || labels.open)}</strong>
+            </div>
+            <div>
+              <small>${escapeHtml(labels.expectedArrival)}</small>
+              <strong>${escapeHtml(displayArrivalTime)}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="card scope-card">
+          <span class="section-label">${escapeHtml(labels.workScope)}</span>
+          ${buildAssignmentScopeHtml()}
+        </section>
+
+        <section class="card notes-card">
+          <span class="section-label">${escapeHtml(labels.employeeNotes)}</span>
+          ${assignmentNotes ? `<p>${escapeHtml(assignmentNotes)}</p>` : `<div class="blank-box"></div>`}
+        </section>
+
+        ${assignmentPhotosHtml ? `<section class="card image-card">
+          <span class="section-label">${escapeHtml(labels.assignmentImages)}</span>
+          ${assignmentPhotosHtml}
+        </section>` : ""}
+
+        <footer class="sheet-footer">
+          <span class="footer-contact"><strong>${escapeHtml(labels.office)}</strong> <a href="${escapeHtml(phoneHref(companyPhone))}">${escapeHtml(formatPhone(companyPhone))}</a></span>
+          <span class="footer-contact"><strong>${escapeHtml(labels.email)}</strong> <a href="${escapeHtml(emailHref(companyEmail))}">${escapeHtml(companyEmail)}</a></span>
+          <span class="footer-contact"><strong>${escapeHtml(labels.address)}</strong> <span>${formatPaymentAddressHtml(companyAddress)}</span></span>
+        </footer>
+      </article>
+    </main>
+  </body>
+</html>`;
+}
+
+function showAssignmentSheetPreview(html) {
+  const preview = $("assignmentSheetPreview");
+  const frame = $("assignmentSheetFrame");
+  frame.style.display = "block";
+  frame.style.width = "100%";
+  frame.style.minHeight = "820px";
+  frame.srcdoc = html;
+  preview.hidden = false;
+  preview.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function generateAssignmentSheet() {
+  ensureEstimateNumber();
+  updatePreview();
+  showAssignmentSheetPreview(buildAssignmentSheetHtml());
+  $("submitStatus").textContent = "Assignment sheet is ready below.";
+}
+
+function generateAssignmentSheetLanguage(language) {
+  $("assignmentLanguage").value = language;
+  generateAssignmentSheet();
+}
+
+function printAssignmentSheet() {
+  generateAssignmentPdf().catch(() => printAssignmentSheetFallback());
+}
+
+function printAssignmentSheetFallback() {
+  const frame = $("assignmentSheetFrame");
+  if (!frame.srcdoc) {
+    generateAssignmentSheet();
+    return;
+  }
+  if (frame.contentWindow) frame.contentWindow.print();
+}
+
+function printHtmlDocument(html) {
+  let frame = document.getElementById("dedicatedPrintFrame");
+  if (!frame) {
+    frame = document.createElement("iframe");
+    frame.id = "dedicatedPrintFrame";
+    frame.title = "Dedicated print preview";
+    frame.style.position = "fixed";
+    frame.style.width = "1px";
+    frame.style.height = "1px";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.opacity = "0";
+    frame.style.pointerEvents = "none";
+    frame.setAttribute("aria-hidden", "true");
+    document.body.appendChild(frame);
+  }
+  frame.onload = () => {
+    if (frame.contentWindow) frame.contentWindow.print();
+  };
+  frame.srcdoc = html;
+}
+
+function getJsPdf() {
+  return window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
+}
+
+function getHtml2Canvas() {
+  return window.html2canvas || null;
+}
+
+function getPdfFileName(label) {
+  const client = fileSafeName($("clientName").value) || "Client";
+  const estimateNumber = fileSafeName($("estimateNumber").value) || "Estimate";
+  return `${client} - ${estimateNumber} ${label}.pdf`;
+}
+
+function waitForPdfFrameAssets(frameDocument) {
+  const imagePromises = Array.from(frameDocument.images).map((image) => {
+    if (image.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      image.onload = resolve;
+      image.onerror = resolve;
+    });
+  });
+  const fontPromise = frameDocument.fonts && frameDocument.fonts.ready ? frameDocument.fonts.ready.catch(() => {}) : Promise.resolve();
+  return Promise.all([fontPromise, ...imagePromises]);
+}
+
+function waitForPdfHostAssets(host) {
+  const imagePromises = Array.from(host.querySelectorAll("img")).map((image) => {
+    if (image.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      image.onload = resolve;
+      image.onerror = resolve;
+    });
+  });
+  return Promise.all(imagePromises);
+}
+
+function createPdfRenderFrame(html) {
+  return new Promise((resolve) => {
+    const frame = document.createElement("iframe");
+    frame.title = "PDF render source";
+    frame.style.position = "fixed";
+    frame.style.left = "-10000px";
+    frame.style.top = "0";
+    frame.style.width = "900px";
+    frame.style.height = "1200px";
+    frame.style.opacity = "0";
+    frame.style.pointerEvents = "none";
+    frame.setAttribute("aria-hidden", "true");
+    frame.onload = async () => {
+      await waitForPdfFrameAssets(frame.contentDocument);
+      resolve(frame);
+    };
+    document.body.appendChild(frame);
+    frame.srcdoc = html;
+  });
+}
+
+async function createPdfRenderHost(html, sourceSelector) {
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(html, "text/html");
+  const host = document.createElement("div");
+  host.className = "pdf-render-host";
+  host.style.position = "fixed";
+  host.style.left = "-10000px";
+  host.style.top = "0";
+  host.style.width = "900px";
+  host.style.background = "#ffffff";
+  host.style.zIndex = "-1";
+  host.style.pointerEvents = "none";
+  host.setAttribute("aria-hidden", "true");
+
+  parsed.querySelectorAll("style, link[rel='stylesheet']").forEach((node) => {
+    host.appendChild(node.cloneNode(true));
+  });
+  Array.from(parsed.body.children).forEach((node) => {
+    host.appendChild(node.cloneNode(true));
+  });
+  document.body.appendChild(host);
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await waitForPdfHostAssets(host);
+  return {
+    host,
+    source: host.querySelector(sourceSelector) || host,
+  };
+}
+
+async function createPdfRenderClone(sourceElement) {
+  const host = document.createElement("div");
+  host.className = "pdf-render-host";
+  host.style.position = "fixed";
+  host.style.left = "-10000px";
+  host.style.top = "0";
+  host.style.width = `${sourceElement.getBoundingClientRect().width || 760}px`;
+  host.style.background = "#ffffff";
+  host.style.zIndex = "-1";
+  host.style.pointerEvents = "none";
+  host.setAttribute("aria-hidden", "true");
+  host.appendChild(sourceElement.cloneNode(true));
+  document.body.appendChild(host);
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await waitForPdfHostAssets(host);
+  return {
+    host,
+    source: host.firstElementChild,
+  };
+}
+
+async function generateVisualPdfFromHtml(html, fileName, sourceSelector) {
+  const JsPdf = getJsPdf();
+  const html2canvas = getHtml2Canvas();
+  if (!JsPdf || !html2canvas) {
+    printHtmlDocument(html);
+    return;
+  }
+
+  const { host, source } = await createPdfRenderHost(html, sourceSelector);
+  try {
+    const sourceRect = source.getBoundingClientRect();
+    const canvas = await html2canvas(source, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+      windowWidth: Math.ceil(source.scrollWidth || sourceRect.width),
+      windowHeight: Math.ceil(source.scrollHeight || sourceRect.height),
+    });
+
+    const doc = new JsPdf({ unit: "mm", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 8.9;
+    const imageWidth = pageWidth - margin * 2;
+    const imageHeight = (canvas.height * imageWidth) / canvas.width;
+    const pageImageHeight = pageHeight - margin * 2;
+    const pageCanvasHeight = Math.floor((pageImageHeight * canvas.width) / imageWidth);
+    const pageCount = Math.max(1, Math.ceil(canvas.height / pageCanvasHeight));
+    const links = Array.from(source.querySelectorAll("a[href]"))
+      .map((anchor) => {
+        const href = anchor.getAttribute("href");
+        if (!href || href === "#") return null;
+        const rect = anchor.getBoundingClientRect();
+        if (!rect.width || !rect.height) return null;
+        return {
+          href: anchor.href || href,
+          x: ((rect.left - sourceRect.left) * imageWidth) / sourceRect.width,
+          y: ((rect.top - sourceRect.top) * imageWidth) / sourceRect.width,
+          width: (rect.width * imageWidth) / sourceRect.width,
+          height: (rect.height * imageWidth) / sourceRect.width,
+        };
+      })
+      .filter(Boolean);
+
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+      if (pageIndex > 0) doc.addPage("letter");
+      const sliceY = pageIndex * pageCanvasHeight;
+      const sliceHeight = Math.min(pageCanvasHeight, canvas.height - sliceY);
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceHeight;
+      const context = sliceCanvas.getContext("2d");
+      context.drawImage(canvas, 0, sliceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+      const sliceImageHeight = (sliceHeight * imageWidth) / canvas.width;
+      doc.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imageWidth, sliceImageHeight, undefined, "FAST");
+
+      links.forEach((link) => {
+        const pageTop = pageIndex * pageImageHeight;
+        const pageBottom = pageTop + pageImageHeight;
+        if (link.y + link.height < pageTop || link.y > pageBottom) return;
+        doc.link(margin + link.x, margin + link.y - pageTop, link.width, link.height, { url: link.href });
+      });
+    }
+
+    doc.save(fileName);
+  } finally {
+    host.remove();
+  }
+}
+
+async function generateVisualPdfFromElement(sourceElement, fileName) {
+  const JsPdf = getJsPdf();
+  const html2canvas = getHtml2Canvas();
+  if (!JsPdf || !html2canvas) {
+    const label = COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer";
+    printHtmlDocument(buildEstimateHtmlCopy(label));
+    return;
+  }
+
+  const { host, source } = await createPdfRenderClone(sourceElement);
+  try {
+    const sourceRect = source.getBoundingClientRect();
+    const canvas = await html2canvas(source, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+      windowWidth: Math.ceil(source.scrollWidth || sourceRect.width),
+      windowHeight: Math.ceil(source.scrollHeight || sourceRect.height),
+    });
+
+    const doc = new JsPdf({ unit: "mm", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 8.9;
+    const imageWidth = pageWidth - margin * 2;
+    const imageHeight = (canvas.height * imageWidth) / canvas.width;
+    doc.addImage(canvas.toDataURL("image/png"), "PNG", margin, margin, imageWidth, imageHeight, undefined, "FAST");
+
+    Array.from(source.querySelectorAll("a[href]")).forEach((anchor) => {
+      const href = anchor.getAttribute("href");
+      if (!href || href === "#") return;
+      const rect = anchor.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      doc.link(
+        margin + ((rect.left - sourceRect.left) * imageWidth) / sourceRect.width,
+        margin + ((rect.top - sourceRect.top) * imageWidth) / sourceRect.width,
+        (rect.width * imageWidth) / sourceRect.width,
+        (rect.height * imageWidth) / sourceRect.width,
+        { url: anchor.href || href }
+      );
+    });
+
+    doc.save(fileName);
+  } finally {
+    host.remove();
+  }
+}
+
+async function getLogoDataUrl() {
+  const image = new Image();
+  image.src = new URL("assets/d2-logo.png", window.location.href).href;
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = reject;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth || 400;
+  canvas.height = image.naturalHeight || 300;
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+function addPdfWrappedText(doc, text, x, y, width, options = {}) {
+  const lineHeight = options.lineHeight || 5;
+  const lines = doc.splitTextToSize(String(text || ""), width);
+  doc.text(lines, x, y);
+  return y + lines.length * lineHeight;
+}
+
+function addPdfLinkText(doc, text, x, y, url, options = {}) {
+  const value = String(text || "");
+  if (!value) return y;
+  if (url) {
+    doc.textWithLink(value, x, y, { url });
+  } else {
+    doc.text(value, x, y);
+  }
+  return y + (options.lineHeight || 5);
+}
+
+function drawPdfCard(doc, x, y, width, height) {
+  doc.setDrawColor(215, 220, 229);
+  doc.setFillColor(248, 250, 252);
+  doc.roundedRect(x, y, width, height, 2, 2, "FD");
+}
+
+function addPdfPageIfNeeded(doc, y, neededHeight = 24) {
+  if (y + neededHeight <= 270) return y;
+  addPdfFooter(doc);
+  doc.addPage("letter");
+  return 18;
+}
+
+async function addPdfHeader(doc, title) {
+  const blue = [13, 74, 145];
+  const logo = await getLogoDataUrl().catch(() => "");
+  if (logo) doc.addImage(logo, "PNG", 14, 12, 32, 24);
+  doc.setTextColor(...blue);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(17);
+  doc.text($("companyName").value || COMPANY_DEFAULTS.name, 52, 22);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(107, 114, 128);
+  doc.text("-Crafting Your Vision One Nail At A Time-", 52, 28);
+  doc.setTextColor(...blue);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.text(title, 196, 22, { align: "right" });
+  doc.setDrawColor(...blue);
+  doc.setLineWidth(1.4);
+  doc.line(14, 42, 196, 42);
+}
+
+function addPdfFooter(doc) {
+  const y = 282;
+  const companyPhone = $("companyPhone").value || COMPANY_DEFAULTS.phone;
+  const companyEmail = $("companyEmail").value || COMPANY_DEFAULTS.email;
+  const companyAddress = normalizeCompanyAddress($("companyAddress").value || COMPANY_DEFAULTS.address);
+  doc.setDrawColor(215, 220, 229);
+  doc.line(14, y - 7, 196, y - 7);
+  doc.setFontSize(7);
+  doc.setTextColor(75, 85, 99);
+  doc.setFont("helvetica", "bold");
+  doc.text("Office:", 14, y);
+  doc.setFont("helvetica", "normal");
+  doc.textWithLink(formatPhone(companyPhone), 26, y, { url: phoneHref(companyPhone) });
+  doc.setFont("helvetica", "bold");
+  doc.text("Email:", 62, y);
+  doc.setFont("helvetica", "normal");
+  doc.textWithLink(companyEmail, 74, y, { url: emailHref(companyEmail) });
+  doc.setFont("helvetica", "bold");
+  doc.text("Address:", 128, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(companyAddress, 144, y, { maxWidth: 50 });
+}
+
+function addPdfClientCard(doc, x, y, width, height) {
+  const clientPhone = formatPhone($("clientPhone").value);
+  const clientEmail = $("clientEmail").value.trim();
+  const projectAddress = $("projectAddress").value.trim();
+  drawPdfCard(doc, x, y, width, height);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(13, 74, 145);
+  doc.text("CLIENT INFORMATION", x + 5, y + 7);
+  doc.setFontSize(11);
+  doc.setTextColor(32, 33, 36);
+  doc.text($("clientName").value || "Client", x + 5, y + 15);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(55, 65, 81);
+  let nextY = y + 23;
+  nextY = addPdfLinkText(doc, clientPhone, x + 5, nextY, phoneHref($("clientPhone").value));
+  nextY = addPdfLinkText(doc, clientEmail, x + 5, nextY, emailHref(clientEmail));
+  addPdfLinkText(doc, projectAddress, x + 5, nextY, mapHref(projectAddress));
+}
+
+function addPdfPhotos(doc, photos, startY, title) {
+  if (!photos.length) return startY;
+  let y = addPdfPageIfNeeded(doc, startY, 78);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(13, 74, 145);
+  doc.text(title.toUpperCase(), 14, y);
+  y += 7;
+  let x = 14;
+  photos.forEach((photo, index) => {
+    y = addPdfPageIfNeeded(doc, y, 68);
+    x = index % 2 === 0 ? 14 : 106;
+    if (index % 2 === 0 && index > 0) y += 62;
+    y = addPdfPageIfNeeded(doc, y, 68);
+    doc.setDrawColor(215, 220, 229);
+    doc.roundedRect(x, y, 84, 55, 2, 2, "S");
+    try {
+      doc.addImage(photo.dataUrl, "JPEG", x + 2, y + 2, 80, 43, undefined, "FAST");
+    } catch (error) {
+      try {
+        doc.addImage(photo.dataUrl, "PNG", x + 2, y + 2, 80, 43, undefined, "FAST");
+      } catch (_error) {
+        doc.text("Image attached", x + 5, y + 24);
+      }
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(75, 85, 99);
+    doc.text(String(photo.label || photo.name || "Photo"), x + 3, y + 51, { maxWidth: 78 });
+  });
+  return y + 66;
+}
+
+async function generateEstimatePdf() {
+  ensureEstimateNumber();
+  updatePreview();
+  await generateVisualPdfFromElement($("estimateSheet"), getPdfFileName("Estimate"));
+}
+
+async function generateAssignmentPdf() {
+  ensureEstimateNumber();
+  updatePreview();
+  const labels = getAssignmentLabels();
+  await generateVisualPdfFromHtml(buildAssignmentSheetHtml(), getPdfFileName(labels.pageTitle), ".sheet");
+}
+
+async function generatePaymentPdf() {
+  ensureEstimateNumber();
+  updatePreview();
+  await generateVisualPdfFromHtml(buildPaymentInvoiceHtml(), getPdfFileName("Payment Invoice"), ".invoice-sheet");
+}
+
+function printEstimateCopy() {
+  ensureEstimateNumber();
+  updatePreview();
+  generateEstimatePdf().catch(() => {
+    printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
+  });
+}
+
 function serializeEstimate() {
   const totals = calculateTotals();
   const data = {
@@ -867,6 +1861,7 @@ function serializeEstimate() {
     lineItems: state.lineItems,
     materialItems: state.materialItems,
     photos: state.photos,
+    assignmentPhotos: state.assignmentPhotos,
     totals,
     backend: {
       estimatedMaterialCost: calculateMaterialCost(),
@@ -880,6 +1875,7 @@ function serializeEstimate() {
     data[field] = $(field).value;
   });
   data.showEstimateNumber = $("showEstimateNumber").checked;
+  data.useSpanishScope = $("useSpanishScope").checked;
   return data;
 }
 
@@ -947,6 +1943,7 @@ function applyEstimateData(data) {
     if (data[field] !== undefined) $(field).value = data[field];
   });
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
+  $("useSpanishScope").checked = data.useSpanishScope === true;
   applyCompanyDefaults();
   $("companyAddress").value = normalizeCompanyAddress($("companyAddress").value);
   if ($("showEstimateNumber").checked && !$("estimateNumber").value.trim()) {
@@ -968,9 +1965,11 @@ function applyEstimateData(data) {
     state.lineItems = [{ id: createId(), type: "item", name: "", qty: "", price: "" }];
   }
   state.photos = Array.isArray(data.photos) ? data.photos : [];
+  state.assignmentPhotos = Array.isArray(data.assignmentPhotos) ? data.assignmentPhotos : [];
   renderLineItems();
   renderMaterialItems();
   renderPhotos();
+  renderAssignmentPhotos();
   syncProjectMode();
   updateCalculationPanel();
   updatePreview();
@@ -1033,7 +2032,7 @@ function saveEstimate(options = {}) {
     setTimeout(() => {
       $("saveEstimate").textContent = "Save";
     }, 1000);
-    window.print();
+    printEstimateCopy();
   }
 }
 
@@ -1053,6 +2052,12 @@ function hasWorkInProgress() {
     "discount",
     "depositRate",
     "notes",
+    "assignmentLanguage",
+    "assignmentStartDate",
+    "assignmentArrivalTime",
+    "assignmentScope",
+    "assignmentScopeSpanish",
+    "assignmentNotes",
   ];
   const hasFieldContent = changedFields.some((field) => $(field).value.trim());
   const hasLineContent = state.lineItems.some((item) => {
@@ -1061,7 +2066,7 @@ function hasWorkInProgress() {
   const hasMaterialContent = state.materialItems.some((item) => {
     return item.name.trim() || Number.parseFloat(item.qty) > 0 || Number.parseFloat(item.price) > 0;
   });
-  return hasFieldContent || hasLineContent || hasMaterialContent || state.photos.length > 0;
+  return hasFieldContent || hasLineContent || hasMaterialContent || state.photos.length > 0 || state.assignmentPhotos.length > 0;
 }
 
 function openFreshEstimateWindow() {
@@ -1091,7 +2096,7 @@ async function startNewEstimate() {
   if (!saveFirst) return;
 
   saveEstimate({ silent: true });
-  window.print();
+  printEstimateCopy();
   const openAfterSave = window.confirm("After saving/printing the PDF, open a fresh estimate in a new window?");
   if (openAfterSave) {
     openFreshEstimateWindow();
@@ -1215,12 +2220,21 @@ function resetEstimate() {
   $("taxRate").value = "6.5";
   $("depositRate").value = "";
   $("notes").value = "";
+  $("assignmentLanguage").value = "en";
+  $("assignmentStartDate").value = "";
+  $("assignmentArrivalTime").value = "Open";
+  $("assignmentScope").value = "";
+  $("useSpanishScope").checked = false;
+  $("assignmentScopeSpanish").value = "";
+  $("assignmentNotes").value = "";
   state.lineItems = [{ id: createId(), type: "item", name: "", qty: "", price: "" }];
   state.materialItems = [{ id: createId(), name: "", qty: "", price: "", unit: "" }];
   state.photos = [];
+  state.assignmentPhotos = [];
   renderLineItems();
   renderMaterialItems();
   renderPhotos();
+  renderAssignmentPhotos();
   syncProjectMode();
   updateCalculationPanel();
   updatePreview();
@@ -1271,6 +2285,23 @@ $("photoDropzone").addEventListener("drop", (event) => {
   $("photoDropzone").classList.remove("drag-over");
   addPhotos(event.dataTransfer.files);
 });
+$("assignmentPhotoUpload").addEventListener("change", (event) => {
+  addAssignmentPhotos(event.target.files);
+  event.target.value = "";
+});
+$("assignmentPhotoDropzone").addEventListener("click", () => $("assignmentPhotoUpload").click());
+$("assignmentPhotoDropzone").addEventListener("dragover", (event) => {
+  event.preventDefault();
+  $("assignmentPhotoDropzone").classList.add("drag-over");
+});
+$("assignmentPhotoDropzone").addEventListener("dragleave", () => {
+  $("assignmentPhotoDropzone").classList.remove("drag-over");
+});
+$("assignmentPhotoDropzone").addEventListener("drop", (event) => {
+  event.preventDefault();
+  $("assignmentPhotoDropzone").classList.remove("drag-over");
+  addAssignmentPhotos(event.dataTransfer.files);
+});
 $("projectType").addEventListener("change", () => {
   if ($("projectType").value === "Other") {
     clearManualEstimate();
@@ -1287,8 +2318,14 @@ $("editableEstimateUpload").addEventListener("change", (event) => {
   event.target.value = "";
 });
 $("submitEstimate").addEventListener("click", () => submitEstimateToGoogle().catch(() => {}));
+$("generatePaymentInvoice").addEventListener("click", () => generatePaymentInvoice());
+$("generateAssignmentSheet").addEventListener("click", () => generateAssignmentSheet());
 $("generateEstimate").addEventListener("click", () => generateEstimatePreview());
-$("printEstimate").addEventListener("click", () => window.print());
+$("printEstimate").addEventListener("click", () => printEstimateCopy());
+$("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
+$("assignmentEnglish").addEventListener("click", () => generateAssignmentSheetLanguage("en"));
+$("assignmentSpanish").addEventListener("click", () => generateAssignmentSheetLanguage("es"));
+$("printAssignmentSheet").addEventListener("click", () => printAssignmentSheet());
 document.querySelectorAll("[data-copy-mode]").forEach((button) => {
   button.addEventListener("click", () => setCopyMode(button.dataset.copyMode));
 });
@@ -1300,8 +2337,10 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
     if (action === "save-file") downloadEditableEstimate().catch(() => {});
     if (action === "open-file") $("editableEstimateUpload").click();
     if (action === "submit") submitEstimateToGoogle().catch(() => {});
+    if (action === "payment") generatePaymentInvoice();
+    if (action === "assignment") generateAssignmentSheet();
     if (action === "generate") generateEstimatePreview();
-    if (action === "print") window.print();
+    if (action === "print") printEstimateCopy();
   });
 });
 setCopyMode("customer");
