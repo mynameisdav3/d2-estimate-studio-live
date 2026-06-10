@@ -404,6 +404,32 @@ function maybeAddBlankLineItemRow(item) {
   return true;
 }
 
+function getLineItemDepth(item) {
+  let depth = 0;
+  let parentId = item.parentId;
+  const seen = new Set();
+  while (parentId && !seen.has(parentId)) {
+    seen.add(parentId);
+    const parent = state.lineItems.find((entry) => entry.id === parentId);
+    if (!parent) break;
+    depth += 1;
+    parentId = parent.parentId;
+  }
+  return depth;
+}
+
+function isLineItemDescendant(entry, ancestorId) {
+  let parentId = entry.parentId;
+  const seen = new Set();
+  while (parentId && !seen.has(parentId)) {
+    if (parentId === ancestorId) return true;
+    seen.add(parentId);
+    const parent = state.lineItems.find((item) => item.id === parentId);
+    parentId = parent ? parent.parentId : "";
+  }
+  return false;
+}
+
 function renderMaterialItems() {
   const container = $("materialItems");
   container.innerHTML = "";
@@ -461,7 +487,7 @@ function addSubLine(parentId) {
   const parentIndex = state.lineItems.findIndex((item) => item.id === parentId);
   if (parentIndex === -1) return;
   let insertAt = parentIndex + 1;
-  while (insertAt < state.lineItems.length && state.lineItems[insertAt].parentId === parentId) {
+  while (insertAt < state.lineItems.length && isLineItemDescendant(state.lineItems[insertAt], parentId)) {
     insertAt += 1;
   }
   const subline = {
@@ -475,6 +501,11 @@ function addSubLine(parentId) {
 
   state.lineItems.splice(insertAt, 0, subline);
   renderLineItems();
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`[data-id="${subline.id}"]`);
+    const textarea = row ? row.querySelector('[data-field="name"]') : null;
+    if (textarea) textarea.focus();
+  });
   updatePreview();
 }
 
@@ -502,7 +533,7 @@ function addSubLineAfter(sublineId) {
 }
 
 function removeLineItem(id) {
-  state.lineItems = state.lineItems.filter((item) => item.id !== id && item.parentId !== id);
+  state.lineItems = state.lineItems.filter((item) => item.id !== id && !isLineItemDescendant(item, id));
   renderLineItems();
   updatePreview();
 }
@@ -631,13 +662,19 @@ function renderLineItems() {
     const row = document.createElement("div");
     row.className = item.type === "subline" ? "line-row subline-editor-row" : "line-row";
     row.dataset.id = item.id;
+    const depth = item.type === "subline" ? Math.max(getLineItemDepth(item), 1) : 0;
+    row.style.setProperty("--subline-depth", depth);
+    row.style.setProperty("--subline-indent", `${Math.max(depth - 1, 0) * 22}px`);
     row.innerHTML = item.type === "subline"
       ? `
         <label>
           Subline
           <textarea data-field="name" rows="1">${escapeHtml(item.name)}</textarea>
         </label>
-        <button type="button" data-action="remove" title="Remove subline" aria-label="Remove subline">x</button>
+        <div class="line-actions">
+          <button type="button" data-action="subline" title="Add nested subline" aria-label="Add nested subline">+</button>
+          <button type="button" data-action="remove" title="Remove subline" aria-label="Remove subline">x</button>
+        </div>
       `
       : `
         <label>
@@ -836,6 +873,8 @@ function updatePreview() {
     const tr = document.createElement("tr");
     if (item.type === "subline") {
       tr.className = "subline-preview-row";
+      tr.style.setProperty("--subline-depth", Math.max(getLineItemDepth(item), 1));
+      tr.style.setProperty("--subline-indent", `${Math.max(getLineItemDepth(item) - 1, 0) * 18}px`);
       tr.innerHTML = `
         <td><span>${escapeHtml(item.name)}</span></td>
         <td></td>
@@ -850,6 +889,7 @@ function updatePreview() {
     const hasQty = Number.isFinite(qty) && qty > 0;
     const hasPrice = Number.isFinite(price) && price > 0;
     const total = hasQty && hasPrice ? qty * price * totals.finishMultiplier : 0;
+    tr.className = "description-preview-row";
     tr.innerHTML = `
       <td>${escapeHtml(item.name)}</td>
       <td>${!totals.hasFlatTotal && hasQty ? qty : ""}</td>

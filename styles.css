@@ -573,9 +573,13 @@ textarea:focus {
   color: #633929;
 }
 
+.line-row label:first-child {
+  font-weight: 900;
+}
+
 .subline-editor-row {
-  grid-template-columns: minmax(150px, 1fr) 40px;
-  padding-left: 10px;
+  grid-template-columns: minmax(150px, 1fr) 82px;
+  padding-left: calc(10px + var(--subline-indent, 0px));
 }
 
 .subline-editor-row label {
@@ -937,6 +941,7 @@ th {
   background: #0d4a91;
   color: #ffffff;
   font-size: 0.72rem;
+  font-weight: 900;
   text-transform: none;
 }
 
@@ -962,6 +967,7 @@ th {
   width: 100%;
 }
 
+.description-preview-row td:first-child,
 .estimate-sheet tbody tr:first-child td {
   font-weight: 800;
 }
@@ -972,7 +978,7 @@ th {
 }
 
 .subline-preview-row td:first-child {
-  padding-left: 18px;
+  padding-left: calc(18px + var(--subline-indent, 0px));
 }
 
 .subline-preview-row td:first-child::before {
