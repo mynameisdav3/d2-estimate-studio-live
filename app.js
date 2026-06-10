@@ -2058,6 +2058,40 @@ function openEditableEstimateFile(file) {
   reader.readAsText(file);
 }
 
+async function openEditableEstimatePicker() {
+  if (window.showOpenFilePicker) {
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [
+          {
+            description: "D2 editable estimate",
+            accept: {
+              "application/json": [".d2estimate", ".json"],
+              "text/plain": [".txt"],
+            },
+          },
+        ],
+      });
+      if (!handle) return;
+      openEditableEstimateFile(await handle.getFile());
+      return;
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+    }
+  }
+  $("editableEstimateUpload").click();
+}
+
+function runButtonAction(action) {
+  try {
+    const result = action();
+    if (result && typeof result.catch === "function") result.catch(() => {});
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function saveEstimate(options = {}) {
   ensureEstimateNumber();
   const estimate = serializeEstimate();
@@ -2349,10 +2383,10 @@ $("projectType").addEventListener("change", () => {
   refreshAutoEstimateNumber();
   syncProjectMode();
 });
-$("newEstimate").addEventListener("click", () => startNewEstimate().catch(() => {}));
-$("saveEstimate").addEventListener("click", () => saveEstimate().catch(() => {}));
-$("saveEditableEstimate").addEventListener("click", () => downloadEditableEstimate().catch(() => {}));
-$("openEditableEstimate").addEventListener("click", () => $("editableEstimateUpload").click());
+$("newEstimate").addEventListener("click", () => runButtonAction(startNewEstimate));
+$("saveEstimate").addEventListener("click", () => runButtonAction(saveEstimate));
+$("saveEditableEstimate").addEventListener("click", () => runButtonAction(downloadEditableEstimate));
+$("openEditableEstimate").addEventListener("click", () => runButtonAction(openEditableEstimatePicker));
 $("editableEstimateUpload").addEventListener("change", (event) => {
   openEditableEstimateFile(event.target.files[0]);
   event.target.value = "";
@@ -2372,11 +2406,11 @@ document.querySelectorAll("[data-copy-mode]").forEach((button) => {
 document.querySelectorAll("[data-action-button]").forEach((button) => {
   button.addEventListener("click", () => {
     const action = button.dataset.actionButton;
-    if (action === "new") startNewEstimate().catch(() => {});
-    if (action === "save") saveEstimate().catch(() => {});
-    if (action === "save-file") downloadEditableEstimate().catch(() => {});
-    if (action === "open-file") $("editableEstimateUpload").click();
-    if (action === "submit") submitEstimateToGoogle().catch(() => {});
+    if (action === "new") runButtonAction(startNewEstimate);
+    if (action === "save") runButtonAction(saveEstimate);
+    if (action === "save-file") runButtonAction(downloadEditableEstimate);
+    if (action === "open-file") runButtonAction(openEditableEstimatePicker);
+    if (action === "submit") runButtonAction(submitEstimateToGoogle);
     if (action === "payment") generatePaymentInvoice();
     if (action === "assignment") generateAssignmentSheet();
     if (action === "generate") generateEstimatePreview();
