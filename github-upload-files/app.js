@@ -1981,9 +1981,7 @@ async function generatePaymentPdf() {
 function printEstimateCopy() {
   ensureEstimateNumber();
   updatePreview();
-  generateEstimatePdf().catch(() => {
-    printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
-  });
+  printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
 }
 
 function serializeEstimate() {
