@@ -488,7 +488,12 @@ textarea:focus {
 }
 
 .material-row {
-  grid-template-columns: minmax(150px, 1fr) 86px 110px 42px;
+  grid-template-columns: minmax(150px, 1fr) 86px 110px 82px;
+}
+
+.material-actions {
+  display: flex;
+  gap: 6px;
 }
 
 .material-summary {
@@ -1223,7 +1228,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   }
 
   .line-actions,
-  .material-row button {
+  .material-actions {
     grid-column: 1 / -1;
   }
 

@@ -331,6 +331,13 @@ function renderMaterialSuggestions(row, value) {
   `).join("");
 }
 
+function closeMaterialSuggestions(row) {
+  const panel = row.querySelector(".material-suggestions");
+  if (!panel) return;
+  panel.hidden = true;
+  panel.innerHTML = "";
+}
+
 function applyMaterialSuggestion(row, materialItem, materialId) {
   const material = (window.D2_MATERIALS_DATABASE || []).find((entry) => entry.id === materialId);
   if (!material) return;
@@ -348,7 +355,7 @@ function applyMaterialSuggestion(row, materialItem, materialId) {
   }
   if (qtyInput) qtyInput.value = materialItem.qty;
   if (priceInput) priceInput.value = material.defaultPrice;
-  if (panel) panel.hidden = true;
+  if (panel) closeMaterialSuggestions(row);
   updatePreview();
 }
 
@@ -356,11 +363,25 @@ function addMaterialItem(item = { name: "", qty: "", price: "", unit: "" }) {
   state.materialItems.push({
     id: createId(),
     name: item.name || "",
-    qty: item.qty || "",
+    qty: item.qty === "" ? "" : wholeNumberValue(item.qty),
     price: item.price || "",
     unit: item.unit || "",
   });
   renderMaterialItems();
+  updatePreview();
+}
+
+function insertMaterialItemAfter(id) {
+  const currentIndex = state.materialItems.findIndex((item) => item.id === id);
+  const insertAt = currentIndex >= 0 ? currentIndex + 1 : state.materialItems.length;
+  const material = { id: createId(), name: "", qty: "", price: "", unit: "" };
+  state.materialItems.splice(insertAt, 0, material);
+  renderMaterialItems();
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`[data-id="${material.id}"]`);
+    const textarea = row ? row.querySelector('[data-field="name"]') : null;
+    if (textarea) textarea.focus();
+  });
   updatePreview();
 }
 
@@ -375,7 +396,7 @@ function removeMaterialItem(id) {
 
 function calculateMaterialCost() {
   return state.materialItems.reduce((sum, item) => {
-    return sum + (Number.parseFloat(item.qty) || 0) * (Number.parseFloat(item.price) || 0);
+    return sum + wholeNumberValue(item.qty) * (Number.parseFloat(item.price) || 0);
   }, 0);
 }
 
@@ -383,6 +404,10 @@ function isCompleteEntry(item) {
   return Boolean(String(item.name || "").trim()) &&
     Number.parseFloat(item.qty) > 0 &&
     Number.parseFloat(item.price) > 0;
+}
+
+function wholeNumberValue(value) {
+  return Math.max(0, Math.round(Number.parseFloat(value) || 0));
 }
 
 function maybeAddBlankMaterialRow(item) {
@@ -446,13 +471,16 @@ function renderMaterialItems() {
       </label>
       <label>
         Qty
-        <input data-field="qty" type="number" min="0" step="0.01" value="${item.qty}">
+        <input data-field="qty" type="number" min="0" step="1" inputmode="numeric" value="${item.qty === "" ? "" : wholeNumberValue(item.qty)}">
       </label>
       <label>
         Unit Cost
         <input data-field="price" type="number" min="0" step="0.01" value="${item.price}">
       </label>
-      <button type="button" data-action="remove" title="Remove material" aria-label="Remove material">x</button>
+      <div class="material-actions">
+        <button type="button" data-action="add" title="Add supply item below" aria-label="Add supply item below">+</button>
+        <button type="button" data-action="remove" title="Remove material" aria-label="Remove material">x</button>
+      </div>
     `;
 
     row.addEventListener("input", (event) => {
@@ -460,11 +488,64 @@ function renderMaterialItems() {
       const field = target.dataset.field;
       if (!field) return;
       const materialItem = state.materialItems.find((entry) => entry.id === item.id);
-      materialItem[field] = field === "name" ? target.value : Number.parseFloat(target.value) || 0;
-      if (field === "name") renderMaterialSuggestions(row, target.value);
+      if (field === "name") {
+        materialItem[field] = target.value;
+      } else if (field === "qty") {
+        materialItem[field] = wholeNumberValue(target.value);
+      } else {
+        materialItem[field] = Number.parseFloat(target.value) || 0;
+      }
+      if (field === "name") {
+        if (String(target.value || "").trim()) {
+          renderMaterialSuggestions(row, target.value);
+        } else {
+          closeMaterialSuggestions(row);
+        }
+      }
       if (target.tagName === "TEXTAREA") autoGrowTextArea(target);
-      if (maybeAddBlankMaterialRow(materialItem)) return;
       updatePreview();
+    });
+
+    row.addEventListener("change", (event) => {
+      const target = event.target;
+      if (target.dataset.field !== "qty") return;
+      const materialItem = state.materialItems.find((entry) => entry.id === item.id);
+      materialItem.qty = wholeNumberValue(target.value);
+      target.value = materialItem.qty || "";
+      updatePreview();
+    });
+
+    row.addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (event.key !== "Enter") return;
+      if (target.dataset.field === "name") {
+        event.preventDefault();
+        closeMaterialSuggestions(row);
+        target.blur();
+        updatePreview();
+        return;
+      }
+      if (target.dataset.field !== "price") return;
+      event.preventDefault();
+      closeMaterialSuggestions(row);
+      const materialItem = state.materialItems.find((entry) => entry.id === item.id);
+      if (maybeAddBlankMaterialRow(materialItem)) {
+        requestAnimationFrame(() => {
+          const currentIndex = state.materialItems.findIndex((entry) => entry.id === materialItem.id);
+          const nextItem = state.materialItems[currentIndex + 1];
+          const nextRow = nextItem ? document.querySelector(`[data-id="${nextItem.id}"]`) : null;
+          const textarea = nextRow ? nextRow.querySelector('[data-field="name"]') : null;
+          if (textarea) textarea.focus();
+        });
+        return;
+      }
+      updatePreview();
+    });
+
+    row.addEventListener("focusout", () => {
+      setTimeout(() => {
+        if (!row.contains(document.activeElement)) closeMaterialSuggestions(row);
+      }, 120);
     });
 
     row.addEventListener("click", (event) => {
@@ -472,9 +553,10 @@ function renderMaterialItems() {
       if (materialButton) {
         const materialItem = state.materialItems.find((entry) => entry.id === item.id);
         applyMaterialSuggestion(row, materialItem, materialButton.dataset.materialId);
-        maybeAddBlankMaterialRow(materialItem);
+        closeMaterialSuggestions(row);
         return;
       }
+      if (event.target.dataset.action === "add") insertMaterialItemAfter(item.id);
       if (event.target.dataset.action === "remove") removeMaterialItem(item.id);
     });
 
@@ -2147,6 +2229,24 @@ function hasWorkInProgress() {
   return hasFieldContent || hasLineContent || hasMaterialContent || state.photos.length > 0 || state.assignmentPhotos.length > 0;
 }
 
+function saveDraftBeforeLeaving() {
+  if (!hasWorkInProgress()) return;
+  try {
+    ensureEstimateNumber();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeEstimate()));
+  } catch (error) {
+    // Closing/navigating browsers may block storage; the warning still protects the user.
+  }
+}
+
+function warnBeforeLeaving(event) {
+  if (!hasWorkInProgress()) return;
+  saveDraftBeforeLeaving();
+  event.preventDefault();
+  event.returnValue = "You have an estimate in progress. Are you sure you want to close this page?";
+  return event.returnValue;
+}
+
 function openFreshEstimateWindow() {
   const url = new URL(window.location.href);
   url.searchParams.set("new", Date.now());
@@ -2404,6 +2504,8 @@ $("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
 $("assignmentEnglish").addEventListener("click", () => generateAssignmentSheetLanguage("en"));
 $("assignmentSpanish").addEventListener("click", () => generateAssignmentSheetLanguage("es"));
 $("printAssignmentSheet").addEventListener("click", () => printAssignmentSheet());
+window.addEventListener("beforeunload", warnBeforeLeaving);
+window.addEventListener("pagehide", saveDraftBeforeLeaving);
 document.querySelectorAll("[data-copy-mode]").forEach((button) => {
   button.addEventListener("click", () => setCopyMode(button.dataset.copyMode));
 });
