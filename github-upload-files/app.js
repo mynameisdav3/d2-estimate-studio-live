@@ -410,6 +410,11 @@ function wholeNumberValue(value) {
   return Math.max(0, Math.round(Number.parseFloat(value) || 0));
 }
 
+function wholeNumberText(value) {
+  const match = String(value || "").match(/\d+/);
+  return match ? match[0] : "";
+}
+
 function maybeAddBlankMaterialRow(item) {
   const lastItem = state.materialItems[state.materialItems.length - 1];
   if (!lastItem || lastItem.id !== item.id || !isCompleteEntry(item)) return false;
@@ -471,7 +476,7 @@ function renderMaterialItems() {
       </label>
       <label>
         Qty
-        <input data-field="qty" type="number" min="0" step="1" inputmode="numeric" value="${item.qty === "" ? "" : wholeNumberValue(item.qty)}">
+        <input data-field="qty" type="text" inputmode="numeric" pattern="[0-9]*" value="${item.qty === "" ? "" : wholeNumberText(item.qty)}">
       </label>
       <label>
         Unit Cost
@@ -491,7 +496,9 @@ function renderMaterialItems() {
       if (field === "name") {
         materialItem[field] = target.value;
       } else if (field === "qty") {
-        materialItem[field] = wholeNumberValue(target.value);
+        const cleanedQty = wholeNumberText(target.value);
+        materialItem[field] = cleanedQty;
+        target.value = cleanedQty;
       } else {
         materialItem[field] = Number.parseFloat(target.value) || 0;
       }
@@ -510,8 +517,8 @@ function renderMaterialItems() {
       const target = event.target;
       if (target.dataset.field !== "qty") return;
       const materialItem = state.materialItems.find((entry) => entry.id === item.id);
-      materialItem.qty = wholeNumberValue(target.value);
-      target.value = materialItem.qty || "";
+      materialItem.qty = wholeNumberText(target.value);
+      target.value = materialItem.qty;
       updatePreview();
     });
 
@@ -908,7 +915,7 @@ function updatePreview() {
         </thead>
         <tbody>
           ${internalMaterials.map((item) => {
-            const qty = Number.parseFloat(item.qty) || 0;
+            const qty = wholeNumberValue(item.qty);
             const price = Number.parseFloat(item.price) || 0;
             return `
               <tr>
@@ -2082,7 +2089,11 @@ function applyEstimateData(data) {
     ? data.lineItems.map((item) => ({ type: "item", ...item, name: cleanLineItemName(item.name) }))
     : [];
   state.materialItems = Array.isArray(data.materialItems)
-    ? data.materialItems.map((item) => ({ id: item.id || createId(), ...item }))
+    ? data.materialItems.map((item) => ({
+        id: item.id || createId(),
+        ...item,
+        qty: item.qty === "" ? "" : wholeNumberValue(item.qty),
+      }))
     : [];
   if (state.materialItems.length === 0) {
     state.materialItems = [{ id: createId(), name: "", qty: "", price: "", unit: "" }];
