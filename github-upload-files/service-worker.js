@@ -1,9 +1,12 @@
-const CACHE_NAME = "alchemyist-estimate-studio-v76";
+const CACHE_NAME = "alchemyist-estimate-studio-v84";
 const APP_FILES = [
   "./",
   "./index.html",
+  "./crm.html",
   "./styles.css",
   "./app.js",
+  "./crm.js",
+  "./revenue-data.js",
   "./materials-database.js",
   "./vendor/jspdf.umd.min.js",
   "./vendor/html2canvas.min.js",

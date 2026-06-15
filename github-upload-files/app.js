@@ -9,6 +9,7 @@ const ZELLE_ID = "D2carpentry";
 const MATERIAL_PERCENT = 0.25;
 const STORAGE_KEY = "d2EstimateStudio";
 const ESTIMATE_SEQUENCE_KEY = "d2EstimateSequence";
+const DASHBOARD_STORAGE_KEY = "d2CrmDemoFiles";
 const COMPANY_DEFAULTS = {
   name: "D2 Carpentry & Design",
   phone: "239-469-8555",
@@ -18,6 +19,12 @@ const COMPANY_DEFAULTS = {
 
 const PROJECT_PREFIXES = {
   "Other": "A",
+  "Closet": "C",
+  "Cabinetry": "B",
+  "Pantry": "P",
+  "Garage": "G",
+  "Built-In": "I",
+  "Trim": "T",
   "Reach-in closet": "R",
   "Walk-in closet": "W",
   "Pantry storage": "P",
@@ -55,6 +62,16 @@ const fields = [
   "estimateNumber",
   "showEstimateNumber",
   "estimateDate",
+  "leadSource",
+  "fileStatus",
+  "contactStatus",
+  "customerTemperature",
+  "estimateStatus",
+  "warrantyStatus",
+  "inspectionDate",
+  "inspectionTime",
+  "nextActionDate",
+  "nextAction",
   "clientName",
   "clientPhone",
   "clientEmail",
@@ -2042,6 +2059,86 @@ function createEditableDownloadLink(blob, fileName) {
   return link;
 }
 
+function loadLocalDashboardFiles() {
+  try {
+    return JSON.parse(localStorage.getItem(DASHBOARD_STORAGE_KEY) || "[]");
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveLocalDashboardFiles(files) {
+  try {
+    localStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify(files));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function makeDashboardNote(text) {
+  return text ? [{ at: new Date().toISOString(), text }] : [];
+}
+
+function saveEstimateToLocalDashboard(payloadData) {
+  const totals = payloadData.totals || {};
+  const backend = payloadData.backend || {};
+  const fileNumber = payloadData.estimateNumber || `D2-${Date.now()}`;
+  const files = loadLocalDashboardFiles();
+  const existingIndex = files.findIndex((file) => file.fileNumber === fileNumber);
+  const existing = existingIndex >= 0 ? files[existingIndex] : {};
+  const importedAt = new Date().toISOString();
+  const dashboardFile = {
+    ...existing,
+    id: existing.id || `file-${Date.now()}`,
+    fileNumber,
+    clientName: payloadData.clientName || "Unnamed Client",
+    clientPhone: payloadData.clientPhone || "",
+    clientEmail: payloadData.clientEmail || "",
+    projectAddress: payloadData.projectAddress || "",
+    leadSource: payloadData.leadSource || existing.leadSource || "Manual",
+    fileStatus: payloadData.fileStatus || existing.fileStatus || "Estimate Completed",
+    contactStatus: payloadData.contactStatus || existing.contactStatus || "Established",
+    customerTemperature: payloadData.customerTemperature || existing.customerTemperature || "Warm",
+    projectType: payloadData.projectType || "Other",
+    inspectionDate: payloadData.inspectionDate || existing.inspectionDate || "",
+    inspectionTime: payloadData.inspectionTime || existing.inspectionTime || "",
+    startDate: payloadData.assignmentStartDate || existing.startDate || "",
+    arrivalWindow: payloadData.assignmentArrivalTime || existing.arrivalWindow || "Open",
+    nextAction: payloadData.nextAction || existing.nextAction || "",
+    nextActionDate: payloadData.nextActionDate || existing.nextActionDate || "",
+    warrantyStatus: payloadData.warrantyStatus || existing.warrantyStatus || "Not Sent",
+    estimateTotal: Number(totals.total) || 0,
+    depositTotal: Number(totals.deposit) || 0,
+    materialTotal: Number(backend.estimatedMaterialCost) || 0,
+    editableEstimate: payloadData,
+    notes: Array.isArray(existing.notes) && existing.notes.length
+      ? existing.notes
+      : makeDashboardNote(payloadData.notes || ""),
+    timeline: [
+      ...(Array.isArray(existing.timeline) ? existing.timeline : []),
+      existingIndex >= 0 ? `Estimate updated ${formatDateTimeForDashboard(importedAt)}` : `Estimate imported ${formatDateTimeForDashboard(importedAt)}`,
+    ],
+  };
+
+  if (existingIndex >= 0) {
+    files[existingIndex] = dashboardFile;
+  } else {
+    files.unshift(dashboardFile);
+  }
+  return saveLocalDashboardFiles(files);
+}
+
+function formatDateTimeForDashboard(value) {
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 async function downloadEditableEstimate() {
   ensureEstimateNumber();
   updatePreview();
@@ -2211,8 +2308,31 @@ function generateEstimatePreview() {
   $("estimatePreview").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function createCrmFile() {
+  ensureEstimateNumber();
+  if (!$("estimateDate").value) {
+    $("estimateDate").value = new Date().toISOString().slice(0, 10);
+  }
+  if (!$("fileStatus").value) $("fileStatus").value = "New Lead";
+  if (!$("contactStatus").value) $("contactStatus").value = "Pending";
+  if (!$("estimateStatus").value) $("estimateStatus").value = "Pending";
+  if (!$("leadSource").value) $("leadSource").value = "Manual";
+  $("submitStatus").textContent = `Dashboard file ${$("estimateNumber").value} is ready. Add client info, then Save Dashboard to send it to Google Drive once connected.`;
+  updatePreview();
+}
+
 function hasWorkInProgress() {
   const changedFields = [
+    "leadSource",
+    "fileStatus",
+    "contactStatus",
+    "customerTemperature",
+    "estimateStatus",
+    "warrantyStatus",
+    "inspectionDate",
+    "inspectionTime",
+    "nextActionDate",
+    "nextAction",
     "clientName",
     "clientPhone",
     "clientEmail",
@@ -2292,16 +2412,19 @@ async function startNewEstimate() {
 
 async function submitEstimateToGoogle() {
   const status = $("submitStatus");
+  saveEstimate({ silent: true });
+  const payloadData = serializeEstimate();
+  payloadData.copies = buildSubmittedCopies();
+  const savedLocally = saveEstimateToLocalDashboard(payloadData);
+
   if (!GOOGLE_SCRIPT_URL) {
-    status.textContent = "Google Drive submit is not connected yet.";
-    window.alert("Google Drive submit is not connected yet. I prepared the app for it, but we still need to deploy the Google Apps Script and paste its web app URL into the estimator.");
+    status.textContent = savedLocally
+      ? "Saved to local Dashboard. Google Drive sync is not connected yet."
+      : "Google Drive sync is not connected yet, and this browser blocked local Dashboard storage.";
     return;
   }
 
-  saveEstimate({ silent: true });
-  status.textContent = "Submitting estimate...";
-  const payloadData = serializeEstimate();
-  payloadData.copies = buildSubmittedCopies();
+  status.textContent = "Saving to Dashboard and Google Drive...";
 
   const iframeName = "googleSubmitFrame";
   let iframe = document.querySelector(`iframe[name="${iframeName}"]`);
@@ -2326,7 +2449,7 @@ async function submitEstimateToGoogle() {
 
   document.body.appendChild(form);
   iframe.addEventListener("load", () => {
-    status.textContent = "Estimate submitted to Google Drive.";
+    status.textContent = "Dashboard file saved to Google Drive.";
     form.remove();
   }, { once: true });
   form.submit();
@@ -2387,6 +2510,16 @@ function resetEstimate() {
   $("companyPhone").value = COMPANY_DEFAULTS.phone;
   $("companyEmail").value = COMPANY_DEFAULTS.email;
   $("companyAddress").value = COMPANY_DEFAULTS.address;
+  $("leadSource").value = "Manual";
+  $("fileStatus").value = "New Lead";
+  $("contactStatus").value = "Pending";
+  $("customerTemperature").value = "Warm";
+  $("estimateStatus").value = "Pending";
+  $("warrantyStatus").value = "Not Sent";
+  $("inspectionDate").value = "";
+  $("inspectionTime").value = "";
+  $("nextActionDate").value = "";
+  $("nextAction").value = "";
   $("clientName").value = "";
   $("clientPhone").value = "";
   $("clientEmail").value = "";
@@ -2439,6 +2572,7 @@ fields.forEach((field) => {
 
 $("useLinearTotal").addEventListener("click", () => useCalculatedTotal("linear"));
 $("useSquareTotal").addEventListener("click", () => useCalculatedTotal("square"));
+$("createCrmFile").addEventListener("click", () => createCrmFile());
 
 $("estimateNumber").addEventListener("input", () => {
   state.autoEstimateNumber = false;
