@@ -20,23 +20,21 @@
         </div>
         <div class="crm-actions">
           <button type="button" class="icon-button primary-action" id="crmNewFile">+ New File</button>
+          <button type="button" class="icon-button" id="crmImportApprovedEstimate">Import Approved Estimate</button>
           <button type="button" class="icon-button active" data-crm-view="dashboard">Dashboard</button>
           <button type="button" class="icon-button" data-crm-view="revenue">Revenue</button>
           <a class="icon-button" href="index.html">Estimator</a>
           <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
+          <input id="crmApprovedEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
         </div>
       </header>
 
       <section class="crm-dashboard">
         <section class="crm-command-panel crm-dashboard-view">
-          <div class="crm-command-copy">
-            <p class="eyebrow">Command Center</p>
-            <h2>Tomorrow, pipeline, and customer files in one place.</h2>
-          </div>
           <div class="crm-command-grid">
-            <button type="button" class="crm-command-card active" data-crm-filter="tomorrow">
-              <span>Tomorrow</span>
-              <strong id="tomorrowCount">0</strong>
+            <button type="button" class="crm-command-card active" data-crm-filter="all">
+              <span>All Files</span>
+              <strong id="allFilesCount">0</strong>
             </button>
             <button type="button" class="crm-command-card" data-crm-filter="new">
               <span>New Leads</span>
@@ -70,11 +68,10 @@
             <div class="crm-panel-heading">
               <div>
                 <p class="eyebrow">Files</p>
-                <h2 id="crmListTitle">Tomorrow</h2>
+                <h2 id="crmListTitle">All Files</h2>
               </div>
               <select id="crmFileFilter" aria-label="File filter">
-                <option value="all">All Files</option>
-                <option value="tomorrow" selected>Tomorrow</option>
+                <option value="all" selected>All Files</option>
                 <option value="new">New Leads</option>
                 <option value="estimate">Pending Estimates</option>
                 <option value="inspection">Inspections</option>
@@ -83,6 +80,10 @@
                 <option value="review">Reviews</option>
                 <option value="archive">Archived</option>
               </select>
+            </div>
+            <div class="crm-file-search">
+              <input id="crmFileSearch" type="search" placeholder="Search project #">
+              <button type="button" id="crmSearchFile">Search</button>
             </div>
             <div class="crm-file-list" id="crmFileList"></div>
           </aside>
@@ -148,38 +149,21 @@
                     File Status
                     <select id="crmFileStatus">
                       <option>New Lead</option>
+                      <option>Initial Contact</option>
                       <option>Contact Pending</option>
-                      <option>Contact Attempted</option>
-                      <option>Contact Established</option>
                       <option>Inspection Scheduled</option>
-                      <option>Estimate Pending</option>
+                      <option>Inspection Pending</option>
+                      <option>Inspection Completed</option>
+                      <option>Pending Estimate</option>
                       <option>Estimate Sent</option>
-                      <option>Approved</option>
-                      <option>Start Date Set</option>
-                      <option>Job Scheduled</option>
+                      <option>Job Won</option>
+                      <option>In Negotiation</option>
                       <option>In Progress</option>
-                      <option>Completed</option>
-                      <option>Paid</option>
-                      <option>Review Requested</option>
-                      <option>Closed</option>
-                      <option>Dead Lead</option>
-                      <option>Archived</option>
-                    </select>
-                  </label>
-                  <label>
-                    Contact
-                    <select id="crmContactStatus">
-                      <option>Pending</option>
-                      <option>Attempted</option>
-                      <option>Established</option>
-                    </select>
-                  </label>
-                  <label>
-                    Temperature
-                    <select id="crmCustomerTemperature">
-                      <option>Warm</option>
-                      <option>Hot</option>
-                      <option>Cold</option>
+                      <option>Work Completed</option>
+                      <option>Closing Call / Invoice Sent</option>
+                      <option>Review Sent / Post-Care</option>
+                      <option>Closed / Paid</option>
+                      <option>Job Lost / Closed</option>
                     </select>
                   </label>
                   <label>
@@ -194,22 +178,7 @@
                       <option>Trim</option>
                     </select>
                   </label>
-                  <label>
-                    Project Stage
-                    <select id="crmProjectStage">
-                      <option>Lead</option>
-                      <option>Inspection</option>
-                      <option>Estimate</option>
-                      <option>Approved</option>
-                      <option>Scheduled</option>
-                      <option>In Progress</option>
-                      <option>Completed</option>
-                      <option>Paid</option>
-                      <option>Review</option>
-                      <option>Warranty</option>
-                      <option>Closed</option>
-                    </select>
-                  </label>
+                  <p class="crm-status-description wide" id="crmStatusDescription"></p>
                 </div>
               </section>
 
@@ -241,6 +210,14 @@
                       <option>Afternoon</option>
                     </select>
                   </label>
+                  <label>
+                    Follow-Up Date
+                    <input id="crmFollowUpDate" type="date">
+                  </label>
+                  <label>
+                    Anticipated Completion
+                    <input id="crmAnticipatedCompletionDate" type="date">
+                  </label>
                   <label class="wide">
                     Next Action
                     <input id="crmNextAction" placeholder="Follow up, send estimate, confirm start date">
@@ -265,12 +242,76 @@
                   <h2>Money</h2>
                 </div>
                 <div class="crm-money-grid">
-                  <div><span>Lead Value</span><strong id="crmLeadValueTotal">$0.00</strong></div>
                   <div><span>Estimate</span><strong id="crmEstimateTotal">$0.00</strong></div>
-                  <div><span>Deposit</span><strong id="crmDepositTotal">$0.00</strong></div>
+                  <div><span>Initial Deposit</span><strong id="crmDepositTotal">$0.00</strong></div>
+                  <div><span>Midpoint Deposit</span><strong id="crmMidpointDepositTotal">$0.00</strong></div>
                   <div><span>Balance</span><strong id="crmBalanceTotal">$0.00</strong></div>
                   <div><span>Materials</span><strong id="crmMaterialTotal">$0.00</strong></div>
                 </div>
+                <div class="field-grid two-tight crm-money-controls">
+                  <label>
+                    Contact Email Sent?
+                    <select id="crmContactEmailSent">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Contact Text Sent?
+                    <select id="crmContactTextSent">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Deposit Secured?
+                    <select id="crmDepositSecured">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Paid in Full?
+                    <select id="crmPaidInFull">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Initial Deposit
+                    <input id="crmInitialDeposit" type="number" min="0" step="0.01">
+                  </label>
+                  <label>
+                    Midpoint Deposit
+                    <input id="crmMidpointDeposit" type="number" min="0" step="0.01">
+                  </label>
+                  <label>
+                    Closing Call Completed?
+                    <select id="crmClosingCallCompleted">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Final Payment Secured?
+                    <select id="crmFinalPaymentSecured">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Final Payment Amount
+                    <input id="crmFinalPaymentAmount" type="number" min="0" step="0.01">
+                  </label>
+                  <label>
+                    Review Sent?
+                    <select id="crmReviewSent">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="crm-material-breakdown" id="crmMaterialBreakdown"></div>
               </section>
 
               <section class="panel crm-detail-card">
@@ -278,10 +319,6 @@
                   <h2>Operations</h2>
                 </div>
                 <div class="field-grid two-tight">
-                  <label>
-                    Lead Value Estimate
-                    <input id="crmLeadValue" type="number" min="0" step="1">
-                  </label>
                   <label>
                     Estimate Status
                     <select id="crmEstimateStatus">
@@ -313,10 +350,6 @@
                       <option>Requested</option>
                       <option>Received</option>
                     </select>
-                  </label>
-                  <label class="wide">
-                    Loss Reason
-                    <input id="crmLossReason" placeholder="Price, timing, no response, went with another contractor">
                   </label>
                 </div>
               </section>
@@ -361,9 +394,13 @@
               <div class="panel-header">
                 <div>
                   <p class="eyebrow">Revenue Log</p>
-                  <h2>Imported Sales Spreadsheet</h2>
+                  <h2>Working Revenue Sheet</h2>
                 </div>
-                <button type="button" id="crmAddRevenueRow">Add Revenue Row</button>
+                <div class="crm-panel-actions">
+                  <button type="button" id="crmUploadEstimateFile">Upload Estimate File</button>
+                  <button type="button" id="crmAddRevenueRow">Add Revenue Row</button>
+                </div>
+                <input id="crmEstimateFileUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
               </div>
               <div class="crm-revenue-table-wrap">
                 <table class="crm-revenue-table">

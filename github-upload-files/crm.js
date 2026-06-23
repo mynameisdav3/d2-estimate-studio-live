@@ -5,6 +5,27 @@ const crmCurrency = new Intl.NumberFormat("en-US", {
 
 const CRM_STORAGE_KEY = "d2CrmDemoFiles";
 const CRM_REVENUE_STORAGE_KEY = "d2CrmRevenueRows";
+const CRM_RESET_VERSION_KEY = "d2CrmFreshDashboardVersion";
+const CRM_FRESH_DASHBOARD_VERSION = "approved-estimate-start-v1";
+
+const CRM_STATUS_DESCRIPTIONS = {
+  "New Lead": "Inquiry received from your website, social media, or local referral.",
+  "Initial Contact": "You have spoken to the client and are actively qualifying their project scope.",
+  "Contact Pending": "A call was made. Confirm whether email or text contact was also sent.",
+  "Inspection Scheduled": "The date is locked in the calendar to visit the job site and take measurements.",
+  "Inspection Pending": "Waiting on the owner or waiting on the estimator.",
+  "Inspection Completed": "You met the client, took site dimensions, and discussed wood types/finishes.",
+  "Pending Estimate": "You are calculating material costs, lumber yard pricing, and labor hours.",
+  "Estimate Sent": "The quote is in the customer's hands; awaiting approval or negotiation.",
+  "Job Won": "The customer approved the job. Confirm whether the deposit has been secured.",
+  "In Negotiation": "Customer wants to think it over. Set a follow-up call date.",
+  "In Progress": "Job has started. Confirm expected completion date and midpoint deposit.",
+  "Work Completed": "Work is complete. Confirm closing call, review request, and final payment.",
+  "Closing Call / Invoice Sent": "Final invoice is delivered and remaining balance is being secured.",
+  "Review Sent / Post-Care": "Payment is cleared. Review link and care instructions have been sent.",
+  "Closed / Paid": "Job folder is archived and contact info is saved for future marketing.",
+  "Job Lost / Closed": "Archive the file and save contact info for future marketing.",
+};
 
 const crmFields = [
   "clientName",
@@ -13,28 +34,33 @@ const crmFields = [
   "projectAddress",
   "leadSource",
   "fileStatus",
-  "contactStatus",
-  "customerTemperature",
   "projectType",
-  "projectStage",
+  "contactEmailSent",
+  "contactTextSent",
   "inspectionDate",
   "inspectionTime",
   "startDate",
   "arrivalWindow",
+  "followUpDate",
+  "anticipatedCompletionDate",
   "nextAction",
   "nextActionDate",
   "warrantyStatus",
-  "leadValue",
+  "depositSecured",
+  "initialDeposit",
+  "midpointDeposit",
+  "paidInFull",
+  "closingCallCompleted",
+  "finalPaymentSecured",
+  "finalPaymentAmount",
+  "reviewSent",
   "estimateStatus",
   "invoiceStatus",
   "reviewStatus",
-  "lossReason",
 ];
 
 const trackedStatusFields = {
   fileStatus: "File status",
-  contactStatus: "Contact status",
-  projectStage: "Project stage",
   estimateStatus: "Estimate status",
   invoiceStatus: "Invoice status",
   reviewStatus: "Review status",
@@ -47,6 +73,19 @@ let activeFileId = crmFiles[0] ? crmFiles[0].id : null;
 let crmRevenueRows = loadRevenueRows();
 let activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
 
+function applyFreshDashboardReset() {
+  try {
+    if (localStorage.getItem(CRM_RESET_VERSION_KEY) === CRM_FRESH_DASHBOARD_VERSION) return;
+    localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify([]));
+    localStorage.setItem(CRM_RESET_VERSION_KEY, CRM_FRESH_DASHBOARD_VERSION);
+    crmFiles = [];
+    activeFileId = null;
+  } catch (error) {
+    crmFiles = [];
+    activeFileId = null;
+  }
+}
+
 function todayIso(offset = 0) {
   const date = new Date();
   date.setDate(date.getDate() + offset);
@@ -56,77 +95,27 @@ function todayIso(offset = 0) {
 function makeCrmFileNumber() {
   const date = new Date();
   const year = String(date.getFullYear()).slice(2);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const count = crmFiles.filter((file) => String(file.fileNumber || "").includes(`D2-${year}${month}${day}`)).length + 1;
-  return `D2-${year}${month}${day}-${String(count).padStart(3, "0")}`;
+  const existingNumbers = crmFiles
+    .map((file) => String(file.fileNumber || ""))
+    .map((value) => value.match(new RegExp(`^${year}-([A-Z])(\\d{4})$`)))
+    .filter(Boolean)
+    .map((match) => ({ series: match[1], number: Number(match[2]) }));
+  for (let code = 65; code <= 90; code += 1) {
+    const series = String.fromCharCode(code);
+    const maxInSeries = existingNumbers
+      .filter((entry) => entry.series === series)
+      .reduce((max, entry) => Math.max(max, entry.number), 1000);
+    if (maxInSeries < 9999) return `${year}-${series}${String(maxInSeries + 1).padStart(4, "0")}`;
+  }
+  return `${year}-Z${Date.now()}`;
+}
+
+function makeCrmId(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
 function defaultFiles() {
-  return [
-    {
-      id: "demo-1",
-      fileNumber: "D2-260614-001",
-      clientName: "Sample Angi Lead",
-      clientPhone: "239-555-0188",
-      clientEmail: "sample@email.com",
-      projectAddress: "Cape Coral, FL",
-      leadSource: "Angi",
-      fileStatus: "Contact Pending",
-      contactStatus: "Pending",
-      customerTemperature: "Warm",
-      projectType: "Closet",
-      projectStage: "Lead",
-      inspectionDate: todayIso(1),
-      inspectionTime: "09:00",
-      startDate: "",
-      arrivalWindow: "Open",
-      nextAction: "Call and schedule inspection",
-      nextActionDate: todayIso(1),
-      warrantyStatus: "Not Sent",
-      leadValue: 0,
-      estimateStatus: "Not Started",
-      invoiceStatus: "Not Created",
-      reviewStatus: "Not Ready",
-      lossReason: "",
-      estimateTotal: 0,
-      depositTotal: 0,
-      materialTotal: 0,
-      notes: [{ at: new Date().toISOString(), text: "New lead waiting for first contact." }],
-      timeline: ["Lead received", "Customer auto-reply queued"],
-    },
-    {
-      id: "demo-2",
-      fileNumber: "D2-260613-004",
-      clientName: "Approved Cabinet Job",
-      clientPhone: "239-555-0142",
-      clientEmail: "approved@email.com",
-      projectAddress: "Fort Myers, FL",
-      leadSource: "Referral",
-      fileStatus: "Start Date Set",
-      contactStatus: "Established",
-      customerTemperature: "Hot",
-      projectType: "Cabinetry",
-      projectStage: "Scheduled",
-      inspectionDate: todayIso(-2),
-      inspectionTime: "10:00",
-      startDate: todayIso(1),
-      arrivalWindow: "8:00 AM",
-      nextAction: "Send warranty details and start-date congratulations",
-      nextActionDate: todayIso(1),
-      warrantyStatus: "Ready to Send",
-      leadValue: 4782,
-      estimateStatus: "Approved",
-      invoiceStatus: "Deposit Paid",
-      reviewStatus: "Not Ready",
-      lossReason: "",
-      estimateTotal: 4782,
-      depositTotal: 2391,
-      materialTotal: 1120,
-      notes: [{ at: new Date().toISOString(), text: "Customer approved. Needs warranty email and team assignment." }],
-      timeline: ["Estimate sent", "Customer approved", "Start date selected"],
-    },
-  ];
+  return [];
 }
 
 function defaultRevenueRows() {
@@ -313,10 +302,20 @@ function normalizeCrmFile(file) {
   if (!Array.isArray(file.timeline)) file.timeline = [];
   file.projectStage = file.projectStage || inferProjectStage(file.fileStatus);
   file.estimateStatus = file.estimateStatus || inferEstimateStatus(file.fileStatus);
-  file.invoiceStatus = file.invoiceStatus || (file.fileStatus === "Paid" ? "Paid" : "Not Created");
-  file.reviewStatus = file.reviewStatus || (file.fileStatus === "Review Requested" ? "Requested" : "Not Ready");
-  file.leadValue = file.leadValue || file.estimateTotal || 0;
-  file.lossReason = file.lossReason || "";
+  file.invoiceStatus = file.invoiceStatus || (["Closed / Paid", "Review Sent / Post-Care"].includes(file.fileStatus) ? "Paid" : "Not Created");
+  file.reviewStatus = file.reviewStatus || (["Review Sent / Post-Care", "Closed / Paid"].includes(file.fileStatus) ? "Requested" : "Not Ready");
+  file.depositSecured = file.depositSecured || (Number(file.depositTotal) > 0 ? "Yes" : "No");
+  file.initialDeposit = file.initialDeposit === undefined ? file.depositTotal || "" : file.initialDeposit;
+  file.midpointDeposit = file.midpointDeposit === undefined ? "" : file.midpointDeposit;
+  file.paidInFull = file.paidInFull || (file.invoiceStatus === "Paid" || file.fileStatus === "Closed / Paid" ? "Yes" : "No");
+  file.contactEmailSent = file.contactEmailSent || "No";
+  file.contactTextSent = file.contactTextSent || "No";
+  file.followUpDate = file.followUpDate || "";
+  file.anticipatedCompletionDate = file.anticipatedCompletionDate || "";
+  file.closingCallCompleted = file.closingCallCompleted || "No";
+  file.finalPaymentSecured = file.finalPaymentSecured || "No";
+  file.finalPaymentAmount = file.finalPaymentAmount === undefined ? "" : file.finalPaymentAmount;
+  file.reviewSent = file.reviewSent || "No";
   if (file.fileNotes && !file.notes.length) {
     file.notes.push({ at: new Date().toISOString(), text: file.fileNotes });
     file.fileNotes = "";
@@ -325,52 +324,51 @@ function normalizeCrmFile(file) {
 }
 
 function inferProjectStage(status = "") {
-  if (["Approved", "Start Date Set", "Job Scheduled"].includes(status)) return "Scheduled";
+  if (["Job Won"].includes(status)) return "Scheduled";
   if (status === "In Progress") return "In Progress";
-  if (status === "Completed") return "Completed";
-  if (status === "Paid") return "Paid";
-  if (status === "Review Requested") return "Review";
-  if (status === "Inspection Scheduled") return "Inspection";
-  if (["Estimate Pending", "Estimate Completed", "Estimate Sent"].includes(status)) return "Estimate";
-  if (["Closed", "Dead Lead", "Archived"].includes(status)) return "Closed";
+  if (status === "Work Completed") return "Completed";
+  if (status === "Closed / Paid") return "Paid";
+  if (status === "Review Sent / Post-Care") return "Review";
+  if (["Inspection Scheduled", "Inspection Pending", "Inspection Completed"].includes(status)) return "Inspection";
+  if (["Pending Estimate", "Estimate Sent", "In Negotiation"].includes(status)) return "Estimate";
+  if (["Closing Call / Invoice Sent"].includes(status)) return "Closing";
+  if (["Job Lost / Closed"].includes(status)) return "Closed";
   return "Lead";
 }
 
 function inferEstimateStatus(status = "") {
-  if (status === "Estimate Pending") return "Pending";
-  if (status === "Estimate Completed") return "Completed";
+  if (status === "Pending Estimate") return "Pending";
   if (status === "Estimate Sent") return "Sent";
-  if (["Approved", "Start Date Set", "Job Scheduled", "In Progress", "Completed", "Paid"].includes(status)) return "Approved";
-  if (status === "Dead Lead") return "Declined";
+  if (["Job Won", "In Progress", "Work Completed", "Closing Call / Invoice Sent", "Review Sent / Post-Care", "Closed / Paid"].includes(status)) return "Approved";
+  if (status === "Job Lost / Closed") return "Declined";
   return "Not Started";
+}
+
+function isOpenCrmFile(file) {
+  return !["Job Lost / Closed", "Closed / Paid"].includes(file.fileStatus);
 }
 
 function visibleFiles() {
   const filter = $("crmFileFilter").value;
-  if (filter === "all") return crmFiles;
-  if (filter === "tomorrow") {
-    const tomorrow = todayIso(1);
-    return crmFiles.filter((file) => file.nextActionDate === tomorrow || file.inspectionDate === tomorrow || file.startDate === tomorrow);
-  }
-  if (filter === "new") return crmFiles.filter((file) => file.fileStatus === "New Lead" || file.fileStatus === "Contact Pending");
-  if (filter === "estimate") return crmFiles.filter((file) => ["Estimate Pending", "Estimate Completed", "Estimate Sent"].includes(file.fileStatus));
-  if (filter === "inspection") return crmFiles.filter((file) => file.fileStatus === "Inspection Scheduled" || file.projectStage === "Inspection" || Boolean(file.inspectionDate));
-  if (filter === "won") return crmFiles.filter((file) => ["Approved", "Start Date Set", "Job Scheduled", "In Progress"].includes(file.fileStatus));
-  if (filter === "active") return crmFiles.filter((file) => ["Scheduled", "In Progress"].includes(file.projectStage) || ["Start Date Set", "Job Scheduled", "In Progress"].includes(file.fileStatus));
-  if (filter === "review") return crmFiles.filter((file) => ["Ready to Request", "Requested"].includes(file.reviewStatus) || file.fileStatus === "Review Requested");
-  if (filter === "archive") return crmFiles.filter((file) => file.fileStatus === "Archived" || file.fileStatus === "Dead Lead");
+  if (filter === "all") return crmFiles.filter(isOpenCrmFile);
+  if (filter === "new") return crmFiles.filter((file) => ["New Lead", "Initial Contact", "Contact Pending"].includes(file.fileStatus));
+  if (filter === "estimate") return crmFiles.filter((file) => ["Pending Estimate", "Estimate Sent", "In Negotiation"].includes(file.fileStatus));
+  if (filter === "inspection") return crmFiles.filter((file) => ["Inspection Scheduled", "Inspection Pending", "Inspection Completed"].includes(file.fileStatus) || file.projectStage === "Inspection" || Boolean(file.inspectionDate));
+  if (filter === "won") return crmFiles.filter((file) => ["Job Won", "In Progress", "Work Completed", "Closing Call / Invoice Sent"].includes(file.fileStatus));
+  if (filter === "active") return crmFiles.filter((file) => ["Job Won", "In Progress"].includes(file.fileStatus) || ["Scheduled", "In Progress"].includes(file.projectStage));
+  if (filter === "review") return crmFiles.filter((file) => ["Work Completed", "Closing Call / Invoice Sent", "Review Sent / Post-Care"].includes(file.fileStatus) || ["Ready to Request", "Requested"].includes(file.reviewStatus));
+  if (filter === "archive") return crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus));
   return crmFiles;
 }
 
 function renderCounts() {
-  const tomorrow = todayIso(1);
-  $("tomorrowCount").textContent = crmFiles.filter((file) => file.nextActionDate === tomorrow || file.inspectionDate === tomorrow || file.startDate === tomorrow).length;
-  $("newLeadCount").textContent = crmFiles.filter((file) => file.fileStatus === "New Lead" || file.fileStatus === "Contact Pending").length;
-  $("pendingEstimateCount").textContent = crmFiles.filter((file) => ["Estimate Pending", "Estimate Completed", "Estimate Sent"].includes(file.fileStatus)).length;
-  $("inspectionCount").textContent = crmFiles.filter((file) => file.fileStatus === "Inspection Scheduled" || file.projectStage === "Inspection" || Boolean(file.inspectionDate)).length;
-  $("wonJobCount").textContent = crmFiles.filter((file) => ["Approved", "Start Date Set", "Job Scheduled", "In Progress"].includes(file.fileStatus)).length;
-  $("activeJobCount").textContent = crmFiles.filter((file) => ["Scheduled", "In Progress"].includes(file.projectStage) || ["Start Date Set", "Job Scheduled", "In Progress"].includes(file.fileStatus)).length;
-  $("reviewCount").textContent = crmFiles.filter((file) => ["Ready to Request", "Requested"].includes(file.reviewStatus) || file.fileStatus === "Review Requested").length;
+  $("allFilesCount").textContent = crmFiles.filter(isOpenCrmFile).length;
+  $("newLeadCount").textContent = crmFiles.filter((file) => ["New Lead", "Initial Contact", "Contact Pending"].includes(file.fileStatus)).length;
+  $("pendingEstimateCount").textContent = crmFiles.filter((file) => ["Pending Estimate", "Estimate Sent", "In Negotiation"].includes(file.fileStatus)).length;
+  $("inspectionCount").textContent = crmFiles.filter((file) => ["Inspection Scheduled", "Inspection Pending", "Inspection Completed"].includes(file.fileStatus) || file.projectStage === "Inspection" || Boolean(file.inspectionDate)).length;
+  $("wonJobCount").textContent = crmFiles.filter((file) => ["Job Won", "In Progress", "Work Completed", "Closing Call / Invoice Sent"].includes(file.fileStatus)).length;
+  $("activeJobCount").textContent = crmFiles.filter((file) => ["Job Won", "In Progress"].includes(file.fileStatus) || ["Scheduled", "In Progress"].includes(file.projectStage)).length;
+  $("reviewCount").textContent = crmFiles.filter((file) => ["Work Completed", "Closing Call / Invoice Sent", "Review Sent / Post-Care"].includes(file.fileStatus) || ["Ready to Request", "Requested"].includes(file.reviewStatus)).length;
 }
 
 function renderFileList() {
@@ -394,10 +392,35 @@ function renderFileList() {
   });
 }
 
+function renderMaterialBreakdown(file) {
+  const container = $("crmMaterialBreakdown");
+  if (!container) return;
+  const materials = Array.isArray(file?.materialItems) ? file.materialItems : [];
+  if (!materials.length) {
+    container.innerHTML = `<p class="crm-empty-state">No estimate materials attached yet.</p>`;
+    return;
+  }
+  container.innerHTML = `
+    <div class="crm-material-heading">
+      <span>Materials from Estimate</span>
+      <strong>${crmCurrency.format(Number(file.materialTotal) || materials.reduce((sum, item) => sum + (Number(item.total) || materialItemCost(item)), 0))}</strong>
+    </div>
+    <div class="crm-material-list">
+      ${materials.map((item) => `
+        <div class="crm-material-row">
+          <span>${escapeHtml(item.name || "Material")}</span>
+          <small>${escapeHtml(item.qty || "")}${item.unit ? ` ${escapeHtml(item.unit)}` : ""}</small>
+          <strong>${crmCurrency.format(Number(item.total) || materialItemCost(item))}</strong>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderActiveFile() {
   const file = normalizeCrmFile(activeFile());
   if (!file) {
-    $("activeFileNumber").textContent = "No file selected";
+    $("activeFileNumber").textContent = "No project selected";
     $("activeClientName").textContent = "Create or select a customer file";
     crmFields.forEach((field) => {
       const element = $(`crm${field[0].toUpperCase()}${field.slice(1)}`);
@@ -405,25 +428,34 @@ function renderActiveFile() {
     });
     $("crmEstimateTotal").textContent = crmCurrency.format(0);
     $("crmDepositTotal").textContent = crmCurrency.format(0);
+    $("crmMidpointDepositTotal").textContent = crmCurrency.format(0);
     $("crmMaterialTotal").textContent = crmCurrency.format(0);
     $("crmBalanceTotal").textContent = crmCurrency.format(0);
-    $("crmLeadValueTotal").textContent = crmCurrency.format(0);
+    $("crmStatusDescription").textContent = "";
+    renderMaterialBreakdown(null);
     $("crmNewNote").value = "";
     $("crmNoteList").innerHTML = `<p class="crm-empty-state">No file selected.</p>`;
     $("crmTimeline").innerHTML = "<p>No timeline activity yet.</p>";
     return;
   }
-  $("activeFileNumber").textContent = file.fileNumber;
+  $("activeFileNumber").textContent = `Project # ${file.fileNumber}`;
   $("activeClientName").textContent = file.clientName || "Unnamed Client";
   crmFields.forEach((field) => {
     const element = $(`crm${field[0].toUpperCase()}${field.slice(1)}`);
     if (element) element.value = file[field] || "";
   });
-  $("crmEstimateTotal").textContent = crmCurrency.format(Number(file.estimateTotal) || 0);
-  $("crmDepositTotal").textContent = crmCurrency.format(Number(file.depositTotal) || 0);
+  const estimateTotal = Number(file.estimateTotal) || 0;
+  const initialDeposit = Number(file.initialDeposit) || Number(file.depositTotal) || 0;
+  const midpointDeposit = Number(file.midpointDeposit) || 0;
+  const paidInFull = file.paidInFull === "Yes";
+  const securedTotal = paidInFull ? estimateTotal : initialDeposit + midpointDeposit;
+  $("crmEstimateTotal").textContent = crmCurrency.format(estimateTotal);
+  $("crmDepositTotal").textContent = crmCurrency.format(initialDeposit);
+  $("crmMidpointDepositTotal").textContent = crmCurrency.format(midpointDeposit);
   $("crmMaterialTotal").textContent = crmCurrency.format(Number(file.materialTotal) || 0);
-  $("crmBalanceTotal").textContent = crmCurrency.format(Math.max((Number(file.estimateTotal) || 0) - (Number(file.depositTotal) || 0), 0));
-  $("crmLeadValueTotal").textContent = crmCurrency.format(Number(file.leadValue) || 0);
+  $("crmBalanceTotal").textContent = crmCurrency.format(Math.max(estimateTotal - securedTotal, 0));
+  $("crmStatusDescription").textContent = CRM_STATUS_DESCRIPTIONS[file.fileStatus] || "";
+  renderMaterialBreakdown(file);
   $("crmNewNote").value = "";
   renderNotes(file);
   $("crmTimeline").innerHTML = (file.timeline || []).map((entry) => `<div>${escapeHtml(entry)}</div>`).join("") || "<p>No timeline activity yet.</p>";
@@ -444,6 +476,71 @@ function saveActiveFile() {
   });
   if (!file.timeline) file.timeline = [];
   saveCrmFiles();
+}
+
+function addSystemNote(file, text) {
+  if (!text) return;
+  const timestamp = new Date().toISOString();
+  file.notes = [...(file.notes || []), { at: timestamp, text }];
+  file.timeline = [...(file.timeline || []), `Workflow note added ${formatNoteTimestamp(timestamp)}`];
+}
+
+function handleStatusWorkflow() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  const status = $("crmFileStatus").value;
+  $("crmStatusDescription").textContent = CRM_STATUS_DESCRIPTIONS[status] || "";
+
+  if (["Estimate Sent", "In Negotiation"].includes(status) && !$("crmFollowUpDate").value) {
+    const followUp = window.prompt("Set a follow-up date for the business calendar. Use YYYY-MM-DD.");
+    if (followUp) {
+      $("crmFollowUpDate").value = followUp;
+      $("crmNextActionDate").value = followUp;
+      $("crmNextAction").value = status === "Estimate Sent" ? "Follow up on sent estimate" : "Follow up on negotiation";
+    }
+  }
+
+  if (status === "Job Won" && $("crmDepositSecured").value !== "Yes") {
+    const reason = window.prompt("Deposit is not secured yet. Add a note explaining why.");
+    if (reason) addSystemNote(file, `Deposit not secured at Job Won: ${reason}`);
+    $("crmNextAction").value = "Secure initial deposit";
+  }
+
+  if (status === "In Progress") {
+    if (!$("crmAnticipatedCompletionDate").value) {
+      const completion = window.prompt("Set the anticipated completion date. Use YYYY-MM-DD.");
+      if (completion) $("crmAnticipatedCompletionDate").value = completion;
+    }
+    if (!$("crmMidpointDeposit").value) {
+      const reason = window.prompt("Midpoint deposit is not entered yet. Add a note explaining why.");
+      if (reason) addSystemNote(file, `Midpoint deposit not secured: ${reason}`);
+    }
+  }
+
+  if (status === "Work Completed") {
+    if ($("crmClosingCallCompleted").value !== "Yes") $("crmNextAction").value = "Complete closing call";
+    if ($("crmFinalPaymentSecured").value !== "Yes") {
+      const reason = window.prompt("Final payment is not secured yet. Add a note explaining why.");
+      if (reason) addSystemNote(file, `Final payment not secured at completion: ${reason}`);
+    }
+    if ($("crmReviewSent").value !== "Yes") {
+      window.alert("Send the review request before moving this file to Review Sent / Post-Care or Closed / Paid.");
+    }
+  }
+
+  if (status === "Closed / Paid") {
+    $("crmPaidInFull").value = "Yes";
+    $("crmFinalPaymentSecured").value = "Yes";
+    $("crmReviewSent").value = "Yes";
+    $("crmNextAction").value = "Archived for future marketing";
+  }
+
+  if (status === "Job Lost / Closed") {
+    $("crmNextAction").value = "Archived for future marketing";
+  }
+
+  saveActiveFile();
+  renderCrm();
 }
 
 function formatNoteTimestamp(value) {
@@ -489,7 +586,7 @@ function addCrmNote() {
 function newCrmFile() {
   saveActiveFile();
   const file = {
-    id: `file-${Date.now()}`,
+    id: makeCrmId("file"),
     fileNumber: makeCrmFileNumber(),
     clientName: "",
     clientPhone: "",
@@ -497,22 +594,30 @@ function newCrmFile() {
     projectAddress: "",
     leadSource: "Manual",
     fileStatus: "New Lead",
-    contactStatus: "Pending",
-    customerTemperature: "Warm",
     projectType: "Other",
     projectStage: "Lead",
+    contactEmailSent: "No",
+    contactTextSent: "No",
     inspectionDate: "",
     inspectionTime: "",
     startDate: "",
     arrivalWindow: "Open",
+    followUpDate: "",
+    anticipatedCompletionDate: "",
     nextAction: "Contact customer",
     nextActionDate: todayIso(1),
     warrantyStatus: "Not Sent",
-    leadValue: 0,
+    depositSecured: "No",
+    initialDeposit: "",
+    midpointDeposit: "",
+    paidInFull: "No",
+    closingCallCompleted: "No",
+    finalPaymentSecured: "No",
+    finalPaymentAmount: "",
+    reviewSent: "No",
     estimateStatus: "Not Started",
     invoiceStatus: "Not Created",
     reviewStatus: "Not Ready",
-    lossReason: "",
     estimateTotal: 0,
     depositTotal: 0,
     materialTotal: 0,
@@ -550,6 +655,44 @@ function deleteActiveFile() {
   renderCrm();
 }
 
+function openActiveEstimate(target = "") {
+  saveActiveFile();
+  const file = activeFile();
+  if (!file) {
+    window.alert("Select a customer file first.");
+    return;
+  }
+  if (!file.editableEstimate) {
+    window.alert("This customer file does not have an attached editable estimate yet. Import an approved estimate first.");
+    return;
+  }
+  try {
+    localStorage.setItem("d2EstimateStudio", JSON.stringify(file.editableEstimate));
+  } catch (error) {
+    window.alert("The estimate could not be loaded into this browser. Try refreshing and opening it again.");
+    return;
+  }
+  window.open(`index.html${target}`, "_blank", "noopener");
+}
+
+function searchCrmFile() {
+  const query = String($("crmFileSearch").value || "").trim().toLowerCase();
+  if (!query) return;
+  const match = crmFiles.find((file) => {
+    return String(file.fileNumber || "").toLowerCase().includes(query)
+      || String(file.clientName || "").toLowerCase().includes(query)
+      || String(file.projectAddress || "").toLowerCase().includes(query);
+  });
+  if (!match) {
+    window.alert("No matching project file was found.");
+    return;
+  }
+  saveActiveFile();
+  activeFileId = match.id;
+  $("crmFileFilter").value = "all";
+  renderCrm();
+}
+
 function renderCrm() {
   renderCounts();
   renderFileList();
@@ -561,6 +704,52 @@ function parseMoney(value) {
   const cleaned = String(value || "").replace(/[$,]/g, "").trim();
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function materialItemCost(item) {
+  const qty = parseMoney(item.qty || item.quantity || 0);
+  const price = parseMoney(item.price || item.unitCost || item.cost || 0);
+  return qty * price;
+}
+
+function estimateMaterialItems(data) {
+  if (!Array.isArray(data.materialItems)) return [];
+  return data.materialItems
+    .filter((item) => String(item.name || "").trim() || materialItemCost(item))
+    .map((item) => ({
+      name: String(item.name || "Material").trim(),
+      qty: item.qty || item.quantity || "",
+      unit: item.unit || "",
+      price: parseMoney(item.price || item.unitCost || item.cost || 0),
+      total: materialItemCost(item),
+    }));
+}
+
+function estimateMaterialTotal(data) {
+  if (data && data.backend && Number(data.backend.estimatedMaterialCost)) {
+    return Number(data.backend.estimatedMaterialCost) || 0;
+  }
+  if (Array.isArray(data.materialItems)) {
+    return data.materialItems.reduce((total, item) => total + materialItemCost(item), 0);
+  }
+  return 0;
+}
+
+function estimateReceiptNotes(data) {
+  if (!Array.isArray(data.materialItems) || !data.materialItems.length) return "";
+  return data.materialItems
+    .filter((item) => String(item.name || "").trim() || materialItemCost(item))
+    .map((item) => {
+      const qty = item.qty || item.quantity || "";
+      const price = parseMoney(item.price || item.unitCost || item.cost || 0);
+      const total = materialItemCost(item);
+      const parts = [String(item.name || "Material").trim()];
+      if (qty !== "") parts.push(`qty ${qty}`);
+      if (price) parts.push(crmCurrency.format(price));
+      if (total) parts.push(`total ${crmCurrency.format(total)}`);
+      return parts.join(" - ");
+    })
+    .join("\n");
 }
 
 function normalizeDate(value) {
@@ -578,20 +767,242 @@ function displayDate(value) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function parseEstimateFileText(text) {
+  const raw = String(text || "").trim().replace(/^\uFEFF/, "");
+  if (!raw) throw new Error("The file is empty.");
+  if (raw.startsWith("%PDF")) throw new Error("That is a PDF. Please upload the editable .d2estimate file.");
+  if (/^<!doctype html|^<html/i.test(raw)) throw new Error("That is an HTML copy. Please upload the editable .d2estimate file.");
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(raw.slice(start, end + 1));
+    throw error;
+  }
+}
+
+function isUsableEstimateNumber(value) {
+  const text = String(value || "").trim();
+  return Boolean(text) && text.toLowerCase() !== "estimate";
+}
+
+function estimateFileNumber(data, row) {
+  const estimateNumber = data?.estimateNumber || row?.attachedEstimate?.estimateNumber || row?.attachedEstimate?.fileNumber;
+  return isUsableEstimateNumber(estimateNumber) ? String(estimateNumber).trim() : makeCrmFileNumber();
+}
+
+function revenueRowFromEstimate(data, fileName) {
+  if (!data || typeof data !== "object") throw new Error("That estimate file could not be read.");
+  const estimateNumber = estimateFileNumber(data);
+  const clientName = data.clientName || "Unnamed Client";
+  const gross = Number(data.totals && data.totals.total) || parseMoney(data.total) || 0;
+  const expenses = estimateMaterialTotal(data);
+  const labor = 0;
+  return {
+    id: makeCrmId("rev-estimate"),
+    date: normalizeDate(data.date || data.submittedAt || todayIso(0)),
+    clientJob: `${clientName} - ${estimateNumber}`,
+    gross,
+    expenses,
+    labor,
+    profit: gross - expenses - labor,
+    receiptNotes: estimateReceiptNotes(data),
+    laborAssigns: "",
+    attachedEstimate: {
+      fileName: fileName || "",
+      estimateNumber,
+      clientName,
+      clientPhone: data.clientPhone || "",
+      clientEmail: data.clientEmail || "",
+      projectAddress: data.clientAddress || data.projectAddress || "",
+      total: gross,
+      materialTotal: expenses,
+      materialItems: estimateMaterialItems(data),
+      savedAt: new Date().toISOString(),
+    },
+  };
+}
+
+function dashboardFileFromEstimate(data, row) {
+  const importedAt = new Date().toISOString();
+  const estimateNumber = estimateFileNumber(data, row);
+  const existing = crmFiles.find((file) => file.fileNumber === estimateNumber);
+  const estimateDeposit = Number(data.totals && data.totals.deposit) || 0;
+  const file = {
+    ...(existing || {}),
+    id: existing?.id || makeCrmId("file"),
+    fileNumber: estimateNumber,
+    clientName: data.clientName || row.attachedEstimate?.clientName || "Unnamed Client",
+    clientPhone: data.clientPhone || "",
+    clientEmail: data.clientEmail || "",
+    projectAddress: data.projectAddress || data.clientAddress || "",
+    leadSource: data.leadSource || existing?.leadSource || "Estimate Upload",
+    fileStatus: data.fileStatus || existing?.fileStatus || "New Lead",
+    projectType: data.projectType || existing?.projectType || "Other",
+    projectStage: existing?.projectStage || "Lead",
+    contactEmailSent: existing?.contactEmailSent || "No",
+    contactTextSent: existing?.contactTextSent || "No",
+    inspectionDate: data.inspectionDate || existing?.inspectionDate || "",
+    inspectionTime: data.inspectionTime || existing?.inspectionTime || "",
+    startDate: data.assignmentStartDate || existing?.startDate || "",
+    arrivalWindow: data.assignmentArrivalTime || existing?.arrivalWindow || "Open",
+    followUpDate: existing?.followUpDate || "",
+    anticipatedCompletionDate: existing?.anticipatedCompletionDate || "",
+    nextAction: data.nextAction || existing?.nextAction || "Review estimate and contact customer",
+    nextActionDate: data.nextActionDate || existing?.nextActionDate || todayIso(1),
+    warrantyStatus: data.warrantyStatus || existing?.warrantyStatus || "Not Sent",
+    depositSecured: existing?.depositSecured || (estimateDeposit > 0 ? "Yes" : "No"),
+    initialDeposit: existing?.initialDeposit === undefined ? estimateDeposit || "" : existing.initialDeposit,
+    midpointDeposit: existing?.midpointDeposit || "",
+    paidInFull: existing?.paidInFull || "No",
+    closingCallCompleted: existing?.closingCallCompleted || "No",
+    finalPaymentSecured: existing?.finalPaymentSecured || "No",
+    finalPaymentAmount: existing?.finalPaymentAmount || "",
+    reviewSent: existing?.reviewSent || "No",
+    estimateStatus: data.estimateStatus || existing?.estimateStatus || "Estimate Completed",
+    invoiceStatus: existing?.invoiceStatus || "Not Created",
+    reviewStatus: existing?.reviewStatus || "Not Ready",
+    estimateTotal: Number(row.gross) || 0,
+    depositTotal: estimateDeposit,
+    materialTotal: Number(row.expenses) || 0,
+    materialItems: estimateMaterialItems(data),
+    editableEstimate: data,
+    notes: Array.isArray(existing?.notes) && existing.notes.length
+      ? existing.notes
+      : [{ at: importedAt, text: data.notes || "Estimate uploaded into Revenue. Treat as a new lead/customer file." }],
+    timeline: [
+      ...(Array.isArray(existing?.timeline) ? existing.timeline : []),
+      existing ? `Estimate file updated ${formatNoteTimestamp(importedAt)}` : `Estimate file uploaded ${formatNoteTimestamp(importedAt)}`,
+    ],
+  };
+  return file;
+}
+
+function dashboardApprovedFileFromEstimate(data, row) {
+  const file = dashboardFileFromEstimate(data, row);
+  const importedAt = new Date().toISOString();
+  return {
+    ...file,
+    fileStatus: "Job Won",
+    projectStage: "Scheduled",
+    estimateStatus: "Approved",
+    invoiceStatus: "Not Created",
+    nextAction: "Set start date, create invoice, and prepare assignment",
+    nextActionDate: todayIso(1),
+    notes: [
+      ...(Array.isArray(file.notes) ? file.notes : []),
+      { at: importedAt, text: "Approved estimate imported. Next step: set start date, prepare invoice/deposit, and build assignment." },
+    ],
+    timeline: [...(Array.isArray(file.timeline) ? file.timeline : []), `Approved estimate imported ${formatNoteTimestamp(importedAt)}`],
+  };
+}
+
+function upsertDashboardFileFromEstimate(data, row, options = {}) {
+  const file = options.approved ? dashboardApprovedFileFromEstimate(data, row) : dashboardFileFromEstimate(data, row);
+  const existingIndex = crmFiles.findIndex((entry) => entry.id === file.id || entry.fileNumber === file.fileNumber);
+  if (existingIndex >= 0) {
+    crmFiles[existingIndex] = file;
+  } else {
+    crmFiles.unshift(file);
+  }
+  row.dashboardFileId = file.id;
+  row.attachedEstimate = {
+    ...(row.attachedEstimate || {}),
+    dashboardFileId: file.id,
+    fileNumber: file.fileNumber,
+  };
+  activeFileId = file.id;
+  saveCrmFiles();
+  return file;
+}
+
+function createDashboardFileFromRevenueRow(row) {
+  const estimate = row.attachedEstimate || {};
+  const importedAt = new Date().toISOString();
+  const file = {
+    id: makeCrmId("file"),
+    fileNumber: estimate.fileNumber || estimate.estimateNumber || makeCrmFileNumber(),
+    clientName: estimate.clientName || row.clientJob || "Unnamed Client",
+    clientPhone: estimate.clientPhone || "",
+    clientEmail: estimate.clientEmail || "",
+    projectAddress: estimate.projectAddress || "",
+    leadSource: "Estimate Upload",
+    fileStatus: "New Lead",
+    projectType: "Other",
+    projectStage: "Lead",
+    contactEmailSent: "No",
+    contactTextSent: "No",
+    inspectionDate: "",
+    inspectionTime: "",
+    startDate: "",
+    arrivalWindow: "Open",
+    followUpDate: "",
+    anticipatedCompletionDate: "",
+    nextAction: "Review estimate and contact customer",
+    nextActionDate: todayIso(1),
+    warrantyStatus: "Not Sent",
+    depositSecured: "No",
+    initialDeposit: "",
+    midpointDeposit: "",
+    paidInFull: "No",
+    closingCallCompleted: "No",
+    finalPaymentSecured: "No",
+    finalPaymentAmount: "",
+    reviewSent: "No",
+    estimateStatus: "Estimate Completed",
+    invoiceStatus: "Not Created",
+    reviewStatus: "Not Ready",
+    estimateTotal: Number(row.gross) || 0,
+    depositTotal: 0,
+    materialTotal: Number(row.expenses) || 0,
+    materialItems: Array.isArray(estimate.materialItems) ? estimate.materialItems : [],
+    notes: [{ at: importedAt, text: "Lead file created from an attached Revenue estimate." }],
+    timeline: [`Revenue estimate linked ${formatNoteTimestamp(importedAt)}`],
+  };
+  crmFiles.unshift(file);
+  row.dashboardFileId = file.id;
+  row.attachedEstimate = {
+    ...estimate,
+    dashboardFileId: file.id,
+    fileNumber: file.fileNumber,
+  };
+  activeFileId = file.id;
+  saveCrmFiles();
+  saveRevenueRows();
+  return file;
+}
+
 function revenueTotals() {
   return crmRevenueRows.reduce(
     (totals, row) => {
       totals.gross += Number(row.gross) || 0;
       totals.expenses += Number(row.expenses) || 0;
       totals.labor += Number(row.labor) || 0;
-      totals.profit += Number(row.profit) || ((Number(row.gross) || 0) - (Number(row.expenses) || 0) - (Number(row.labor) || 0));
+      totals.profit += revenueProfit(row);
       return totals;
     },
     { gross: 0, expenses: 0, labor: 0, profit: 0 },
   );
 }
 
+function revenueProfit(row) {
+  return (Number(row.gross) || 0) - (Number(row.expenses) || 0) - (Number(row.labor) || 0);
+}
+
 function findFileForRevenue(row) {
+  if (row.dashboardFileId) {
+    const linkedFile = crmFiles.find((file) => file.id === row.dashboardFileId);
+    if (linkedFile) return linkedFile;
+  }
+  if (row.attachedEstimate?.dashboardFileId) {
+    const linkedFile = crmFiles.find((file) => file.id === row.attachedEstimate.dashboardFileId);
+    if (linkedFile) return linkedFile;
+  }
+  if (row.attachedEstimate?.fileNumber) {
+    const numberedFile = crmFiles.find((file) => file.fileNumber === row.attachedEstimate.fileNumber);
+    if (numberedFile) return numberedFile;
+  }
   const needle = String(row.clientJob || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!needle) return null;
   return crmFiles.find((file) => {
@@ -612,18 +1023,21 @@ function renderRevenue() {
       const file = findFileForRevenue(row);
       return `
         <tr class="${row.id === activeRevenueId ? "active" : ""}">
-          <td>${escapeHtml(displayDate(row.date))}</td>
+          <td><input class="crm-revenue-input crm-revenue-date" type="date" value="${escapeHtml(row.date || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="date"></td>
           <td>
-            <strong>${escapeHtml(row.clientJob || "Unnamed Job")}</strong>
+            <input class="crm-revenue-input crm-revenue-job" type="text" value="${escapeHtml(row.clientJob || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="clientJob" placeholder="Client / job">
             ${file ? `<small>${escapeHtml(file.fileNumber)}</small>` : ""}
           </td>
-          <td>${crmCurrency.format(Number(row.gross) || 0)}</td>
-          <td>${crmCurrency.format(Number(row.expenses) || 0)}</td>
-          <td>${crmCurrency.format(Number(row.labor) || 0)}</td>
-          <td>${crmCurrency.format(Number(row.profit) || 0)}</td>
-          <td>${escapeHtml(row.receiptNotes || "")}</td>
-          <td>${escapeHtml(row.laborAssigns || "")}</td>
-          <td><button type="button" data-revenue-id="${escapeHtml(row.id)}">View</button></td>
+          <td><input class="crm-revenue-input crm-money-input" inputmode="decimal" value="${escapeHtml(Number(row.gross) || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="gross" placeholder="0"></td>
+          <td><input class="crm-revenue-input crm-money-input" inputmode="decimal" value="${escapeHtml(Number(row.expenses) || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="expenses" placeholder="0"></td>
+          <td><input class="crm-revenue-input crm-money-input" inputmode="decimal" value="${escapeHtml(Number(row.labor) || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="labor" placeholder="0"></td>
+          <td><strong class="crm-profit-value">${crmCurrency.format(revenueProfit(row))}</strong></td>
+          <td><textarea class="crm-revenue-input crm-revenue-notes" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="receiptNotes" placeholder="Receipt notes">${escapeHtml(row.receiptNotes || "")}</textarea></td>
+          <td><input class="crm-revenue-input" type="text" value="${escapeHtml(row.laborAssigns || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="laborAssigns" placeholder="Labor"></td>
+          <td class="crm-revenue-actions">
+            <button type="button" data-revenue-id="${escapeHtml(row.id)}">View</button>
+            <button type="button" data-revenue-delete="${escapeHtml(row.id)}">Delete</button>
+          </td>
         </tr>
       `;
     })
@@ -633,6 +1047,21 @@ function renderRevenue() {
     button.addEventListener("click", () => {
       activeRevenueId = button.dataset.revenueId;
       renderRevenue();
+      window.setTimeout(() => {
+        $("crmExpenseDetail")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 50);
+    });
+  });
+  document.querySelectorAll("[data-revenue-delete]").forEach((button) => {
+    button.addEventListener("click", () => deleteRevenueRow(button.dataset.revenueDelete));
+  });
+  document.querySelectorAll("[data-revenue-edit]").forEach((field) => {
+    field.addEventListener("change", () => updateRevenueField(field));
+    field.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && field.tagName !== "TEXTAREA") {
+        event.preventDefault();
+        field.blur();
+      }
     });
   });
   renderExpenseDetail();
@@ -652,20 +1081,108 @@ function renderExpenseDetail() {
       <div><dt>Gross</dt><dd>${crmCurrency.format(Number(row.gross) || 0)}</dd></div>
       <div><dt>Expenses</dt><dd>${crmCurrency.format(Number(row.expenses) || 0)}</dd></div>
       <div><dt>Labor</dt><dd>${crmCurrency.format(Number(row.labor) || 0)}</dd></div>
-      <div><dt>Profit</dt><dd>${crmCurrency.format(Number(row.profit) || 0)}</dd></div>
+      <div><dt>Profit</dt><dd>${crmCurrency.format(revenueProfit(row))}</dd></div>
     </dl>
-    <p><strong>Receipt Notes</strong><br>${escapeHtml(row.receiptNotes || "No receipt notes added.")}</p>
-    <p><strong>Labor Assigns</strong><br>${escapeHtml(row.laborAssigns || "No labor assignment added.")}</p>
-    ${file ? `<button type="button" class="icon-button" id="crmOpenRevenueFile">Open Customer File</button>` : `<p class="crm-empty-state">No matching customer file linked yet.</p>`}
+    <label class="crm-revenue-editor">
+      <span>Receipt Notes</span>
+      <textarea rows="7" data-expense-detail-field="receiptNotes">${escapeHtml(row.receiptNotes || "")}</textarea>
+    </label>
+    <label class="crm-revenue-editor">
+      <span>Labor Assigns</span>
+      <input type="text" value="${escapeHtml(row.laborAssigns || "")}" data-expense-detail-field="laborAssigns">
+    </label>
+    ${
+      row.attachedEstimate
+        ? `<div class="crm-attached-estimate">
+            <p class="eyebrow">Attached Estimate</p>
+            <strong>${escapeHtml(row.attachedEstimate.estimateNumber || "Estimate")}</strong>
+            <span>${escapeHtml(row.attachedEstimate.clientName || row.clientJob || "")}</span>
+            <span>${escapeHtml(row.attachedEstimate.fileName || "")}</span>
+            <em>Next: open the lead file, contact the customer, and schedule the inspection or follow-up.</em>
+          </div>`
+        : `<p class="crm-empty-state">No estimate file attached yet.</p>`
+    }
+    <div class="crm-add-expense">
+      <label>
+        <span>New Expense Note</span>
+        <input type="text" id="crmExpenseVendor" placeholder="Home Depot, Sherwin, Amazon">
+      </label>
+      <label>
+        <span>Amount</span>
+        <input type="text" inputmode="decimal" id="crmExpenseAmount" placeholder="0.00">
+      </label>
+      <button type="button" id="crmAddExpenseLine">Add Expense</button>
+    </div>
+    ${
+      file || row.attachedEstimate
+        ? `<button type="button" class="icon-button" id="crmOpenRevenueFile">${file ? "Open Lead File" : "Create Lead File"}</button>`
+        : `<p class="crm-empty-state">No matching customer file linked yet.</p>`
+    }
   `;
+  document.querySelectorAll("[data-expense-detail-field]").forEach((field) => {
+    field.addEventListener("change", () => {
+      row[field.dataset.expenseDetailField] = field.value;
+      saveRevenueRows();
+      renderRevenue();
+    });
+  });
+  const addExpenseButton = $("crmAddExpenseLine");
+  if (addExpenseButton) {
+    addExpenseButton.addEventListener("click", () => addExpenseLine(row.id));
+  }
   const openButton = $("crmOpenRevenueFile");
-  if (openButton && file) {
+  if (openButton && (file || row.attachedEstimate)) {
     openButton.addEventListener("click", () => {
-      activeFileId = file.id;
+      const linkedFile = file || createDashboardFileFromRevenueRow(row);
+      activeFileId = linkedFile.id;
       switchCrmView("dashboard");
       renderCrm();
     });
   }
+}
+
+function updateRevenueField(field) {
+  const row = crmRevenueRows.find((entry) => entry.id === field.dataset.revenueEdit);
+  if (!row) return;
+  const key = field.dataset.revenueField;
+  if (["gross", "expenses", "labor"].includes(key)) {
+    row[key] = parseMoney(field.value);
+  } else if (key === "date") {
+    row[key] = normalizeDate(field.value);
+  } else {
+    row[key] = field.value;
+  }
+  row.profit = revenueProfit(row);
+  activeRevenueId = row.id;
+  saveRevenueRows();
+  renderRevenue();
+}
+
+function addExpenseLine(rowId) {
+  const row = crmRevenueRows.find((entry) => entry.id === rowId);
+  if (!row) return;
+  const vendor = $("crmExpenseVendor").value.trim();
+  const amount = parseMoney($("crmExpenseAmount").value);
+  if (!vendor && !amount) {
+    window.alert("Add an expense note or amount first.");
+    return;
+  }
+  const note = amount ? `${vendor || "Expense"}: ${crmCurrency.format(amount)}` : vendor;
+  row.receiptNotes = [row.receiptNotes, note].filter(Boolean).join("\n");
+  row.expenses = (Number(row.expenses) || 0) + amount;
+  row.profit = revenueProfit(row);
+  saveRevenueRows();
+  renderRevenue();
+}
+
+function deleteRevenueRow(rowId) {
+  const row = crmRevenueRows.find((entry) => entry.id === rowId);
+  if (!row) return;
+  if (!window.confirm(`Delete the revenue row for ${row.clientJob || "this job"}?`)) return;
+  crmRevenueRows = crmRevenueRows.filter((entry) => entry.id !== rowId);
+  activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
+  saveRevenueRows();
+  renderRevenue();
 }
 
 function parseRevenueImport(text) {
@@ -708,19 +1225,14 @@ function importRevenueRows() {
 }
 
 function addRevenueRow() {
-  const clientJob = window.prompt("Client / job name");
-  if (!clientJob) return;
-  const gross = parseMoney(window.prompt("Amount charged"));
-  const expenses = parseMoney(window.prompt("Expenses"));
-  const labor = parseMoney(window.prompt("Labor"));
   const row = {
-    id: `rev-${Date.now()}`,
+    id: makeCrmId("rev"),
     date: todayIso(0),
-    clientJob,
-    gross,
-    expenses,
-    labor,
-    profit: gross - expenses - labor,
+    clientJob: "",
+    gross: 0,
+    expenses: 0,
+    labor: 0,
+    profit: 0,
     receiptNotes: "",
     laborAssigns: "",
   };
@@ -728,6 +1240,48 @@ function addRevenueRow() {
   activeRevenueId = row.id;
   saveRevenueRows();
   renderRevenue();
+}
+
+function uploadEstimateToRevenue(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const data = parseEstimateFileText(reader.result);
+      const row = revenueRowFromEstimate(data, file.name);
+      const dashboardFile = upsertDashboardFileFromEstimate(data, row);
+      crmRevenueRows.unshift(row);
+      activeRevenueId = row.id;
+      saveRevenueRows();
+      renderRevenue();
+      window.alert(`${dashboardFile.clientName || "Customer"} was added as a Dashboard lead and linked to Revenue.`);
+    } catch (error) {
+      window.alert(`${error.message || "That file could not be uploaded."} Please choose an editable D2 estimate file ending in .d2estimate.`);
+    }
+  });
+  reader.readAsText(file);
+}
+
+function importApprovedEstimateFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const data = parseEstimateFileText(reader.result);
+      const row = revenueRowFromEstimate(data, file.name);
+      const dashboardFile = upsertDashboardFileFromEstimate(data, row, { approved: true });
+      crmRevenueRows.unshift(row);
+      activeRevenueId = row.id;
+      activeFileId = dashboardFile.id;
+      saveRevenueRows();
+      switchCrmView("dashboard");
+      renderCrm();
+      window.alert(`${dashboardFile.clientName || "Approved estimate"} is now your active Dashboard file.`);
+    } catch (error) {
+      window.alert(`${error.message || "That file could not be imported."} Please choose an editable D2 estimate file ending in .d2estimate.`);
+    }
+  });
+  reader.readAsText(file);
 }
 
 function switchCrmView(view) {
@@ -760,7 +1314,19 @@ document.querySelectorAll("[data-crm-filter]").forEach((button) => {
 });
 
 $("crmFileFilter").addEventListener("change", renderCrm);
+$("crmSearchFile").addEventListener("click", searchCrmFile);
+$("crmFileSearch").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    searchCrmFile();
+  }
+});
 $("crmNewFile").addEventListener("click", newCrmFile);
+$("crmImportApprovedEstimate").addEventListener("click", () => $("crmApprovedEstimateUpload").click());
+$("crmApprovedEstimateUpload").addEventListener("change", (event) => {
+  importApprovedEstimateFile(event.target.files[0]);
+  event.target.value = "";
+});
 $("crmAddNote").addEventListener("click", addCrmNote);
 $("crmNewNote").addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -775,23 +1341,32 @@ $("crmSaveDemo").addEventListener("click", () => {
 $("crmArchiveFile").addEventListener("click", () => {
   const file = activeFile();
   if (!file) return;
-  file.fileStatus = "Archived";
-  file.timeline = [...(file.timeline || []), "File archived"];
+  file.fileStatus = "Job Lost / Closed";
+  file.timeline = [...(file.timeline || []), "File archived as Job Lost / Closed"];
   saveCrmFiles();
   renderCrm();
 });
 $("crmDeleteFile").addEventListener("click", deleteActiveFile);
-$("crmOpenEstimate").addEventListener("click", () => window.open("index.html", "_blank", "noopener"));
-$("crmOpenAssignment").addEventListener("click", () => window.open("index.html#assignment", "_blank", "noopener"));
+$("crmOpenEstimate").addEventListener("click", () => openActiveEstimate(""));
+$("crmOpenAssignment").addEventListener("click", () => openActiveEstimate("#assignment"));
 $("crmImportRevenue").addEventListener("click", importRevenueRows);
 $("crmAddRevenueRow").addEventListener("click", addRevenueRow);
+$("crmUploadEstimateFile").addEventListener("click", () => $("crmEstimateFileUpload").click());
+$("crmEstimateFileUpload").addEventListener("change", (event) => {
+  uploadEstimateToRevenue(event.target.files[0]);
+  event.target.value = "";
+});
 document.querySelectorAll("[data-crm-view]").forEach((button) => {
   button.addEventListener("click", () => switchCrmView(button.dataset.crmView));
 });
 
+$("crmFileStatus").addEventListener("change", handleStatusWorkflow);
+
 document.querySelectorAll("input, select, textarea").forEach((element) => {
+  if (element.id === "crmFileStatus") return;
   element.addEventListener("change", saveActiveFile);
 });
 
+applyFreshDashboardReset();
 switchCrmView("dashboard");
 renderCrm();

@@ -17,22 +17,6 @@ const COMPANY_DEFAULTS = {
   address: "2710 Del Prado Blvd S #2-184 Cape Coral, FL 33904",
 };
 
-const PROJECT_PREFIXES = {
-  "Other": "A",
-  "Closet": "C",
-  "Cabinetry": "B",
-  "Pantry": "P",
-  "Garage": "G",
-  "Built-In": "I",
-  "Trim": "T",
-  "Reach-in closet": "R",
-  "Walk-in closet": "W",
-  "Pantry storage": "P",
-  "Garage storage": "G",
-  "Built-in cabinetry": "B",
-  "Custom carpentry": "C",
-};
-
 const COPY_MODE_LABELS = {
   customer: "Customer",
   internal: "Office",
@@ -64,8 +48,6 @@ const fields = [
   "estimateDate",
   "leadSource",
   "fileStatus",
-  "contactStatus",
-  "customerTemperature",
   "estimateStatus",
   "warrantyStatus",
   "inspectionDate",
@@ -240,21 +222,27 @@ function addDays(date, days) {
 
 function getEstimateNumberParts() {
   const date = new Date();
-  const stamp = date.toISOString().slice(2, 10).replaceAll("-", "");
-  const prefix = PROJECT_PREFIXES[$("projectType").value] || "A";
-  return { prefix, stamp, sequenceKey: `${prefix}-${stamp}` };
+  const year = String(date.getFullYear()).slice(2);
+  const sequence = readEstimateSequence();
+  for (let code = 65; code <= 90; code += 1) {
+    const series = String.fromCharCode(code);
+    const sequenceKey = `${year}-${series}`;
+    const current = sequence[sequenceKey] || 1000;
+    if (current < 9999) return { year, series, sequenceKey };
+  }
+  return { year, series: "Z", sequenceKey: `${year}-Z` };
 }
 
 function makeEstimateNumber(commit = false) {
-  const { prefix, stamp, sequenceKey } = getEstimateNumberParts();
+  const { year, series, sequenceKey } = getEstimateNumberParts();
   const sequence = readEstimateSequence();
-  const nextNumber = (sequence[sequenceKey] || 0) + 1;
+  const nextNumber = (sequence[sequenceKey] || 1000) + 1;
   if (commit) {
     sequence[sequenceKey] = nextNumber;
     writeEstimateSequence(sequence);
     state.estimateNumberCommitted = true;
   }
-  return `${prefix}-${stamp}-${String(nextNumber).padStart(3, "0")}`;
+  return `${year}-${series}${String(nextNumber).padStart(4, "0")}`;
 }
 
 function ensureEstimateNumber() {
@@ -270,10 +258,10 @@ function ensureEstimateNumber() {
 }
 
 function commitEstimateNumber(value) {
-  const match = value.match(/^([A-Z])-([0-9]{6})-([0-9]{3})$/);
+  const match = value.match(/^([0-9]{2})-([A-Z])([0-9]{4})$/);
   if (!match) return;
-  const [, prefix, stamp, number] = match;
-  const sequenceKey = `${prefix}-${stamp}`;
+  const [, year, series, number] = match;
+  const sequenceKey = `${year}-${series}`;
   const sequence = readEstimateSequence();
   sequence[sequenceKey] = Math.max(sequence[sequenceKey] || 0, Number(number));
   writeEstimateSequence(sequence);
@@ -2097,9 +2085,7 @@ function saveEstimateToLocalDashboard(payloadData) {
     clientEmail: payloadData.clientEmail || "",
     projectAddress: payloadData.projectAddress || "",
     leadSource: payloadData.leadSource || existing.leadSource || "Manual",
-    fileStatus: payloadData.fileStatus || existing.fileStatus || "Estimate Completed",
-    contactStatus: payloadData.contactStatus || existing.contactStatus || "Established",
-    customerTemperature: payloadData.customerTemperature || existing.customerTemperature || "Warm",
+    fileStatus: payloadData.fileStatus || existing.fileStatus || "Pending Estimate",
     projectType: payloadData.projectType || "Other",
     inspectionDate: payloadData.inspectionDate || existing.inspectionDate || "",
     inspectionTime: payloadData.inspectionTime || existing.inspectionTime || "",
@@ -2314,7 +2300,6 @@ function createCrmFile() {
     $("estimateDate").value = new Date().toISOString().slice(0, 10);
   }
   if (!$("fileStatus").value) $("fileStatus").value = "New Lead";
-  if (!$("contactStatus").value) $("contactStatus").value = "Pending";
   if (!$("estimateStatus").value) $("estimateStatus").value = "Pending";
   if (!$("leadSource").value) $("leadSource").value = "Manual";
   $("submitStatus").textContent = `Dashboard file ${$("estimateNumber").value} is ready. Add client info, then Save Dashboard to send it to Google Drive once connected.`;
@@ -2325,8 +2310,6 @@ function hasWorkInProgress() {
   const changedFields = [
     "leadSource",
     "fileStatus",
-    "contactStatus",
-    "customerTemperature",
     "estimateStatus",
     "warrantyStatus",
     "inspectionDate",
@@ -2512,8 +2495,6 @@ function resetEstimate() {
   $("companyAddress").value = COMPANY_DEFAULTS.address;
   $("leadSource").value = "Manual";
   $("fileStatus").value = "New Lead";
-  $("contactStatus").value = "Pending";
-  $("customerTemperature").value = "Warm";
   $("estimateStatus").value = "Pending";
   $("warrantyStatus").value = "Not Sent";
   $("inspectionDate").value = "";
@@ -2672,6 +2653,10 @@ if (new URLSearchParams(window.location.search).has("new")) {
   resetEstimate();
 } else if (!loadEstimate()) {
   resetEstimate();
+}
+
+if (window.location.hash === "#assignment") {
+  window.requestAnimationFrame(() => generateAssignmentSheet());
 }
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {

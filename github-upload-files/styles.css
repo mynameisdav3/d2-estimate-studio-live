@@ -279,6 +279,18 @@ label {
   grid-column: 1 / -1;
 }
 
+.crm-status-description {
+  margin: 0;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 input,
 select,
 textarea {
@@ -1503,6 +1515,10 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 }
 
 .crm-command-panel {
+  padding: 10px;
+}
+
+.crm-revenue-hero {
   display: grid;
   grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
   gap: 16px;
@@ -1510,13 +1526,13 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   padding: 16px;
 }
 
-.crm-command-copy {
+.crm-revenue-hero .crm-command-copy {
   display: grid;
   align-content: center;
   gap: 6px;
 }
 
-.crm-command-copy h2 {
+.crm-revenue-hero .crm-command-copy h2 {
   max-width: 520px;
   color: var(--ink);
   font-size: clamp(1.35rem, 2.2vw, 2.2rem);
@@ -1524,22 +1540,24 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 }
 
 .crm-command-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .crm-command-card {
-  display: grid;
-  min-height: 104px;
-  align-content: space-between;
-  justify-items: start;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   border: 1px solid #d7dce5;
   background: #f8fafc;
   color: var(--ink);
-  padding: 14px;
-  text-align: left;
+  padding: 9px 12px;
+  text-align: center;
   box-shadow: none;
+  white-space: nowrap;
 }
 
 .crm-command-card.active,
@@ -1557,7 +1575,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 
 .crm-command-card strong {
   color: var(--blue);
-  font-size: 2.2rem;
+  font-size: 0.98rem;
   line-height: 1;
 }
 
@@ -1600,6 +1618,24 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 .crm-panel-heading select {
   width: auto;
   min-width: 132px;
+}
+
+.crm-file-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.crm-file-search input {
+  min-width: 0;
+  flex: 1;
+}
+
+.crm-file-search button {
+  border: 1px solid #d7dce5;
+  background: #ffffff;
+  color: var(--blue);
+  padding: 0 12px;
 }
 
 .crm-file-list {
@@ -1701,6 +1737,60 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   font-size: 1.25rem;
 }
 
+.crm-money-controls {
+  margin-top: 12px;
+}
+
+.crm-material-breakdown {
+  margin-top: 12px;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.crm-material-heading,
+.crm-material-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.crm-material-heading {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #d7dce5;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.crm-material-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.crm-material-row span,
+.crm-material-row small {
+  min-width: 0;
+}
+
+.crm-material-row span {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.crm-material-row small {
+  color: var(--muted);
+}
+
+.crm-material-row strong {
+  color: var(--ink);
+  white-space: nowrap;
+}
+
 .crm-revenue-view {
   display: grid;
   gap: 18px;
@@ -1744,7 +1834,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 }
 
 .crm-revenue-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .crm-revenue-table-card {
@@ -1760,9 +1850,28 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 
 .crm-revenue-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 1280px;
   border-collapse: collapse;
   background: #ffffff;
+}
+
+.crm-revenue-table th:nth-child(1),
+.crm-revenue-table td:nth-child(1) {
+  width: 150px;
+}
+
+.crm-revenue-table th:nth-child(2),
+.crm-revenue-table td:nth-child(2) {
+  width: 330px;
+}
+
+.crm-revenue-table th:nth-child(3),
+.crm-revenue-table th:nth-child(4),
+.crm-revenue-table th:nth-child(5),
+.crm-revenue-table td:nth-child(3),
+.crm-revenue-table td:nth-child(4),
+.crm-revenue-table td:nth-child(5) {
+  width: 120px;
 }
 
 .crm-revenue-table th,
@@ -1794,6 +1903,56 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   white-space: nowrap;
 }
 
+.crm-revenue-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d5dbe6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 8px 9px;
+}
+
+.crm-revenue-input:focus {
+  outline: 2px solid rgba(28, 77, 135, 0.18);
+  border-color: var(--blue);
+}
+
+.crm-revenue-date {
+  min-width: 132px;
+}
+
+.crm-revenue-job {
+  min-width: 290px;
+}
+
+.crm-money-input {
+  max-width: 110px;
+  margin-left: auto;
+  text-align: right;
+}
+
+.crm-revenue-notes {
+  min-width: 220px;
+  min-height: 42px;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
+.crm-profit-value {
+  color: var(--blue);
+  font-weight: 900;
+}
+
+.crm-revenue-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .crm-revenue-table tr.active td {
   background: #eef4fb;
 }
@@ -1818,6 +1977,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 
 .crm-revenue-side {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
   align-content: start;
   gap: 14px;
 }
@@ -1873,6 +2033,89 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   color: var(--ink);
   font-size: 0.9rem;
   line-height: 1.45;
+}
+
+.crm-revenue-editor,
+.crm-add-expense label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.crm-revenue-editor input,
+.crm-revenue-editor textarea,
+.crm-add-expense input {
+  width: 100%;
+  border: 1px solid #d5dbe6;
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 10px;
+  text-transform: none;
+}
+
+.crm-revenue-editor textarea {
+  resize: vertical;
+  white-space: pre-wrap;
+}
+
+.crm-add-expense {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.crm-add-expense button {
+  grid-column: 1 / -1;
+  min-height: 38px;
+  box-shadow: none;
+}
+
+.crm-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.crm-attached-estimate {
+  display: grid;
+  gap: 4px;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  background: #eef4fb;
+  padding: 12px;
+}
+
+.crm-attached-estimate strong {
+  color: var(--blue);
+  font-size: 1rem;
+}
+
+.crm-attached-estimate span {
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.crm-attached-estimate em {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .crm-notes-card,
