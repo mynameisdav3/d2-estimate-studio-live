@@ -22,7 +22,6 @@ const CRM_STATUS_DESCRIPTIONS = {
   "In Progress": "Job has started. Confirm expected completion date and midpoint deposit.",
   "Work Completed": "Work is complete. Confirm closing call, review request, and final payment.",
   "Closing Call / Invoice Sent": "Final invoice is delivered and remaining balance is being secured.",
-  "Review Sent / Post-Care": "Payment is cleared. Review link and care instructions have been sent.",
   "Closed / Paid": "Job folder is archived and contact info is saved for future marketing.",
   "Job Lost / Closed": "Archive the file and save contact info for future marketing.",
 };
@@ -302,8 +301,8 @@ function normalizeCrmFile(file) {
   if (!Array.isArray(file.timeline)) file.timeline = [];
   file.projectStage = file.projectStage || inferProjectStage(file.fileStatus);
   file.estimateStatus = file.estimateStatus || inferEstimateStatus(file.fileStatus);
-  file.invoiceStatus = file.invoiceStatus || (["Closed / Paid", "Review Sent / Post-Care"].includes(file.fileStatus) ? "Paid" : "Not Created");
-  file.reviewStatus = file.reviewStatus || (["Review Sent / Post-Care", "Closed / Paid"].includes(file.fileStatus) ? "Requested" : "Not Ready");
+  file.invoiceStatus = file.invoiceStatus || (file.fileStatus === "Closed / Paid" ? "Paid" : "Not Created");
+  file.reviewStatus = file.reviewStatus || (file.fileStatus === "Closed / Paid" ? "Requested" : "Not Ready");
   file.depositSecured = file.depositSecured || (Number(file.depositTotal) > 0 ? "Yes" : "No");
   file.initialDeposit = file.initialDeposit === undefined ? file.depositTotal || "" : file.initialDeposit;
   file.midpointDeposit = file.midpointDeposit === undefined ? "" : file.midpointDeposit;
@@ -328,7 +327,6 @@ function inferProjectStage(status = "") {
   if (status === "In Progress") return "In Progress";
   if (status === "Work Completed") return "Completed";
   if (status === "Closed / Paid") return "Paid";
-  if (status === "Review Sent / Post-Care") return "Review";
   if (["Inspection Scheduled", "Inspection Pending", "Inspection Completed"].includes(status)) return "Inspection";
   if (["Pending Estimate", "Estimate Sent", "In Negotiation"].includes(status)) return "Estimate";
   if (["Closing Call / Invoice Sent"].includes(status)) return "Closing";
@@ -339,7 +337,7 @@ function inferProjectStage(status = "") {
 function inferEstimateStatus(status = "") {
   if (status === "Pending Estimate") return "Pending";
   if (status === "Estimate Sent") return "Sent";
-  if (["Job Won", "In Progress", "Work Completed", "Closing Call / Invoice Sent", "Review Sent / Post-Care", "Closed / Paid"].includes(status)) return "Approved";
+  if (["Job Won", "In Progress", "Work Completed", "Closing Call / Invoice Sent", "Closed / Paid"].includes(status)) return "Approved";
   if (status === "Job Lost / Closed") return "Declined";
   return "Not Started";
 }
@@ -356,7 +354,7 @@ function visibleFiles() {
   if (filter === "inspection") return crmFiles.filter((file) => ["Inspection Scheduled", "Inspection Pending", "Inspection Completed"].includes(file.fileStatus) || file.projectStage === "Inspection" || Boolean(file.inspectionDate));
   if (filter === "won") return crmFiles.filter((file) => ["Job Won", "In Progress", "Work Completed", "Closing Call / Invoice Sent"].includes(file.fileStatus));
   if (filter === "active") return crmFiles.filter((file) => ["Job Won", "In Progress"].includes(file.fileStatus) || ["Scheduled", "In Progress"].includes(file.projectStage));
-  if (filter === "review") return crmFiles.filter((file) => ["Work Completed", "Closing Call / Invoice Sent", "Review Sent / Post-Care"].includes(file.fileStatus) || ["Ready to Request", "Requested"].includes(file.reviewStatus));
+  if (filter === "review") return crmFiles.filter((file) => ["Work Completed", "Closing Call / Invoice Sent"].includes(file.fileStatus) || ["Ready to Request", "Requested"].includes(file.reviewStatus));
   if (filter === "archive") return crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus));
   return crmFiles;
 }
@@ -368,7 +366,8 @@ function renderCounts() {
   $("inspectionCount").textContent = crmFiles.filter((file) => ["Inspection Scheduled", "Inspection Pending", "Inspection Completed"].includes(file.fileStatus) || file.projectStage === "Inspection" || Boolean(file.inspectionDate)).length;
   $("wonJobCount").textContent = crmFiles.filter((file) => ["Job Won", "In Progress", "Work Completed", "Closing Call / Invoice Sent"].includes(file.fileStatus)).length;
   $("activeJobCount").textContent = crmFiles.filter((file) => ["Job Won", "In Progress"].includes(file.fileStatus) || ["Scheduled", "In Progress"].includes(file.projectStage)).length;
-  $("reviewCount").textContent = crmFiles.filter((file) => ["Work Completed", "Closing Call / Invoice Sent", "Review Sent / Post-Care"].includes(file.fileStatus) || ["Ready to Request", "Requested"].includes(file.reviewStatus)).length;
+  $("reviewCount").textContent = crmFiles.filter((file) => ["Work Completed", "Closing Call / Invoice Sent"].includes(file.fileStatus) || ["Ready to Request", "Requested"].includes(file.reviewStatus)).length;
+  $("archivedCount").textContent = crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus)).length;
 }
 
 function renderFileList() {
@@ -464,17 +463,27 @@ function renderActiveFile() {
 function saveActiveFile() {
   const file = normalizeCrmFile(activeFile());
   if (!file) return;
+  const changeNotes = [];
   crmFields.forEach((field) => {
     const element = $(`crm${field[0].toUpperCase()}${field.slice(1)}`);
     if (!element) return;
     const oldValue = file[field] || "";
     const newValue = element.value;
     file[field] = newValue;
+    if (oldValue !== newValue) {
+      const label = trackedStatusFields[field] || field.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
+      changeNotes.push(`${label} changed from ${oldValue || "blank"} to ${newValue || "blank"}`);
+    }
     if (trackedStatusFields[field] && oldValue && oldValue !== newValue) {
       file.timeline.push(`${trackedStatusFields[field]} changed from ${oldValue} to ${newValue} on ${formatNoteTimestamp(new Date().toISOString())}`);
     }
   });
   if (!file.timeline) file.timeline = [];
+  if (changeNotes.length) {
+    const timestamp = new Date().toISOString();
+    file.notes.push({ at: timestamp, text: changeNotes.join("\n") });
+    file.timeline.push(`File updated ${formatNoteTimestamp(timestamp)}`);
+  }
   saveCrmFiles();
 }
 
@@ -483,6 +492,19 @@ function addSystemNote(file, text) {
   const timestamp = new Date().toISOString();
   file.notes = [...(file.notes || []), { at: timestamp, text }];
   file.timeline = [...(file.timeline || []), `Workflow note added ${formatNoteTimestamp(timestamp)}`];
+}
+
+function openDateField(id) {
+  const field = $(id);
+  if (!field) return;
+  field.focus();
+  if (typeof field.showPicker === "function") {
+    try {
+      field.showPicker();
+    } catch (error) {
+      // Some browsers only allow date pickers from direct user gestures.
+    }
+  }
 }
 
 function handleStatusWorkflow() {
@@ -508,8 +530,8 @@ function handleStatusWorkflow() {
 
   if (status === "In Progress") {
     if (!$("crmAnticipatedCompletionDate").value) {
-      const completion = window.prompt("Set the anticipated completion date. Use YYYY-MM-DD.");
-      if (completion) $("crmAnticipatedCompletionDate").value = completion;
+      $("crmNextAction").value = "Set anticipated completion date";
+      openDateField("crmAnticipatedCompletionDate");
     }
     if (!$("crmMidpointDeposit").value) {
       const reason = window.prompt("Midpoint deposit is not entered yet. Add a note explaining why.");
@@ -524,7 +546,7 @@ function handleStatusWorkflow() {
       if (reason) addSystemNote(file, `Final payment not secured at completion: ${reason}`);
     }
     if ($("crmReviewSent").value !== "Yes") {
-      window.alert("Send the review request before moving this file to Review Sent / Post-Care or Closed / Paid.");
+      window.alert("Send the review request before moving this file to Closed / Paid.");
     }
   }
 
@@ -533,10 +555,12 @@ function handleStatusWorkflow() {
     $("crmFinalPaymentSecured").value = "Yes";
     $("crmReviewSent").value = "Yes";
     $("crmNextAction").value = "Archived for future marketing";
+    activateCrmFilter("archive");
   }
 
   if (status === "Job Lost / Closed") {
     $("crmNextAction").value = "Archived for future marketing";
+    activateCrmFilter("archive");
   }
 
   saveActiveFile();
@@ -689,8 +713,15 @@ function searchCrmFile() {
   }
   saveActiveFile();
   activeFileId = match.id;
-  $("crmFileFilter").value = "all";
+  activateCrmFilter("all");
   renderCrm();
+}
+
+function activateCrmFilter(filter) {
+  document.querySelectorAll("[data-crm-filter]").forEach((item) => {
+    item.classList.toggle("active", item.dataset.crmFilter === filter);
+  });
+  $("crmFileFilter").value = filter;
 }
 
 function renderCrm() {
@@ -1306,14 +1337,15 @@ function escapeHtml(value) {
 
 document.querySelectorAll("[data-crm-filter]").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll("[data-crm-filter]").forEach((item) => item.classList.remove("active"));
-    button.classList.add("active");
-    $("crmFileFilter").value = button.dataset.crmFilter;
+    activateCrmFilter(button.dataset.crmFilter);
     renderCrm();
   });
 });
 
-$("crmFileFilter").addEventListener("change", renderCrm);
+$("crmFileFilter").addEventListener("change", () => {
+  activateCrmFilter($("crmFileFilter").value);
+  renderCrm();
+});
 $("crmSearchFile").addEventListener("click", searchCrmFile);
 $("crmFileSearch").addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
@@ -1343,6 +1375,7 @@ $("crmArchiveFile").addEventListener("click", () => {
   if (!file) return;
   file.fileStatus = "Job Lost / Closed";
   file.timeline = [...(file.timeline || []), "File archived as Job Lost / Closed"];
+  activateCrmFilter("archive");
   saveCrmFiles();
   renderCrm();
 });
