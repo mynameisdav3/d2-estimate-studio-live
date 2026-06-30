@@ -9,21 +9,13 @@ const ZELLE_ID = "D2carpentry";
 const MATERIAL_PERCENT = 0.25;
 const STORAGE_KEY = "d2EstimateStudio";
 const ESTIMATE_SEQUENCE_KEY = "d2EstimateSequence";
+const DASHBOARD_STORAGE_KEY = "d2CrmDemoFiles";
+const PRICE_DATABASE_KEY = "d2PriceDatabase";
 const COMPANY_DEFAULTS = {
   name: "D2 Carpentry & Design",
   phone: "239-469-8555",
   email: "D2CarpentryandDesign@gmail.com",
   address: "2710 Del Prado Blvd S #2-184 Cape Coral, FL 33904",
-};
-
-const PROJECT_PREFIXES = {
-  "Other": "A",
-  "Reach-in closet": "R",
-  "Walk-in closet": "W",
-  "Pantry storage": "P",
-  "Garage storage": "G",
-  "Built-in cabinetry": "B",
-  "Custom carpentry": "C",
 };
 
 const COPY_MODE_LABELS = {
@@ -55,6 +47,14 @@ const fields = [
   "estimateNumber",
   "showEstimateNumber",
   "estimateDate",
+  "leadSource",
+  "fileStatus",
+  "estimateStatus",
+  "warrantyStatus",
+  "inspectionDate",
+  "inspectionTime",
+  "nextActionDate",
+  "nextAction",
   "clientName",
   "clientPhone",
   "clientEmail",
@@ -223,21 +223,27 @@ function addDays(date, days) {
 
 function getEstimateNumberParts() {
   const date = new Date();
-  const stamp = date.toISOString().slice(2, 10).replaceAll("-", "");
-  const prefix = PROJECT_PREFIXES[$("projectType").value] || "A";
-  return { prefix, stamp, sequenceKey: `${prefix}-${stamp}` };
+  const year = String(date.getFullYear()).slice(2);
+  const sequence = readEstimateSequence();
+  for (let code = 65; code <= 90; code += 1) {
+    const series = String.fromCharCode(code);
+    const sequenceKey = `${year}-${series}`;
+    const current = sequence[sequenceKey] || 1000;
+    if (current < 9999) return { year, series, sequenceKey };
+  }
+  return { year, series: "Z", sequenceKey: `${year}-Z` };
 }
 
 function makeEstimateNumber(commit = false) {
-  const { prefix, stamp, sequenceKey } = getEstimateNumberParts();
+  const { year, series, sequenceKey } = getEstimateNumberParts();
   const sequence = readEstimateSequence();
-  const nextNumber = (sequence[sequenceKey] || 0) + 1;
+  const nextNumber = (sequence[sequenceKey] || 1000) + 1;
   if (commit) {
     sequence[sequenceKey] = nextNumber;
     writeEstimateSequence(sequence);
     state.estimateNumberCommitted = true;
   }
-  return `${prefix}-${stamp}-${String(nextNumber).padStart(3, "0")}`;
+  return `${year}-${series}${String(nextNumber).padStart(4, "0")}`;
 }
 
 function ensureEstimateNumber() {
@@ -253,10 +259,10 @@ function ensureEstimateNumber() {
 }
 
 function commitEstimateNumber(value) {
-  const match = value.match(/^([A-Z])-([0-9]{6})-([0-9]{3})$/);
+  const match = value.match(/^([0-9]{2})-([A-Z])([0-9]{4})$/);
   if (!match) return;
-  const [, prefix, stamp, number] = match;
-  const sequenceKey = `${prefix}-${stamp}`;
+  const [, year, series, number] = match;
+  const sequenceKey = `${year}-${series}`;
   const sequence = readEstimateSequence();
   sequence[sequenceKey] = Math.max(sequence[sequenceKey] || 0, Number(number));
   writeEstimateSequence(sequence);
@@ -302,7 +308,15 @@ function materialSearchTerms(value) {
 }
 
 function materialMatches(value) {
-  const materials = Array.isArray(window.D2_MATERIALS_DATABASE) ? window.D2_MATERIALS_DATABASE : [];
+  const baseMaterials = Array.isArray(window.D2_MATERIALS_DATABASE) ? window.D2_MATERIALS_DATABASE : [];
+  let customMaterials = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(PRICE_DATABASE_KEY) || "[]");
+    customMaterials = Array.isArray(saved) ? saved : [];
+  } catch (error) {
+    customMaterials = [];
+  }
+  const materials = [...customMaterials, ...baseMaterials];
   const terms = materialSearchTerms(value);
   if (terms.length === 0) return [];
   return materials
@@ -331,6 +345,13 @@ function renderMaterialSuggestions(row, value) {
   `).join("");
 }
 
+function closeMaterialSuggestions(row) {
+  const panel = row.querySelector(".material-suggestions");
+  if (!panel) return;
+  panel.hidden = true;
+  panel.innerHTML = "";
+}
+
 function applyMaterialSuggestion(row, materialItem, materialId) {
   const material = (window.D2_MATERIALS_DATABASE || []).find((entry) => entry.id === materialId);
   if (!material) return;
@@ -348,7 +369,7 @@ function applyMaterialSuggestion(row, materialItem, materialId) {
   }
   if (qtyInput) qtyInput.value = materialItem.qty;
   if (priceInput) priceInput.value = material.defaultPrice;
-  if (panel) panel.hidden = true;
+  if (panel) closeMaterialSuggestions(row);
   updatePreview();
 }
 
@@ -356,11 +377,25 @@ function addMaterialItem(item = { name: "", qty: "", price: "", unit: "" }) {
   state.materialItems.push({
     id: createId(),
     name: item.name || "",
-    qty: item.qty || "",
+    qty: item.qty === "" ? "" : wholeNumberValue(item.qty),
     price: item.price || "",
     unit: item.unit || "",
   });
   renderMaterialItems();
+  updatePreview();
+}
+
+function insertMaterialItemAfter(id) {
+  const currentIndex = state.materialItems.findIndex((item) => item.id === id);
+  const insertAt = currentIndex >= 0 ? currentIndex + 1 : state.materialItems.length;
+  const material = { id: createId(), name: "", qty: "", price: "", unit: "" };
+  state.materialItems.splice(insertAt, 0, material);
+  renderMaterialItems();
+  requestAnimationFrame(() => {
+    const row = document.querySelector(`[data-id="${material.id}"]`);
+    const textarea = row ? row.querySelector('[data-field="name"]') : null;
+    if (textarea) textarea.focus();
+  });
   updatePreview();
 }
 
@@ -375,7 +410,7 @@ function removeMaterialItem(id) {
 
 function calculateMaterialCost() {
   return state.materialItems.reduce((sum, item) => {
-    return sum + (Number.parseFloat(item.qty) || 0) * (Number.parseFloat(item.price) || 0);
+    return sum + wholeNumberValue(item.qty) * (Number.parseFloat(item.price) || 0);
   }, 0);
 }
 
@@ -383,6 +418,15 @@ function isCompleteEntry(item) {
   return Boolean(String(item.name || "").trim()) &&
     Number.parseFloat(item.qty) > 0 &&
     Number.parseFloat(item.price) > 0;
+}
+
+function wholeNumberValue(value) {
+  return Math.max(0, Math.round(Number.parseFloat(value) || 0));
+}
+
+function wholeNumberText(value) {
+  const match = String(value || "").match(/\d+/);
+  return match ? match[0] : "";
 }
 
 function maybeAddBlankMaterialRow(item) {
@@ -446,13 +490,16 @@ function renderMaterialItems() {
       </label>
       <label>
         Qty
-        <input data-field="qty" type="number" min="0" step="0.01" value="${item.qty}">
+        <input data-field="qty" type="text" inputmode="numeric" pattern="[0-9]*" value="${item.qty === "" ? "" : wholeNumberText(item.qty)}">
       </label>
       <label>
         Unit Cost
         <input data-field="price" type="number" min="0" step="0.01" value="${item.price}">
       </label>
-      <button type="button" data-action="remove" title="Remove material" aria-label="Remove material">x</button>
+      <div class="material-actions">
+        <button type="button" data-action="add" title="Add supply item below" aria-label="Add supply item below">+</button>
+        <button type="button" data-action="remove" title="Remove material" aria-label="Remove material">x</button>
+      </div>
     `;
 
     row.addEventListener("input", (event) => {
@@ -460,11 +507,66 @@ function renderMaterialItems() {
       const field = target.dataset.field;
       if (!field) return;
       const materialItem = state.materialItems.find((entry) => entry.id === item.id);
-      materialItem[field] = field === "name" ? target.value : Number.parseFloat(target.value) || 0;
-      if (field === "name") renderMaterialSuggestions(row, target.value);
+      if (field === "name") {
+        materialItem[field] = target.value;
+      } else if (field === "qty") {
+        const cleanedQty = wholeNumberText(target.value);
+        materialItem[field] = cleanedQty;
+        target.value = cleanedQty;
+      } else {
+        materialItem[field] = Number.parseFloat(target.value) || 0;
+      }
+      if (field === "name") {
+        if (String(target.value || "").trim()) {
+          renderMaterialSuggestions(row, target.value);
+        } else {
+          closeMaterialSuggestions(row);
+        }
+      }
       if (target.tagName === "TEXTAREA") autoGrowTextArea(target);
-      if (maybeAddBlankMaterialRow(materialItem)) return;
       updatePreview();
+    });
+
+    row.addEventListener("change", (event) => {
+      const target = event.target;
+      if (target.dataset.field !== "qty") return;
+      const materialItem = state.materialItems.find((entry) => entry.id === item.id);
+      materialItem.qty = wholeNumberText(target.value);
+      target.value = materialItem.qty;
+      updatePreview();
+    });
+
+    row.addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (event.key !== "Enter") return;
+      if (target.dataset.field === "name") {
+        event.preventDefault();
+        closeMaterialSuggestions(row);
+        target.blur();
+        updatePreview();
+        return;
+      }
+      if (target.dataset.field !== "price") return;
+      event.preventDefault();
+      closeMaterialSuggestions(row);
+      const materialItem = state.materialItems.find((entry) => entry.id === item.id);
+      if (maybeAddBlankMaterialRow(materialItem)) {
+        requestAnimationFrame(() => {
+          const currentIndex = state.materialItems.findIndex((entry) => entry.id === materialItem.id);
+          const nextItem = state.materialItems[currentIndex + 1];
+          const nextRow = nextItem ? document.querySelector(`[data-id="${nextItem.id}"]`) : null;
+          const textarea = nextRow ? nextRow.querySelector('[data-field="name"]') : null;
+          if (textarea) textarea.focus();
+        });
+        return;
+      }
+      updatePreview();
+    });
+
+    row.addEventListener("focusout", () => {
+      setTimeout(() => {
+        if (!row.contains(document.activeElement)) closeMaterialSuggestions(row);
+      }, 120);
     });
 
     row.addEventListener("click", (event) => {
@@ -472,9 +574,10 @@ function renderMaterialItems() {
       if (materialButton) {
         const materialItem = state.materialItems.find((entry) => entry.id === item.id);
         applyMaterialSuggestion(row, materialItem, materialButton.dataset.materialId);
-        maybeAddBlankMaterialRow(materialItem);
+        closeMaterialSuggestions(row);
         return;
       }
+      if (event.target.dataset.action === "add") insertMaterialItemAfter(item.id);
       if (event.target.dataset.action === "remove") removeMaterialItem(item.id);
     });
 
@@ -714,6 +817,10 @@ function renderLineItems() {
     row.addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
       const target = event.target;
+      if (target.tagName === "TEXTAREA" && (event.altKey || event.ctrlKey || event.shiftKey || event.metaKey)) {
+        requestAnimationFrame(() => autoGrowTextArea(target));
+        return;
+      }
       if (item.type === "subline" && target.dataset.field === "name") {
         event.preventDefault();
         addSubLineAfter(item.id);
@@ -822,7 +929,7 @@ function updatePreview() {
         </thead>
         <tbody>
           ${internalMaterials.map((item) => {
-            const qty = Number.parseFloat(item.qty) || 0;
+            const qty = wholeNumberValue(item.qty);
             const price = Number.parseFloat(item.price) || 0;
             return `
               <tr>
@@ -1888,9 +1995,7 @@ async function generatePaymentPdf() {
 function printEstimateCopy() {
   ensureEstimateNumber();
   updatePreview();
-  generateEstimatePdf().catch(() => {
-    printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
-  });
+  printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
 }
 
 function serializeEstimate() {
@@ -1951,6 +2056,85 @@ function createEditableDownloadLink(blob, fileName) {
   return link;
 }
 
+function loadLocalDashboardFiles() {
+  try {
+    return JSON.parse(localStorage.getItem(DASHBOARD_STORAGE_KEY) || "[]");
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveLocalDashboardFiles(files) {
+  try {
+    localStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify(files));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function makeDashboardNote(text) {
+  return text ? [{ at: new Date().toISOString(), text }] : [];
+}
+
+function saveEstimateToLocalDashboard(payloadData) {
+  const totals = payloadData.totals || {};
+  const backend = payloadData.backend || {};
+  const fileNumber = payloadData.estimateNumber || `D2-${Date.now()}`;
+  const files = loadLocalDashboardFiles();
+  const existingIndex = files.findIndex((file) => file.fileNumber === fileNumber);
+  const existing = existingIndex >= 0 ? files[existingIndex] : {};
+  const importedAt = new Date().toISOString();
+  const dashboardFile = {
+    ...existing,
+    id: existing.id || `file-${Date.now()}`,
+    fileNumber,
+    clientName: payloadData.clientName || "Unnamed Client",
+    clientPhone: payloadData.clientPhone || "",
+    clientEmail: payloadData.clientEmail || "",
+    projectAddress: payloadData.projectAddress || "",
+    leadSource: payloadData.leadSource || existing.leadSource || "Manual",
+    fileStatus: payloadData.fileStatus || existing.fileStatus || "Inspection Completed",
+    statusDetail: payloadData.statusDetail || existing.statusDetail || "Estimate Pending",
+    projectType: payloadData.projectType || "Other",
+    inspectionDate: payloadData.inspectionDate || existing.inspectionDate || "",
+    inspectionTime: payloadData.inspectionTime || existing.inspectionTime || "",
+    startDate: payloadData.assignmentStartDate || existing.startDate || "",
+    arrivalWindow: payloadData.assignmentArrivalTime || existing.arrivalWindow || "Open",
+    nextAction: payloadData.nextAction || existing.nextAction || "",
+    nextActionDate: payloadData.nextActionDate || existing.nextActionDate || "",
+    warrantyStatus: payloadData.warrantyStatus || existing.warrantyStatus || "Not Sent",
+    estimateTotal: Number(totals.total) || 0,
+    depositTotal: Number(totals.deposit) || 0,
+    materialTotal: Number(backend.estimatedMaterialCost) || 0,
+    editableEstimate: payloadData,
+    notes: Array.isArray(existing.notes) && existing.notes.length
+      ? existing.notes
+      : makeDashboardNote(payloadData.notes || ""),
+    timeline: [
+      ...(Array.isArray(existing.timeline) ? existing.timeline : []),
+      existingIndex >= 0 ? `Estimate updated ${formatDateTimeForDashboard(importedAt)}` : `Estimate imported ${formatDateTimeForDashboard(importedAt)}`,
+    ],
+  };
+
+  if (existingIndex >= 0) {
+    files[existingIndex] = dashboardFile;
+  } else {
+    files.unshift(dashboardFile);
+  }
+  return saveLocalDashboardFiles(files);
+}
+
+function formatDateTimeForDashboard(value) {
+  return new Date(value).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 async function downloadEditableEstimate() {
   ensureEstimateNumber();
   updatePreview();
@@ -1996,7 +2180,11 @@ function applyEstimateData(data) {
     ? data.lineItems.map((item) => ({ type: "item", ...item, name: cleanLineItemName(item.name) }))
     : [];
   state.materialItems = Array.isArray(data.materialItems)
-    ? data.materialItems.map((item) => ({ id: item.id || createId(), ...item }))
+    ? data.materialItems.map((item) => ({
+        id: item.id || createId(),
+        ...item,
+        qty: item.qty === "" ? "" : wholeNumberValue(item.qty),
+      }))
     : [];
   if (state.materialItems.length === 0) {
     state.materialItems = [{ id: createId(), name: "", qty: "", price: "", unit: "" }];
@@ -2116,8 +2304,28 @@ function generateEstimatePreview() {
   $("estimatePreview").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function createCrmFile() {
+  ensureEstimateNumber();
+  if (!$("estimateDate").value) {
+    $("estimateDate").value = new Date().toISOString().slice(0, 10);
+  }
+  if (!$("fileStatus").value) $("fileStatus").value = "New Lead";
+  if (!$("estimateStatus").value) $("estimateStatus").value = "Pending";
+  if (!$("leadSource").value) $("leadSource").value = "Manual";
+  $("submitStatus").textContent = `Dashboard file ${$("estimateNumber").value} is ready. Add client info, then Save Dashboard to send it to Google Drive once connected.`;
+  updatePreview();
+}
+
 function hasWorkInProgress() {
   const changedFields = [
+    "leadSource",
+    "fileStatus",
+    "estimateStatus",
+    "warrantyStatus",
+    "inspectionDate",
+    "inspectionTime",
+    "nextActionDate",
+    "nextAction",
     "clientName",
     "clientPhone",
     "clientEmail",
@@ -2141,6 +2349,24 @@ function hasWorkInProgress() {
     return item.name.trim() || Number.parseFloat(item.qty) > 0 || Number.parseFloat(item.price) > 0;
   });
   return hasFieldContent || hasLineContent || hasMaterialContent || state.photos.length > 0 || state.assignmentPhotos.length > 0;
+}
+
+function saveDraftBeforeLeaving() {
+  if (!hasWorkInProgress()) return;
+  try {
+    ensureEstimateNumber();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeEstimate()));
+  } catch (error) {
+    // Closing/navigating browsers may block storage; the warning still protects the user.
+  }
+}
+
+function warnBeforeLeaving(event) {
+  if (!hasWorkInProgress()) return;
+  saveDraftBeforeLeaving();
+  event.preventDefault();
+  event.returnValue = "You have an estimate in progress. Are you sure you want to close this page?";
+  return event.returnValue;
 }
 
 function openFreshEstimateWindow() {
@@ -2179,16 +2405,19 @@ async function startNewEstimate() {
 
 async function submitEstimateToGoogle() {
   const status = $("submitStatus");
+  saveEstimate({ silent: true });
+  const payloadData = serializeEstimate();
+  payloadData.copies = buildSubmittedCopies();
+  const savedLocally = saveEstimateToLocalDashboard(payloadData);
+
   if (!GOOGLE_SCRIPT_URL) {
-    status.textContent = "Google Drive submit is not connected yet.";
-    window.alert("Google Drive submit is not connected yet. I prepared the app for it, but we still need to deploy the Google Apps Script and paste its web app URL into the estimator.");
+    status.textContent = savedLocally
+      ? "Saved to local Dashboard. Google Drive sync is not connected yet."
+      : "Google Drive sync is not connected yet, and this browser blocked local Dashboard storage.";
     return;
   }
 
-  saveEstimate({ silent: true });
-  status.textContent = "Submitting estimate...";
-  const payloadData = serializeEstimate();
-  payloadData.copies = buildSubmittedCopies();
+  status.textContent = "Saving to Dashboard and Google Drive...";
 
   const iframeName = "googleSubmitFrame";
   let iframe = document.querySelector(`iframe[name="${iframeName}"]`);
@@ -2213,7 +2442,7 @@ async function submitEstimateToGoogle() {
 
   document.body.appendChild(form);
   iframe.addEventListener("load", () => {
-    status.textContent = "Estimate submitted to Google Drive.";
+    status.textContent = "Dashboard file saved to Google Drive.";
     form.remove();
   }, { once: true });
   form.submit();
@@ -2274,6 +2503,14 @@ function resetEstimate() {
   $("companyPhone").value = COMPANY_DEFAULTS.phone;
   $("companyEmail").value = COMPANY_DEFAULTS.email;
   $("companyAddress").value = COMPANY_DEFAULTS.address;
+  $("leadSource").value = "Manual";
+  $("fileStatus").value = "New Lead";
+  $("estimateStatus").value = "Pending";
+  $("warrantyStatus").value = "Not Sent";
+  $("inspectionDate").value = "";
+  $("inspectionTime").value = "";
+  $("nextActionDate").value = "";
+  $("nextAction").value = "";
   $("clientName").value = "";
   $("clientPhone").value = "";
   $("clientEmail").value = "";
@@ -2326,6 +2563,7 @@ fields.forEach((field) => {
 
 $("useLinearTotal").addEventListener("click", () => useCalculatedTotal("linear"));
 $("useSquareTotal").addEventListener("click", () => useCalculatedTotal("square"));
+$("createCrmFile").addEventListener("click", () => createCrmFile());
 
 $("estimateNumber").addEventListener("input", () => {
   state.autoEstimateNumber = false;
@@ -2400,6 +2638,8 @@ $("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
 $("assignmentEnglish").addEventListener("click", () => generateAssignmentSheetLanguage("en"));
 $("assignmentSpanish").addEventListener("click", () => generateAssignmentSheetLanguage("es"));
 $("printAssignmentSheet").addEventListener("click", () => printAssignmentSheet());
+window.addEventListener("beforeunload", warnBeforeLeaving);
+window.addEventListener("pagehide", saveDraftBeforeLeaving);
 document.querySelectorAll("[data-copy-mode]").forEach((button) => {
   button.addEventListener("click", () => setCopyMode(button.dataset.copyMode));
 });
@@ -2423,6 +2663,10 @@ if (new URLSearchParams(window.location.search).has("new")) {
   resetEstimate();
 } else if (!loadEstimate()) {
   resetEstimate();
+}
+
+if (window.location.hash === "#assignment") {
+  window.requestAnimationFrame(() => generateAssignmentSheet());
 }
 
 if ("serviceWorker" in navigator && location.protocol === "https:") {

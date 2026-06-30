@@ -26,10 +26,11 @@
             <button type="button" class="copy-mode-button" data-copy-mode="supply">Supplies</button>
           </div>
           <button class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
+          <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
           <button class="icon-button" id="saveEstimate" title="Save estimate" aria-label="Save estimate">Save</button>
           <button class="icon-button" id="saveEditableEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
           <button class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
-          <button class="icon-button" id="submitEstimate" title="Submit estimate" aria-label="Submit estimate">Submit</button>
+          <button class="icon-button" id="submitEstimate" title="Save to Dashboard" aria-label="Save to Dashboard">Save Dashboard</button>
           <button class="icon-button" id="generatePaymentInvoice" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
           <button class="icon-button" id="generateAssignmentSheet" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
           <button class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
@@ -73,11 +74,84 @@
                     Show
                   </span>
                 </span>
-                <input id="estimateNumber" placeholder="A-260525-001">
+                <input id="estimateNumber" placeholder="26-A1001">
               </label>
               <label>
                 Date
                 <input id="estimateDate" type="date">
+              </label>
+            </div>
+          </section>
+
+          <section class="panel crm-panel">
+            <div class="panel-header">
+              <h2>Dashboard File</h2>
+              <button type="button" id="createCrmFile">Create File</button>
+            </div>
+            <div class="field-grid three">
+              <label>
+                Lead Source
+                <select id="leadSource">
+                  <option>Manual</option>
+                  <option>Angi</option>
+                  <option>Website</option>
+                  <option>Phone</option>
+                  <option>Text</option>
+                  <option>Referral</option>
+                  <option>Repeat Customer</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>
+                File Status
+                <select id="fileStatus">
+                  <option>New Lead</option>
+                  <option>Contact Established</option>
+                  <option>Contact Attempted</option>
+                  <option>Inspection Completed</option>
+                  <option>Job Won</option>
+                  <option>In Progress</option>
+                  <option>Work Completed</option>
+                  <option>Closed / Paid</option>
+                  <option>Job Lost / Closed</option>
+                </select>
+              </label>
+              <label>
+                Estimate Status
+                <select id="estimateStatus">
+                  <option>Pending</option>
+                  <option>In Progress</option>
+                  <option>Completed</option>
+                  <option>Sent</option>
+                  <option>Reviewed</option>
+                  <option>Revision Needed</option>
+                  <option>Approved</option>
+                  <option>Declined</option>
+                </select>
+              </label>
+              <label>
+                Warranty Details
+                <select id="warrantyStatus">
+                  <option>Not Sent</option>
+                  <option>Ready to Send</option>
+                  <option>Sent</option>
+                </select>
+              </label>
+              <label>
+                Inspection Date
+                <input id="inspectionDate" type="date">
+              </label>
+              <label>
+                Inspection Time
+                <input id="inspectionTime" type="time">
+              </label>
+              <label>
+                Next Action Date
+                <input id="nextActionDate" type="date">
+              </label>
+              <label class="wide">
+                Next Action
+                <input id="nextAction" placeholder="Call customer, send estimate, order materials, follow up tomorrow">
               </label>
             </div>
           </section>
@@ -114,13 +188,13 @@
               <label>
                 Project Type
                 <select id="projectType">
-                  <option>Reach-in closet</option>
-                  <option>Walk-in closet</option>
-                  <option>Pantry storage</option>
-                  <option>Garage storage</option>
-                  <option>Built-in cabinetry</option>
-                  <option>Custom carpentry</option>
                   <option>Other</option>
+                  <option>Closet</option>
+                  <option>Cabinetry</option>
+                  <option>Pantry</option>
+                  <option>Garage</option>
+                  <option>Built-In</option>
+                  <option>Trim</option>
                 </select>
               </label>
               <label data-project-pricing>
@@ -493,10 +567,11 @@
             <button type="button" class="copy-mode-button" data-copy-mode="supply">Supplies</button>
           </div>
           <button class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
+          <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
           <button class="icon-button" data-action-button="save" title="Save estimate" aria-label="Save estimate">Save</button>
           <button class="icon-button" data-action-button="save-file" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
           <button class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
-          <button class="icon-button" data-action-button="submit" title="Submit estimate" aria-label="Submit estimate">Submit</button>
+          <button class="icon-button" data-action-button="submit" title="Save to Dashboard" aria-label="Save to Dashboard">Save Dashboard</button>
           <button class="icon-button" data-action-button="payment" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
           <button class="icon-button" data-action-button="assignment" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
           <button class="icon-button primary-action" data-action-button="generate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
