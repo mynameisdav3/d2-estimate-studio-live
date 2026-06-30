@@ -1038,6 +1038,25 @@ th {
   text-align: right;
 }
 
+.invoice-payment-field {
+  display: none;
+}
+
+body.invoice-mode .dashboard-file-panel,
+body.invoice-mode .project-panel,
+body.invoice-mode .materials-panel,
+body.invoice-mode .project-photos-panel,
+body.invoice-mode .assignment-panel,
+body.invoice-mode .calculations-panel,
+body.invoice-mode #generateAssignmentSheet,
+body.invoice-mode #generatePaymentInvoice {
+  display: none;
+}
+
+body.invoice-mode .invoice-payment-field {
+  display: grid;
+}
+
 .notes {
   margin: 24px 0 0;
   padding-top: 16px;

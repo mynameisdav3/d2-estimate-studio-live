@@ -74,6 +74,9 @@ const fields = [
   "discountType",
   "taxRate",
   "depositRate",
+  "invoiceInitialDeposit",
+  "invoiceSecondDeposit",
+  "invoiceFinalPayment",
   "notes",
   "assignmentLanguage",
   "assignmentStartDate",
@@ -98,6 +101,15 @@ const state = {
 function isInvoiceMode() {
   return new URLSearchParams(window.location.search).has("invoice")
     || String($("estimateTitle")?.value || "").trim().toLowerCase() === "invoice";
+}
+
+function applyInvoiceMode() {
+  const invoiceMode = isInvoiceMode();
+  document.body.classList.toggle("invoice-mode", invoiceMode);
+  if (invoiceMode) {
+    $("estimateTitle").value = "Invoice";
+    if ($("taxRate").value === "6.5") $("taxRate").value = "";
+  }
 }
 
 let editableDownloadUrl = "";
@@ -884,6 +896,7 @@ function escapeHtml(value) {
 }
 
 function calculateTotals() {
+  if (isInvoiceMode() && $("taxRate").value === "6.5") $("taxRate").value = "";
   const finishMultiplier = $("projectType").value === "Other" ? 1 : numberValue("finishLevel") || 1;
   const lineSubtotal = state.lineItems.reduce((sum, item) => {
     if (item.type === "subline") return sum;
@@ -971,9 +984,11 @@ function updatePreview() {
   $("previewCompany").textContent = $("companyName").value || COMPANY_DEFAULTS.name;
   $("previewEstimateTitle").textContent = $("estimateTitle").value || "Estimate";
   const invoiceMode = isInvoiceMode();
+  document.body.classList.toggle("invoice-mode", invoiceMode);
   $("toggleInvoicePaidStamp").hidden = !invoiceMode;
   $("invoicePaidStamp").hidden = !invoiceMode || !state.invoicePaid;
   $("toggleInvoicePaidStamp").textContent = state.invoicePaid ? "Remove Paid Stamp" : "Paid Stamp";
+  $("invoicePaidCheckbox").checked = state.invoicePaid;
   $("previewEstimateNumber").textContent = estimateNumber;
   $("previewEstimateNumber").hidden = !$("showEstimateNumber").checked || !estimateNumber;
   const companyPhone = $("companyPhone").value || COMPANY_DEFAULTS.phone;
@@ -2195,6 +2210,7 @@ function applyEstimateData(data) {
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
   $("useSpanishScope").checked = data.useSpanishScope === true;
   state.invoicePaid = data.invoicePaid === true || data.invoicePaid === "Yes";
+  $("invoicePaidCheckbox").checked = state.invoicePaid;
   applyCompanyDefaults();
   $("companyAddress").value = normalizeCompanyAddress($("companyAddress").value);
   if ($("showEstimateNumber").checked && !$("estimateNumber").value.trim()) {
@@ -2333,6 +2349,14 @@ function generateEstimatePreview() {
 
 function toggleInvoicePaidStamp() {
   state.invoicePaid = !state.invoicePaid;
+  $("invoicePaidCheckbox").checked = state.invoicePaid;
+  saveDraftBeforeLeaving();
+  updatePreview();
+}
+
+function setInvoicePaidStamp(checked) {
+  state.invoicePaid = checked;
+  $("invoicePaidCheckbox").checked = state.invoicePaid;
   saveDraftBeforeLeaving();
   updatePreview();
 }
@@ -2563,6 +2587,11 @@ function resetEstimate() {
   $("discountType").value = "dollar";
   $("taxRate").value = "6.5";
   $("depositRate").value = "";
+  $("invoiceInitialDeposit").value = "";
+  $("invoiceSecondDeposit").value = "";
+  $("invoiceFinalPayment").value = "";
+  $("invoicePaidCheckbox").checked = false;
+  state.invoicePaid = false;
   $("notes").value = "";
   $("assignmentLanguage").value = "en";
   $("assignmentStartDate").value = "";
@@ -2580,6 +2609,7 @@ function resetEstimate() {
   renderPhotos();
   renderAssignmentPhotos();
   syncProjectMode();
+  applyInvoiceMode();
   updateCalculationPanel();
   updatePreview();
 }
@@ -2668,6 +2698,7 @@ $("generateAssignmentSheet").addEventListener("click", () => generateAssignmentS
 $("generateEstimate").addEventListener("click", () => generateEstimatePreview());
 $("printEstimate").addEventListener("click", () => printEstimateCopy());
 $("toggleInvoicePaidStamp").addEventListener("click", toggleInvoicePaidStamp);
+$("invoicePaidCheckbox").addEventListener("change", (event) => setInvoicePaidStamp(event.target.checked));
 $("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
 $("assignmentEnglish").addEventListener("click", () => generateAssignmentSheetLanguage("en"));
 $("assignmentSpanish").addEventListener("click", () => generateAssignmentSheetLanguage("es"));
@@ -2701,6 +2732,7 @@ if (new URLSearchParams(window.location.search).has("new")) {
 
 if (new URLSearchParams(window.location.search).has("invoice")) {
   $("estimateTitle").value = "Invoice";
+  applyInvoiceMode();
   updatePreview();
 }
 
