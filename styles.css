@@ -1029,6 +1029,15 @@ th {
   color: #0d4a91;
 }
 
+.invoice-paid-stamp {
+  display: block;
+  margin: 8px 0;
+  color: #b91c1c;
+  font-size: 1.05rem;
+  font-weight: 950;
+  text-align: right;
+}
+
 .notes {
   margin: 24px 0 0;
   padding-top: 16px;

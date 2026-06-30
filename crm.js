@@ -920,6 +920,35 @@ function openActiveEstimate(target = "") {
   window.open(`index.html${target}`, "_blank", "noopener");
 }
 
+function openActiveInvoice() {
+  saveActiveFile();
+  const file = activeFile();
+  if (!file) {
+    window.alert("Select a customer file first.");
+    return;
+  }
+  if (!file.editableEstimate) {
+    window.alert("This customer file does not have an attached editable estimate yet. Import an approved estimate first.");
+    return;
+  }
+  const invoiceEstimate = {
+    ...file.editableEstimate,
+    estimateTitle: "Invoice",
+    invoicePaid: file.invoicePaid === "Yes" || file.paidInFull === "Yes",
+  };
+  if (file.invoice?.total) {
+    invoiceEstimate.flatTotal = file.invoice.total;
+    invoiceEstimate.totals = { ...(invoiceEstimate.totals || {}), total: Number(file.invoice.total) || 0 };
+  }
+  try {
+    localStorage.setItem("d2EstimateStudio", JSON.stringify(invoiceEstimate));
+  } catch (error) {
+    window.alert("The invoice could not be loaded into this browser. Try refreshing and opening it again.");
+    return;
+  }
+  window.open("index.html?invoice=1", "_blank", "noopener");
+}
+
 function searchCrmFile() {
   const query = String($("crmFileSearch").value || "").trim().toLowerCase();
   if (!query) return;
@@ -2308,7 +2337,7 @@ $("crmArchiveFile").addEventListener("click", () => {
 $("crmDeleteFile").addEventListener("click", deleteActiveFile);
 $("crmOpenEstimate").addEventListener("click", () => openActiveEstimate(""));
 $("crmOpenAssignment").addEventListener("click", () => openActiveEstimate("#assignment"));
-$("crmOpenInvoice").addEventListener("click", () => switchCrmView("invoice"));
+$("crmOpenInvoice").addEventListener("click", openActiveInvoice);
 $("crmImportRevenue").addEventListener("click", importRevenueRows);
 $("crmAddRevenueRow").addEventListener("click", addRevenueRow);
 $("crmUploadEstimateFile").addEventListener("click", () => $("crmEstimateFileUpload").click());

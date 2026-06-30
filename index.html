@@ -35,6 +35,7 @@
           <button class="icon-button" id="generateAssignmentSheet" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
           <button class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
           <button class="icon-button" id="printEstimate" title="Print estimate" aria-label="Print estimate">PDF</button>
+          <button class="icon-button invoice-only" id="toggleInvoicePaidStamp" title="Toggle paid stamp" aria-label="Toggle paid stamp" hidden>Paid Stamp</button>
           <input id="editableEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
         </div>
       </header>
@@ -502,6 +503,7 @@
               <div id="subtotalRow"><span>Subtotal</span><strong id="subtotal">$0.00</strong></div>
               <div id="discountRow"><span>Discount</span><strong id="discountTotal">$0.00</strong></div>
               <div id="taxRow"><span>Tax</span><strong id="taxTotal">$0.00</strong></div>
+              <strong class="invoice-paid-stamp" id="invoicePaidStamp" hidden>PAID IN FULL</strong>
               <div class="grand-total"><span>Total</span><strong id="grandTotal">$0.00</strong></div>
               <div id="depositRow"><span id="depositLabel">Deposit Due</span><strong id="depositDue">$0.00</strong></div>
             </div>

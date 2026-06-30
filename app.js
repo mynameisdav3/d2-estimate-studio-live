@@ -92,7 +92,13 @@ const state = {
   autoEstimateNumber: false,
   estimateNumberCommitted: false,
   estimateSequence: {},
+  invoicePaid: false,
 };
+
+function isInvoiceMode() {
+  return new URLSearchParams(window.location.search).has("invoice")
+    || String($("estimateTitle")?.value || "").trim().toLowerCase() === "invoice";
+}
 
 let editableDownloadUrl = "";
 
@@ -964,6 +970,10 @@ function updatePreview() {
   $("estimateSheet").classList.toggle("flat-total-mode", totals.hasFlatTotal);
   $("previewCompany").textContent = $("companyName").value || COMPANY_DEFAULTS.name;
   $("previewEstimateTitle").textContent = $("estimateTitle").value || "Estimate";
+  const invoiceMode = isInvoiceMode();
+  $("toggleInvoicePaidStamp").hidden = !invoiceMode;
+  $("invoicePaidStamp").hidden = !invoiceMode || !state.invoicePaid;
+  $("toggleInvoicePaidStamp").textContent = state.invoicePaid ? "Remove Paid Stamp" : "Paid Stamp";
   $("previewEstimateNumber").textContent = estimateNumber;
   $("previewEstimateNumber").hidden = !$("showEstimateNumber").checked || !estimateNumber;
   const companyPhone = $("companyPhone").value || COMPANY_DEFAULTS.phone;
@@ -2034,6 +2044,7 @@ function serializeEstimate() {
   });
   data.showEstimateNumber = $("showEstimateNumber").checked;
   data.useSpanishScope = $("useSpanishScope").checked;
+  data.invoicePaid = state.invoicePaid === true;
   return data;
 }
 
@@ -2120,6 +2131,8 @@ function saveEstimateToLocalDashboard(payloadData) {
     estimateTotal: Number(totals.total) || 0,
     depositTotal: Number(totals.deposit) || 0,
     materialTotal: Number(backend.estimatedMaterialCost) || 0,
+    invoicePaid: payloadData.invoicePaid === true ? "Yes" : existing.invoicePaid || "No",
+    paidInFull: payloadData.invoicePaid === true ? "Yes" : existing.paidInFull || "No",
     editableEstimate: payloadData,
     notes: Array.isArray(existing.notes) && existing.notes.length
       ? existing.notes
@@ -2181,6 +2194,7 @@ function applyEstimateData(data) {
   });
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
   $("useSpanishScope").checked = data.useSpanishScope === true;
+  state.invoicePaid = data.invoicePaid === true || data.invoicePaid === "Yes";
   applyCompanyDefaults();
   $("companyAddress").value = normalizeCompanyAddress($("companyAddress").value);
   if ($("showEstimateNumber").checked && !$("estimateNumber").value.trim()) {
@@ -2315,6 +2329,12 @@ function generateEstimatePreview() {
   ensureEstimateNumber();
   updatePreview();
   $("estimatePreview").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function toggleInvoicePaidStamp() {
+  state.invoicePaid = !state.invoicePaid;
+  saveDraftBeforeLeaving();
+  updatePreview();
 }
 
 function createCrmFile() {
@@ -2647,6 +2667,7 @@ $("generatePaymentInvoice").addEventListener("click", () => generatePaymentInvoi
 $("generateAssignmentSheet").addEventListener("click", () => generateAssignmentSheet());
 $("generateEstimate").addEventListener("click", () => generateEstimatePreview());
 $("printEstimate").addEventListener("click", () => printEstimateCopy());
+$("toggleInvoicePaidStamp").addEventListener("click", toggleInvoicePaidStamp);
 $("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
 $("assignmentEnglish").addEventListener("click", () => generateAssignmentSheetLanguage("en"));
 $("assignmentSpanish").addEventListener("click", () => generateAssignmentSheetLanguage("es"));
@@ -2676,6 +2697,11 @@ if (new URLSearchParams(window.location.search).has("new")) {
   resetEstimate();
 } else if (!loadEstimate()) {
   resetEstimate();
+}
+
+if (new URLSearchParams(window.location.search).has("invoice")) {
+  $("estimateTitle").value = "Invoice";
+  updatePreview();
 }
 
 if (window.location.hash === "#assignment") {
