@@ -1970,7 +1970,7 @@ function prepareInvoicePdfClone(source) {
 async function createInvoicePdfDocument(file, sourceElement) {
   const JsPdf = getCrmJsPdf();
   const html2canvas = getCrmHtml2Canvas();
-  if (!JsPdf || !html2canvas) return null;
+  if (!JsPdf || !html2canvas || !sourceElement) return null;
   const host = document.createElement("div");
   host.className = "pdf-render-host";
   host.style.position = "fixed";
@@ -2014,22 +2014,19 @@ async function createInvoicePdfDocument(file, sourceElement) {
       doc.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imageWidth, sliceImageHeight, undefined, "FAST");
     }
     return doc;
+  } catch (error) {
+    console.warn("Invoice PDF generator failed; using print fallback.", error);
+    return null;
   } finally {
     host.remove();
   }
 }
 
-async function saveInvoicePdf() {
-  const file = normalizeCrmFile(activeFile());
-  if (!file) return;
-  saveInvoiceStatus();
-  const sourceElement = $("crmInvoicePaper");
-  const doc = await createInvoicePdfDocument(file, sourceElement);
-  if (doc) {
-    doc.save(invoiceFileName(file));
+function printInvoiceFallback(file, sourceElement) {
+  if (!sourceElement) {
+    window.alert("Open an invoice first, then click Save PDF.");
     return;
   }
-
   const invoiceHtml = prepareInvoicePdfClone(sourceElement).outerHTML;
   const printWindow = window.open("", "_blank", "noopener");
   if (!printWindow) {
@@ -2055,6 +2052,19 @@ async function saveInvoicePdf() {
   printWindow.document.close();
   printWindow.focus();
   setTimeout(() => printWindow.print(), 300);
+}
+
+async function saveInvoicePdf() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  saveInvoiceStatus();
+  const sourceElement = $("crmInvoicePaper");
+  const doc = await createInvoicePdfDocument(file, sourceElement);
+  if (doc) {
+    doc.save(invoiceFileName(file));
+    return;
+  }
+  printInvoiceFallback(file, sourceElement);
 }
 
 async function emailInvoice() {
