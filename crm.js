@@ -14,7 +14,7 @@ const CRM_STATUS_DESCRIPTIONS = {
   "Contact Established": "You have spoken to the client and are actively qualifying their project scope.",
   "Contact Attempted": "A contact attempt was made. Set a next-day follow-up reminder.",
   "Inspection Completed": "You met the client, took site dimensions, and discussed wood types/finishes.",
-  "In Negotiation": "Customer is considering the estimate. Set a follow-up date and keep the file active.",
+  "In Negotiation": "Customer is considering the estimate. Set a follow-up date and keep it out of active jobs.",
   "Job Won": "The customer approved the job. Confirm whether the start date is established.",
   "In Progress": "Job has started. Confirm expected completion date and midpoint deposit.",
   "Work Completed": "Work is complete. Confirm closing call, review request, and final payment.",
@@ -87,6 +87,7 @@ let activeFileId = crmFiles[0] ? crmFiles[0].id : null;
 let crmRevenueRows = loadRevenueRows();
 let activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
 let crmPriceRows = loadPriceRows();
+let editingPriceId = "";
 
 function applyFreshDashboardReset() {
   try {
@@ -353,6 +354,7 @@ function normalizeCrmFile(file) {
   file.finalPaymentSecured = file.finalPaymentSecured || "No";
   file.finalPaymentAmount = file.finalPaymentAmount === undefined ? "" : file.finalPaymentAmount;
   file.invoiceSent = file.invoiceSent || (["Sent", "Deposit Paid", "Balance Due", "Paid"].includes(file.invoiceStatus) ? "Yes" : "No");
+  file.invoicePaid = file.invoicePaid || file.paidInFull || "No";
   file.reviewRequested = file.reviewRequested || (["Requested", "Received"].includes(file.reviewStatus) || file.reviewSent === "Yes" ? "Yes" : "No");
   file.reviewSent = file.reviewSent || "No";
   if (file.fileNotes && !file.notes.length) {
@@ -394,7 +396,7 @@ function visibleFiles() {
   if (filter === "contact") return openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus));
   if (filter === "estimate") return openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail));
   if (filter === "negotiation") return openFiles.filter((file) => file.fileStatus === "In Negotiation");
-  if (filter === "active") return openFiles.filter((file) => ["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage));
+  if (filter === "active") return openFiles.filter((file) => file.fileStatus !== "In Negotiation" && (["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage)));
   if (filter === "archive") return crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus));
   return openFiles;
 }
@@ -405,7 +407,7 @@ function renderCounts() {
   $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus)).length;
   $("pendingEstimateCount").textContent = openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail)).length;
   $("negotiationCount").textContent = openFiles.filter((file) => file.fileStatus === "In Negotiation").length;
-  $("activeJobCount").textContent = openFiles.filter((file) => ["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage)).length;
+  $("activeJobCount").textContent = openFiles.filter((file) => file.fileStatus !== "In Negotiation" && (["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage))).length;
   $("archivedCount").textContent = crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus)).length;
 }
 
@@ -835,6 +837,7 @@ function newCrmFile() {
     finalPaymentSecured: "No",
     finalPaymentAmount: "",
     invoiceSent: "No",
+    invoicePaid: "No",
     reviewRequested: "No",
     reviewSent: "No",
     estimateStatus: "Not Started",
@@ -903,6 +906,7 @@ function searchCrmFile() {
   const match = crmFiles.find((file) => {
     return String(file.fileNumber || "").toLowerCase().includes(query)
       || String(file.clientName || "").toLowerCase().includes(query)
+      || String(file.clientPhone || "").toLowerCase().includes(query)
       || String(file.projectAddress || "").toLowerCase().includes(query);
   });
   if (!match) {
@@ -1102,6 +1106,7 @@ function dashboardFileFromEstimate(data, row) {
     finalPaymentSecured: existing?.finalPaymentSecured || "No",
     finalPaymentAmount: existing?.finalPaymentAmount || "",
     invoiceSent: existing?.invoiceSent || "No",
+    invoicePaid: existing?.invoicePaid || existing?.paidInFull || "No",
     reviewRequested: existing?.reviewRequested || "No",
     reviewSent: existing?.reviewSent || "No",
     estimateStatus: data.estimateStatus || existing?.estimateStatus || "Estimate Completed",
@@ -1199,6 +1204,7 @@ function createDashboardFileFromRevenueRow(row) {
     finalPaymentSecured: "No",
     finalPaymentAmount: "",
     invoiceSent: "No",
+    invoicePaid: "No",
     reviewRequested: "No",
     reviewSent: "No",
     estimateStatus: "Estimate Completed",
@@ -1535,31 +1541,113 @@ function importApprovedEstimateFile(file) {
   reader.readAsText(file);
 }
 
-function renderPriceDatabase() {
+function priceDatabaseRows() {
+  const customRows = crmPriceRows.map((row) => ({ ...row, readonly: false }));
+  const overriddenIds = new Set(customRows.map((row) => row.sourceId).filter(Boolean));
   const baseRows = Array.isArray(window.D2_MATERIALS_DATABASE)
-    ? window.D2_MATERIALS_DATABASE.map((row) => ({ ...row, readonly: true }))
+    ? window.D2_MATERIALS_DATABASE
+        .filter((row) => !overriddenIds.has(row.id))
+        .map((row) => ({ ...row, readonly: true }))
     : [];
-  const rows = [...crmPriceRows, ...baseRows];
-  $("crmPriceCount").textContent = String(rows.length);
-  $("crmPriceLast").textContent = crmPriceRows[0]?.product || baseRows[0]?.product || "None";
+  return [...customRows, ...baseRows];
+}
+
+function renderPriceDatabase() {
+  const rows = priceDatabaseRows();
   $("crmPriceList").innerHTML = rows.length
     ? rows.map((row) => `
-      <div class="crm-price-row">
-        <div>
-          <strong>${escapeHtml(row.product)}</strong>
-          <span>${escapeHtml([row.category, row.vendor].filter(Boolean).join(" - "))}</span>
-        </div>
-        <small>${escapeHtml(row.unit || "each")}</small>
-        <strong>${crmCurrency.format(Number(row.defaultPrice) || 0)}</strong>
-        ${row.readonly
-          ? `<em>Estimator</em>`
-          : `<button type="button" data-price-delete="${escapeHtml(row.id)}">Delete</button>`}
-      </div>
+      ${row.id === editingPriceId ? renderEditablePriceRow(row) : renderReadonlyPriceRow(row)}
     `).join("")
     : `<p class="crm-empty-state">No price lines yet.</p>`;
+  document.querySelectorAll("[data-price-edit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      editingPriceId = button.dataset.priceEdit;
+      renderPriceDatabase();
+    });
+  });
+  document.querySelectorAll("[data-price-save]").forEach((button) => {
+    button.addEventListener("click", () => savePriceLineEdit(button.dataset.priceSave));
+  });
+  document.querySelectorAll("[data-price-cancel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      editingPriceId = "";
+      renderPriceDatabase();
+    });
+  });
   document.querySelectorAll("[data-price-delete]").forEach((button) => {
     button.addEventListener("click", () => deletePriceLine(button.dataset.priceDelete));
   });
+}
+
+function renderReadonlyPriceRow(row) {
+  return `
+    <div class="crm-price-row">
+      <div>
+        <strong>${escapeHtml(row.product)}</strong>
+        <span>${escapeHtml([row.category, row.vendor].filter(Boolean).join(" - "))}</span>
+      </div>
+      <small>${escapeHtml(row.unit || "each")}</small>
+      <strong>${crmCurrency.format(Number(row.defaultPrice) || 0)}</strong>
+      <button type="button" data-price-edit="${escapeHtml(row.id)}">Edit</button>
+      ${row.readonly ? `<em>Estimator</em>` : `<button type="button" data-price-delete="${escapeHtml(row.id)}">Delete</button>`}
+    </div>
+  `;
+}
+
+function renderEditablePriceRow(row) {
+  return `
+    <div class="crm-price-row crm-price-row-editing">
+      <input data-price-field="product" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(row.product)}" placeholder="Item name">
+      <input data-price-field="defaultPrice" data-price-id="${escapeHtml(row.id)}" type="number" min="0" step="0.01" value="${escapeHtml(Number(row.defaultPrice) || "")}" placeholder="Price">
+      <input data-price-field="unit" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(row.unit || "each")}" placeholder="Unit">
+      <input data-price-field="category" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(row.category || "")}" placeholder="Category">
+      <input data-price-field="vendor" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(row.vendor || row.source || "")}" placeholder="Vendor">
+      <button type="button" data-price-save="${escapeHtml(row.id)}">Save</button>
+      <button type="button" data-price-cancel="${escapeHtml(row.id)}">Cancel</button>
+    </div>
+  `;
+}
+
+function cssIdentifier(value) {
+  if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+  return String(value).replace(/["\\]/g, "\\$&");
+}
+
+function savePriceLineEdit(id) {
+  const existing = priceDatabaseRows().find((row) => row.id === id);
+  if (!existing) return;
+  const fieldValue = (field) => {
+    const input = document.querySelector(`[data-price-id="${cssIdentifier(id)}"][data-price-field="${field}"]`);
+    return input ? input.value.trim() : "";
+  };
+  const price = parseMoney(fieldValue("defaultPrice"));
+  const updated = {
+    ...(existing.readonly ? {} : existing),
+    id: existing.readonly ? `custom-${makeCrmId("price")}` : existing.id,
+    sourceId: existing.readonly ? existing.id : existing.sourceId,
+    product: fieldValue("product") || existing.product,
+    category: fieldValue("category") || "Custom",
+    unit: fieldValue("unit") || "each",
+    vendor: fieldValue("vendor"),
+    source: fieldValue("vendor"),
+    priceLow: price,
+    priceHigh: price,
+    defaultPrice: price,
+    lastChecked: new Date().toISOString().slice(0, 10),
+  };
+  if (!updated.product || !updated.defaultPrice) {
+    window.alert("Add an item name and price first.");
+    return;
+  }
+  const index = crmPriceRows.findIndex((row) => row.id === id);
+  if (index >= 0) {
+    crmPriceRows[index] = updated;
+  } else {
+    crmPriceRows.unshift(updated);
+  }
+  editingPriceId = "";
+  savePriceRows();
+  renderPriceDatabase();
 }
 
 function addPriceLine() {
@@ -1595,17 +1683,221 @@ function deletePriceLine(id) {
   renderPriceDatabase();
 }
 
+function invoiceLineItemsFromEstimate(file) {
+  const items = Array.isArray(file?.editableEstimate?.lineItems) ? file.editableEstimate.lineItems : [];
+  const rows = items
+    .filter((item) => String(item.name || "").trim())
+    .map((item) => ({
+      description: String(item.name || "").trim(),
+      qty: item.type === "subline" ? "" : (item.qty || "1"),
+      total: item.type === "subline" ? "" : ((Number(item.qty) || 1) * (Number(item.price) || 0) || ""),
+      type: item.type || "item",
+    }));
+  if (rows.length) return rows;
+  return [{ description: file?.projectType || "Project total", qty: "1", total: Number(file?.estimateTotal) || 0, type: "item" }];
+}
+
+function invoiceData(file) {
+  const existing = file.invoice || {};
+  const rows = Array.isArray(existing.rows) && existing.rows.length ? existing.rows : invoiceLineItemsFromEstimate(file);
+  return {
+    date: existing.date || todayIso(0),
+    title: existing.title || "Invoice",
+    billTo: existing.billTo || file.clientName || "Client",
+    phone: existing.phone || file.clientPhone || "",
+    email: existing.email || file.clientEmail || "",
+    address: existing.address || file.projectAddress || "",
+    projectNumber: existing.projectNumber || file.fileNumber || "",
+    notes: existing.notes || file.editableEstimate?.notes || "",
+    rows,
+    total: existing.total !== undefined && existing.total !== "" ? Number(existing.total) || 0 : invoiceTotal(rows, file.estimateTotal),
+  };
+}
+
+function invoiceTotal(rows, fallback = 0) {
+  const total = rows.reduce((sum, row) => sum + parseMoney(row.total), 0);
+  return total || Number(fallback) || 0;
+}
+
+function renderInvoiceView() {
+  const file = normalizeCrmFile(activeFile());
+  const paper = $("crmInvoicePaper");
+  if (!paper) return;
+  if (!file) {
+    paper.innerHTML = `<p class="crm-empty-state">Select a customer file to create an invoice.</p>`;
+    $("crmInvoicePaid").value = "No";
+    return;
+  }
+  const invoice = invoiceData(file);
+  const estimateTotal = Number(invoice.total) || invoiceTotal(invoice.rows, file.estimateTotal);
+  const paid = file.paidInFull === "Yes" || file.invoicePaid === "Yes";
+  $("crmInvoicePaid").value = paid ? "Yes" : "No";
+  paper.innerHTML = `
+    <header class="crm-invoice-header">
+      <div class="crm-invoice-brand">
+        <img src="assets/d2-logo.png" alt="D2 Carpentry and Design logo">
+        <div>
+          <h2>D2 Carpentry & Design</h2>
+          <p>-Crafting Your Vision One Nail At A Time-</p>
+        </div>
+      </div>
+      <div class="crm-invoice-title">
+        <input data-invoice-field="title" value="${escapeHtml(invoice.title)}" aria-label="Invoice title">
+        <span>${escapeHtml(invoice.projectNumber || "")}</span>
+      </div>
+    </header>
+    <section class="crm-invoice-client">
+      <div>
+        <span>Bill To</span>
+        <input data-invoice-field="billTo" value="${escapeHtml(invoice.billTo)}" aria-label="Bill to">
+        <input data-invoice-field="phone" value="${escapeHtml(invoice.phone)}" aria-label="Invoice phone">
+        <input data-invoice-field="email" value="${escapeHtml(invoice.email)}" aria-label="Invoice email">
+        <textarea data-invoice-field="address" rows="2" aria-label="Invoice address">${escapeHtml(invoice.address)}</textarea>
+      </div>
+      <div>
+        <span>Invoice Details</span>
+        <input data-invoice-field="date" type="date" value="${escapeHtml(invoice.date)}" aria-label="Invoice date">
+        <input data-invoice-field="projectNumber" value="${escapeHtml(invoice.projectNumber)}" aria-label="Project number">
+      </div>
+    </section>
+    <table class="crm-invoice-table">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${invoice.rows.map((item, index) => {
+          return `
+            <tr class="${item.type === "subline" ? "crm-invoice-subline" : ""}">
+              <td><textarea data-invoice-row="${index}" data-invoice-row-field="description" rows="2">${escapeHtml(item.description || "Project total")}</textarea></td>
+              <td><input data-invoice-row="${index}" data-invoice-row-field="qty" value="${escapeHtml(item.qty || "")}"></td>
+              <td><input data-invoice-row="${index}" data-invoice-row-field="total" type="number" min="0" step="0.01" value="${escapeHtml(item.total || "")}"></td>
+            </tr>
+          `;
+        }).join("")}
+      </tbody>
+    </table>
+    <section class="crm-invoice-notes">
+      <span>Notes</span>
+      <textarea data-invoice-field="notes" rows="4" aria-label="Invoice notes">${escapeHtml(invoice.notes)}</textarea>
+    </section>
+    <section class="crm-invoice-total">
+      ${paid ? `<strong class="crm-paid-stamp">PAID IN FULL</strong>` : ""}
+      <div>
+        <span>Total</span>
+        <input data-invoice-field="total" type="number" min="0" step="0.01" value="${escapeHtml(estimateTotal || "")}" aria-label="Invoice total">
+      </div>
+    </section>
+    <footer class="crm-invoice-footer">
+      <span><strong>Office:</strong> (239) 469-8555</span>
+      <span><strong>Email:</strong> D2CarpentryandDesign@gmail.com</span>
+      <span><strong>Address:</strong> 2710 Del Prado Blvd S #2-184, Cape Coral, FL 33904</span>
+    </footer>
+  `;
+}
+
+function saveInvoiceStatus() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  const paid = $("crmInvoicePaid").value;
+  const oldValue = file.invoicePaid || "No";
+  const rowCount = document.querySelectorAll("[data-invoice-row-field='description']").length;
+  const rows = Array.from({ length: rowCount }, (_, index) => ({
+    description: document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="description"]`)?.value.trim() || "",
+    qty: document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="qty"]`)?.value.trim() || "",
+    total: parseMoney(document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="total"]`)?.value || ""),
+    type: "",
+  })).filter((row) => row.description || row.qty || row.total);
+  const fieldValue = (field) => document.querySelector(`[data-invoice-field="${field}"]`)?.value.trim() || "";
+  file.invoice = {
+    title: fieldValue("title") || "Invoice",
+    date: fieldValue("date") || todayIso(0),
+    billTo: fieldValue("billTo"),
+    phone: fieldValue("phone"),
+    email: fieldValue("email"),
+    address: fieldValue("address"),
+    projectNumber: fieldValue("projectNumber") || file.fileNumber,
+    notes: fieldValue("notes"),
+    rows,
+    total: parseMoney(fieldValue("total")) || invoiceTotal(rows, file.estimateTotal),
+  };
+  file.estimateTotal = Number(file.invoice.total) || invoiceTotal(rows, file.estimateTotal);
+  file.invoicePaid = paid;
+  file.paidInFull = paid;
+  file.invoiceSent = "Yes";
+  file.invoiceStatus = paid === "Yes" ? "Paid" : "Sent";
+  if (oldValue !== paid) addSystemNote(file, `Invoice paid status changed to ${paid}.`);
+  saveCrmFiles();
+  renderInvoiceView();
+  renderCrm();
+}
+
+function invoiceFileName(file) {
+  const safeClient = String(file?.clientName || "D2 Invoice").replace(/[^a-z0-9]+/gi, " ").trim();
+  const safeNumber = String(file?.fileNumber || "").replace(/[^a-z0-9-]+/gi, "");
+  return `${safeClient}${safeNumber ? ` - ${safeNumber}` : ""} Invoice.pdf`;
+}
+
+function saveInvoicePdf() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  saveInvoiceStatus();
+  const invoiceHtml = $("crmInvoicePaper").outerHTML;
+  const printWindow = window.open("", "_blank", "noopener");
+  if (!printWindow) {
+    window.alert("The invoice PDF window was blocked. Allow popups, then try again.");
+    return;
+  }
+  printWindow.document.write(`
+    <!doctype html>
+    <html>
+      <head>
+        <title>${escapeHtml(invoiceFileName(file))}</title>
+        <link rel="stylesheet" href="styles.css">
+        <style>
+          body { margin: 0; padding: 20px; background: #fff; }
+          .crm-invoice-paper { box-shadow: none; margin: 0 auto; }
+          input, textarea { border: 0 !important; background: transparent !important; resize: none; }
+          button { display: none !important; }
+          @page { size: letter; margin: 0.35in; }
+        </style>
+      </head>
+      <body>${invoiceHtml}</body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => printWindow.print(), 300);
+}
+
+function emailInvoice() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  saveInvoiceStatus();
+  const invoice = invoiceData(file);
+  const total = crmCurrency.format(invoiceTotal(invoice.rows, file.estimateTotal));
+  const subject = encodeURIComponent(`Invoice ${invoice.projectNumber || file.fileNumber || ""} - D2 Carpentry & Design`);
+  const body = encodeURIComponent(`Hi ${invoice.billTo || file.clientName || ""},\n\nAttached/linked is your invoice from D2 Carpentry & Design.\n\nProject #: ${invoice.projectNumber || file.fileNumber || ""}\nTotal: ${total}\n\nThank you,\nD2 Carpentry & Design`);
+  window.location.href = `mailto:${encodeURIComponent(invoice.email || file.clientEmail || "")}?subject=${subject}&body=${body}`;
+}
+
 function switchCrmView(view) {
   const showRevenue = view === "revenue";
+  const showInvoice = view === "invoice";
   const showPrices = view === "prices";
   document.querySelectorAll(".crm-dashboard-view").forEach((section) => {
-    section.hidden = showRevenue || showPrices;
+    section.hidden = showRevenue || showInvoice || showPrices;
   });
   $("crmRevenueView").hidden = !showRevenue;
+  $("crmInvoiceView").hidden = !showInvoice;
   $("crmPriceView").hidden = !showPrices;
   document.querySelectorAll("[data-crm-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.crmView === view);
   });
+  if (showInvoice) renderInvoiceView();
   if (showPrices) renderPriceDatabase();
 }
 
@@ -1641,6 +1933,9 @@ $("crmSaveEstimateAmount").addEventListener("click", saveEstimateAmountEdit);
 $("crmEditMaterialTotal").addEventListener("click", toggleMaterialAmountEdit);
 $("crmSaveMaterialAmount").addEventListener("click", saveMaterialAmountEdit);
 $("crmAddPriceLine").addEventListener("click", addPriceLine);
+$("crmSaveInvoiceStatus").addEventListener("click", saveInvoiceStatus);
+$("crmSaveInvoicePdf").addEventListener("click", saveInvoicePdf);
+$("crmEmailInvoice").addEventListener("click", emailInvoice);
 $("crmNewFile").addEventListener("click", newCrmFile);
 $("crmImportApprovedEstimate").addEventListener("click", () => $("crmApprovedEstimateUpload").click());
 $("crmApprovedEstimateUpload").addEventListener("change", (event) => {

@@ -316,7 +316,8 @@ function materialMatches(value) {
   } catch (error) {
     customMaterials = [];
   }
-  const materials = [...customMaterials, ...baseMaterials];
+  const overriddenIds = new Set(customMaterials.map((material) => material.sourceId).filter(Boolean));
+  const materials = [...customMaterials, ...baseMaterials.filter((material) => !overriddenIds.has(material.id))];
   const terms = materialSearchTerms(value);
   if (terms.length === 0) return [];
   return materials

@@ -18,17 +18,23 @@
             <h1>Dashboard</h1>
           </div>
         </div>
-        <div class="crm-actions">
-          <button type="button" class="icon-button primary-action" id="crmNewFile">+ New File</button>
-          <button type="button" class="icon-button" id="crmImportApprovedEstimate">Import Approved Estimate</button>
-          <button type="button" class="icon-button active" data-crm-view="dashboard">Dashboard</button>
-          <button type="button" class="icon-button" data-crm-view="revenue">Revenue</button>
-          <button type="button" class="icon-button" data-crm-view="prices">Price Database</button>
-          <a class="icon-button" href="index.html">Estimator</a>
-          <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
-          <input id="crmApprovedEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
+        <div class="crm-header-search">
+          <input id="crmFileSearch" type="search" placeholder="Search name, phone, or file #">
+          <button type="button" id="crmSearchFile">Search</button>
         </div>
       </header>
+
+      <nav class="crm-actions crm-nav-actions" aria-label="Dashboard actions">
+        <button type="button" class="icon-button primary-action" id="crmNewFile">+ New File</button>
+        <button type="button" class="icon-button" id="crmImportApprovedEstimate">Import Approved Estimate</button>
+        <button type="button" class="icon-button active" data-crm-view="dashboard">Dashboard</button>
+        <button type="button" class="icon-button" data-crm-view="revenue">Revenue</button>
+        <button type="button" class="icon-button" data-crm-view="invoice">Invoice</button>
+        <button type="button" class="icon-button" data-crm-view="prices">Price Database</button>
+        <a class="icon-button" href="index.html">Estimator</a>
+        <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
+        <input id="crmApprovedEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
+      </nav>
 
       <section class="crm-dashboard">
         <section class="crm-command-panel crm-dashboard-view">
@@ -75,10 +81,6 @@
                 <option value="active">Active Jobs</option>
                 <option value="archive">Closed Files</option>
               </select>
-            </div>
-            <div class="crm-file-search">
-              <input id="crmFileSearch" type="search" placeholder="Search project #">
-              <button type="button" id="crmSearchFile">Search</button>
             </div>
             <div class="crm-file-list" id="crmFileList"></div>
           </aside>
@@ -385,15 +387,14 @@
         <section class="crm-revenue-view" id="crmRevenueView" hidden>
           <section class="crm-command-panel crm-revenue-hero">
             <div class="crm-command-copy">
-              <p class="eyebrow">Revenue</p>
-              <h2>Sales, expenses, labor, and profit without leaving the customer system.</h2>
+              <h2>Revenue</h2>
             </div>
-            <div class="crm-revenue-summary">
-              <div><span>Gross</span><strong id="crmRevenueGross">$0.00</strong></div>
-              <div><span>Expenses</span><strong id="crmRevenueExpenses">$0.00</strong></div>
-              <div><span>Labor</span><strong id="crmRevenueLabor">$0.00</strong></div>
-              <div><span>Profit</span><strong id="crmRevenueProfit">$0.00</strong></div>
-            </div>
+          </section>
+          <section class="crm-revenue-summary">
+            <div><span>Gross</span><strong id="crmRevenueGross">$0.00</strong></div>
+            <div><span>Expenses</span><strong id="crmRevenueExpenses">$0.00</strong></div>
+            <div><span>Labor</span><strong id="crmRevenueLabor">$0.00</strong></div>
+            <div><span>Profit</span><strong id="crmRevenueProfit">$0.00</strong></div>
           </section>
 
           <section class="crm-layout crm-revenue-layout">
@@ -449,15 +450,34 @@
           </section>
         </section>
 
+        <section class="crm-revenue-view" id="crmInvoiceView" hidden>
+          <section class="crm-command-panel crm-revenue-hero">
+            <div class="crm-command-copy">
+              <h2>Invoice</h2>
+            </div>
+            <div class="crm-invoice-controls">
+              <label>
+                Paid?
+                <select id="crmInvoicePaid">
+                  <option>No</option>
+                  <option>Yes</option>
+                </select>
+              </label>
+              <button type="button" id="crmSaveInvoiceStatus">Save Invoice</button>
+              <button type="button" id="crmSaveInvoicePdf">Save PDF</button>
+              <button type="button" id="crmEmailInvoice">Email</button>
+            </div>
+          </section>
+
+          <section class="crm-invoice-stage">
+            <article class="crm-invoice-paper" id="crmInvoicePaper"></article>
+          </section>
+        </section>
+
         <section class="crm-revenue-view" id="crmPriceView" hidden>
           <section class="crm-command-panel crm-revenue-hero">
             <div class="crm-command-copy">
-              <p class="eyebrow">Estimator Pricing</p>
-              <h2>Price database lines that feed the material picker in the estimator.</h2>
-            </div>
-            <div class="crm-revenue-summary">
-              <div><span>Custom Items</span><strong id="crmPriceCount">0</strong></div>
-              <div><span>Last Added</span><strong id="crmPriceLast">None</strong></div>
+              <h2>Price Database</h2>
             </div>
           </section>
 
