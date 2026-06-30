@@ -14,6 +14,7 @@ const CRM_STATUS_DESCRIPTIONS = {
   "Contact Established": "You have spoken to the client and are actively qualifying their project scope.",
   "Contact Attempted": "A contact attempt was made. Set a next-day follow-up reminder.",
   "Inspection Completed": "You met the client, took site dimensions, and discussed wood types/finishes.",
+  "In Negotiation": "Customer is considering the estimate. Set a follow-up date and keep the file active.",
   "Job Won": "The customer approved the job. Confirm whether the start date is established.",
   "In Progress": "Job has started. Confirm expected completion date and midpoint deposit.",
   "Work Completed": "Work is complete. Confirm closing call, review request, and final payment.",
@@ -26,6 +27,7 @@ const CRM_STATUS_DETAILS = {
   "Contact Established": ["Inspection Date Set", "Inspection Pending"],
   "Contact Attempted": ["Follow Up Tomorrow"],
   "Inspection Completed": ["Estimate Pending", "Estimate Sent"],
+  "In Negotiation": ["Follow-Up Scheduled", "Waiting on Customer"],
   "Job Won": ["Start Date Established", "Start Date Pending"],
   "In Progress": ["On Schedule", "Completion Date Needed"],
   "Work Completed": ["Closing Call Made", "Closing Call Needed"],
@@ -44,6 +46,7 @@ const crmFields = [
   "projectType",
   "contactEmailSent",
   "contactTextSent",
+  "inspectionDateSet",
   "inspectionDate",
   "inspectionTime",
   "startDate",
@@ -54,12 +57,16 @@ const crmFields = [
   "nextActionDate",
   "warrantyStatus",
   "depositSecured",
+  "initialDepositSecured",
   "initialDeposit",
+  "midpointDepositSecured",
   "midpointDeposit",
   "paidInFull",
   "closingCallCompleted",
   "finalPaymentSecured",
   "finalPaymentAmount",
+  "invoiceSent",
+  "reviewRequested",
   "reviewSent",
   "estimateStatus",
   "invoiceStatus",
@@ -331,17 +338,22 @@ function normalizeCrmFile(file) {
   file.invoiceStatus = file.invoiceStatus || (file.fileStatus === "Closed / Paid" ? "Paid" : "Not Created");
   file.reviewStatus = file.reviewStatus || (file.fileStatus === "Closed / Paid" ? "Requested" : "Not Ready");
   file.depositSecured = file.depositSecured || (Number(file.depositTotal) > 0 ? "Yes" : "No");
+  file.initialDepositSecured = file.initialDepositSecured || file.depositSecured || (Number(file.depositTotal) > 0 ? "Yes" : "No");
   file.initialDeposit = file.initialDeposit === undefined ? file.depositTotal || "" : file.initialDeposit;
+  file.midpointDepositSecured = file.midpointDepositSecured || (Number(file.midpointDeposit) > 0 ? "Yes" : "No");
   file.midpointDeposit = file.midpointDeposit === undefined ? "" : file.midpointDeposit;
   file.paidInFull = file.paidInFull || (file.invoiceStatus === "Paid" || file.fileStatus === "Closed / Paid" ? "Yes" : "No");
   file.contactEmailSent = file.contactEmailSent || "No";
   file.contactTextSent = file.contactTextSent || "No";
+  file.inspectionDateSet = file.inspectionDateSet || (file.inspectionDate ? "Yes" : "No");
   file.statusDetail = file.statusDetail || (CRM_STATUS_DETAILS[file.fileStatus] || [""])[0] || "";
   file.followUpDate = file.followUpDate || "";
   file.anticipatedCompletionDate = file.anticipatedCompletionDate || "";
   file.closingCallCompleted = file.closingCallCompleted || "No";
   file.finalPaymentSecured = file.finalPaymentSecured || "No";
   file.finalPaymentAmount = file.finalPaymentAmount === undefined ? "" : file.finalPaymentAmount;
+  file.invoiceSent = file.invoiceSent || (["Sent", "Deposit Paid", "Balance Due", "Paid"].includes(file.invoiceStatus) ? "Yes" : "No");
+  file.reviewRequested = file.reviewRequested || (["Requested", "Received"].includes(file.reviewStatus) || file.reviewSent === "Yes" ? "Yes" : "No");
   file.reviewSent = file.reviewSent || "No";
   if (file.fileNotes && !file.notes.length) {
     file.notes.push({ at: new Date().toISOString(), text: file.fileNotes });
@@ -355,6 +367,7 @@ function inferProjectStage(status = "") {
   if (status === "In Progress") return "In Progress";
   if (status === "Work Completed") return "Completed";
   if (status === "Closed / Paid") return "Paid";
+  if (status === "In Negotiation") return "Estimate";
   if (["Contact Established", "Inspection Completed"].includes(status)) return "Inspection";
   if (status === "Inspection Completed") return "Estimate";
   if (["Job Lost / Closed"].includes(status)) return "Closed";
@@ -364,6 +377,7 @@ function inferProjectStage(status = "") {
 function inferEstimateStatus(status = "", detail = "") {
   if (detail === "Estimate Pending") return "Pending";
   if (detail === "Estimate Sent") return "Sent";
+  if (status === "In Negotiation") return "Sent";
   if (["Job Won", "In Progress", "Work Completed", "Closed / Paid"].includes(status)) return "Approved";
   if (status === "Job Lost / Closed") return "Declined";
   return "Not Started";
@@ -376,26 +390,22 @@ function isOpenCrmFile(file) {
 function visibleFiles() {
   const filter = $("crmFileFilter").value;
   const openFiles = crmFiles.filter(isOpenCrmFile);
-  if (filter === "all") return crmFiles.filter(isOpenCrmFile);
-  if (filter === "new") return openFiles.filter((file) => ["New Lead", "Contact Established", "Contact Attempted"].includes(file.fileStatus));
+  if (filter === "new") return openFiles.filter((file) => file.fileStatus === "New Lead");
+  if (filter === "contact") return openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus));
   if (filter === "estimate") return openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail));
-  if (filter === "inspection") return openFiles.filter((file) => file.fileStatus === "Contact Established" || file.fileStatus === "Inspection Completed" || file.projectStage === "Inspection" || Boolean(file.inspectionDate));
-  if (filter === "won") return openFiles.filter((file) => ["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus));
-  if (filter === "active") return openFiles.filter((file) => ["Job Won", "In Progress"].includes(file.fileStatus) || ["Scheduled", "In Progress"].includes(file.projectStage));
-  if (filter === "review") return openFiles.filter((file) => file.fileStatus === "Work Completed" || ["Ready to Request", "Requested"].includes(file.reviewStatus));
+  if (filter === "negotiation") return openFiles.filter((file) => file.fileStatus === "In Negotiation");
+  if (filter === "active") return openFiles.filter((file) => ["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage));
   if (filter === "archive") return crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus));
-  return crmFiles;
+  return openFiles;
 }
 
 function renderCounts() {
-  $("allFilesCount").textContent = crmFiles.filter(isOpenCrmFile).length;
   const openFiles = crmFiles.filter(isOpenCrmFile);
-  $("newLeadCount").textContent = openFiles.filter((file) => ["New Lead", "Contact Established", "Contact Attempted"].includes(file.fileStatus)).length;
+  $("newLeadCount").textContent = openFiles.filter((file) => file.fileStatus === "New Lead").length;
+  $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus)).length;
   $("pendingEstimateCount").textContent = openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail)).length;
-  $("inspectionCount").textContent = openFiles.filter((file) => file.fileStatus === "Contact Established" || file.fileStatus === "Inspection Completed" || file.projectStage === "Inspection" || Boolean(file.inspectionDate)).length;
-  $("wonJobCount").textContent = openFiles.filter((file) => ["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus)).length;
-  $("activeJobCount").textContent = openFiles.filter((file) => ["Job Won", "In Progress"].includes(file.fileStatus) || ["Scheduled", "In Progress"].includes(file.projectStage)).length;
-  $("reviewCount").textContent = openFiles.filter((file) => file.fileStatus === "Work Completed" || ["Ready to Request", "Requested"].includes(file.reviewStatus)).length;
+  $("negotiationCount").textContent = openFiles.filter((file) => file.fileStatus === "In Negotiation").length;
+  $("activeJobCount").textContent = openFiles.filter((file) => ["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage)).length;
   $("archivedCount").textContent = crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus)).length;
 }
 
@@ -465,10 +475,9 @@ function renderActiveFile() {
       if (element) element.value = "";
     });
     $("crmEstimateTotal").textContent = crmCurrency.format(0);
-    $("crmDepositTotal").textContent = crmCurrency.format(0);
-    $("crmMidpointDepositTotal").textContent = crmCurrency.format(0);
     $("crmMaterialTotal").textContent = crmCurrency.format(0);
     $("crmBalanceTotal").textContent = crmCurrency.format(0);
+    $("crmPaidTotal").textContent = crmCurrency.format(0);
     $("crmStatusDescription").textContent = "";
     renderMaterialBreakdown(null);
     $("crmNewNote").value = "";
@@ -486,14 +495,15 @@ function renderActiveFile() {
   const estimateTotal = Number(file.estimateTotal) || 0;
   const initialDeposit = Number(file.initialDeposit) || Number(file.depositTotal) || 0;
   const midpointDeposit = Number(file.midpointDeposit) || 0;
+  const finalPayment = Number(file.finalPaymentAmount) || 0;
   const paidInFull = file.paidInFull === "Yes";
-  const securedTotal = paidInFull ? estimateTotal : initialDeposit + midpointDeposit;
+  const securedTotal = paidInFull ? estimateTotal : initialDeposit + midpointDeposit + finalPayment;
   $("crmEstimateTotal").textContent = crmCurrency.format(estimateTotal);
   $("crmEstimateAmountInput").value = estimateTotal ? estimateTotal.toFixed(2) : "";
-  $("crmDepositTotal").textContent = crmCurrency.format(initialDeposit);
-  $("crmMidpointDepositTotal").textContent = crmCurrency.format(midpointDeposit);
   $("crmMaterialTotal").textContent = crmCurrency.format(Number(file.materialTotal) || 0);
+  $("crmMaterialAmountInput").value = Number(file.materialTotal) ? Number(file.materialTotal).toFixed(2) : "";
   $("crmBalanceTotal").textContent = crmCurrency.format(Math.max(estimateTotal - securedTotal, 0));
+  $("crmPaidTotal").textContent = crmCurrency.format(Math.min(securedTotal, estimateTotal || securedTotal));
   $("crmStatusDescription").textContent = CRM_STATUS_DESCRIPTIONS[file.fileStatus] || "";
   renderMaterialBreakdown(file);
   $("crmNewNote").value = "";
@@ -552,6 +562,29 @@ function saveEstimateAmountEdit() {
   renderCrm();
 }
 
+function toggleMaterialAmountEdit() {
+  const panel = $("crmMaterialEditPanel");
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) {
+    $("crmMaterialAmountInput").focus();
+    $("crmMaterialAmountInput").select();
+  }
+}
+
+function saveMaterialAmountEdit() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  const oldAmount = Number(file.materialTotal) || 0;
+  const newAmount = parseMoney($("crmMaterialAmountInput").value);
+  file.materialTotal = newAmount;
+  if (oldAmount !== newAmount) {
+    addSystemNote(file, `Materials amount changed from ${crmCurrency.format(oldAmount)} to ${crmCurrency.format(newAmount)}.`);
+  }
+  $("crmMaterialEditPanel").hidden = true;
+  saveCrmFiles();
+  renderCrm();
+}
+
 function addSystemNote(file, text) {
   if (!text) return;
   const timestamp = new Date().toISOString();
@@ -569,6 +602,40 @@ function openDateField(id) {
     } catch (error) {
       // Some browsers only allow date pickers from direct user gestures.
     }
+  }
+}
+
+function requireCrmReason(message, notePrefix) {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  const reason = window.prompt(message);
+  if (reason) addSystemNote(file, `${notePrefix}: ${reason}`);
+}
+
+function handleCrmControlWorkflow(event) {
+  const element = event.target;
+  if (!element || !element.id) return;
+  if (element.id === "crmInspectionDateSet") {
+    if (element.value === "Yes") {
+      openDateField("crmInspectionDate");
+    } else {
+      requireCrmReason("Inspection date is not set. Add a note explaining why.", "Inspection date not set");
+    }
+  }
+  if (element.id === "crmInitialDepositSecured" && element.value === "No") {
+    requireCrmReason("Initial deposit is not secured. Add a note explaining why.", "Initial deposit not secured");
+  }
+  if (element.id === "crmMidpointDepositSecured" && element.value === "No") {
+    requireCrmReason("Midpoint deposit is not secured. Add a note explaining why.", "Midpoint deposit not secured");
+  }
+  if (element.id === "crmFinalPaymentSecured" && element.value === "No") {
+    requireCrmReason("Final payment is not secured. Add a note explaining why.", "Final payment not secured");
+  }
+  if (element.id === "crmInvoiceSent" && element.value === "No") {
+    requireCrmReason("Invoice has not been sent. Add a note explaining why.", "Invoice not sent");
+  }
+  if (element.id === "crmReviewRequested" && element.value === "No") {
+    requireCrmReason("Review has not been requested. Add a note explaining why.", "Review not requested");
   }
 }
 
@@ -615,6 +682,18 @@ function handleStatusWorkflow() {
     const made = window.confirm("Has the estimate follow-up been made?");
     addSystemNote(file, made ? "Estimate sent and follow-up has been made." : "Estimate sent. Follow-up still needs to be made.");
     if (!made) $("crmNextAction").value = "Follow up on sent estimate";
+  }
+
+  if (status === "In Negotiation") {
+    $("crmEstimateStatus").value = "Sent";
+    if (!$("crmFollowUpDate").value) {
+      const followUp = window.prompt("Set a follow-up date for this negotiation. Use YYYY-MM-DD.");
+      if (followUp) {
+        $("crmFollowUpDate").value = followUp;
+        $("crmNextActionDate").value = followUp;
+      }
+    }
+    $("crmNextAction").value = "Follow up on negotiation";
   }
 
   if (status === "Job Won" && detail === "Start Date Pending") {
@@ -736,6 +815,7 @@ function newCrmFile() {
     projectStage: "Lead",
     contactEmailSent: "No",
     contactTextSent: "No",
+    inspectionDateSet: "No",
     inspectionDate: "",
     inspectionTime: "",
     startDate: "",
@@ -746,12 +826,16 @@ function newCrmFile() {
     nextActionDate: todayIso(1),
     warrantyStatus: "Not Sent",
     depositSecured: "No",
+    initialDepositSecured: "No",
     initialDeposit: "",
+    midpointDepositSecured: "No",
     midpointDeposit: "",
     paidInFull: "No",
     closingCallCompleted: "No",
     finalPaymentSecured: "No",
     finalPaymentAmount: "",
+    invoiceSent: "No",
+    reviewRequested: "No",
     reviewSent: "No",
     estimateStatus: "Not Started",
     invoiceStatus: "Not Created",
@@ -827,8 +911,17 @@ function searchCrmFile() {
   }
   saveActiveFile();
   activeFileId = match.id;
-  activateCrmFilter("all");
+  activateCrmFilter(filterForCrmFile(match));
   renderCrm();
+}
+
+function filterForCrmFile(file) {
+  if (!isOpenCrmFile(file)) return "archive";
+  if (file.fileStatus === "New Lead") return "new";
+  if (["Contact Established", "Contact Attempted"].includes(file.fileStatus)) return "contact";
+  if (file.fileStatus === "Inspection Completed") return "estimate";
+  if (file.fileStatus === "In Negotiation") return "negotiation";
+  return "active";
 }
 
 function activateCrmFilter(filter) {
@@ -989,6 +1082,7 @@ function dashboardFileFromEstimate(data, row) {
     projectStage: existing?.projectStage || "Lead",
     contactEmailSent: existing?.contactEmailSent || "No",
     contactTextSent: existing?.contactTextSent || "No",
+    inspectionDateSet: existing?.inspectionDateSet || (data.inspectionDate ? "Yes" : "No"),
     inspectionDate: data.inspectionDate || existing?.inspectionDate || "",
     inspectionTime: data.inspectionTime || existing?.inspectionTime || "",
     startDate: data.assignmentStartDate || existing?.startDate || "",
@@ -999,12 +1093,16 @@ function dashboardFileFromEstimate(data, row) {
     nextActionDate: data.nextActionDate || existing?.nextActionDate || todayIso(1),
     warrantyStatus: data.warrantyStatus || existing?.warrantyStatus || "Not Sent",
     depositSecured: existing?.depositSecured || (estimateDeposit > 0 ? "Yes" : "No"),
+    initialDepositSecured: existing?.initialDepositSecured || (estimateDeposit > 0 ? "Yes" : "No"),
     initialDeposit: existing?.initialDeposit === undefined ? estimateDeposit || "" : existing.initialDeposit,
+    midpointDepositSecured: existing?.midpointDepositSecured || (Number(existing?.midpointDeposit) > 0 ? "Yes" : "No"),
     midpointDeposit: existing?.midpointDeposit || "",
     paidInFull: existing?.paidInFull || "No",
     closingCallCompleted: existing?.closingCallCompleted || "No",
     finalPaymentSecured: existing?.finalPaymentSecured || "No",
     finalPaymentAmount: existing?.finalPaymentAmount || "",
+    invoiceSent: existing?.invoiceSent || "No",
+    reviewRequested: existing?.reviewRequested || "No",
     reviewSent: existing?.reviewSent || "No",
     estimateStatus: data.estimateStatus || existing?.estimateStatus || "Estimate Completed",
     invoiceStatus: existing?.invoiceStatus || "Not Created",
@@ -1081,6 +1179,7 @@ function createDashboardFileFromRevenueRow(row) {
     projectStage: "Lead",
     contactEmailSent: "No",
     contactTextSent: "No",
+    inspectionDateSet: "No",
     inspectionDate: "",
     inspectionTime: "",
     startDate: "",
@@ -1091,12 +1190,16 @@ function createDashboardFileFromRevenueRow(row) {
     nextActionDate: todayIso(1),
     warrantyStatus: "Not Sent",
     depositSecured: "No",
+    initialDepositSecured: "No",
     initialDeposit: "",
+    midpointDepositSecured: "No",
     midpointDeposit: "",
     paidInFull: "No",
     closingCallCompleted: "No",
     finalPaymentSecured: "No",
     finalPaymentAmount: "",
+    invoiceSent: "No",
+    reviewRequested: "No",
     reviewSent: "No",
     estimateStatus: "Estimate Completed",
     invoiceStatus: "Not Created",
@@ -1433,10 +1536,14 @@ function importApprovedEstimateFile(file) {
 }
 
 function renderPriceDatabase() {
-  $("crmPriceCount").textContent = String(crmPriceRows.length);
-  $("crmPriceLast").textContent = crmPriceRows[0]?.product || "None";
-  $("crmPriceList").innerHTML = crmPriceRows.length
-    ? crmPriceRows.map((row) => `
+  const baseRows = Array.isArray(window.D2_MATERIALS_DATABASE)
+    ? window.D2_MATERIALS_DATABASE.map((row) => ({ ...row, readonly: true }))
+    : [];
+  const rows = [...crmPriceRows, ...baseRows];
+  $("crmPriceCount").textContent = String(rows.length);
+  $("crmPriceLast").textContent = crmPriceRows[0]?.product || baseRows[0]?.product || "None";
+  $("crmPriceList").innerHTML = rows.length
+    ? rows.map((row) => `
       <div class="crm-price-row">
         <div>
           <strong>${escapeHtml(row.product)}</strong>
@@ -1444,10 +1551,12 @@ function renderPriceDatabase() {
         </div>
         <small>${escapeHtml(row.unit || "each")}</small>
         <strong>${crmCurrency.format(Number(row.defaultPrice) || 0)}</strong>
-        <button type="button" data-price-delete="${escapeHtml(row.id)}">Delete</button>
+        ${row.readonly
+          ? `<em>Estimator</em>`
+          : `<button type="button" data-price-delete="${escapeHtml(row.id)}">Delete</button>`}
       </div>
     `).join("")
-    : `<p class="crm-empty-state">No custom price lines yet.</p>`;
+    : `<p class="crm-empty-state">No price lines yet.</p>`;
   document.querySelectorAll("[data-price-delete]").forEach((button) => {
     button.addEventListener("click", () => deletePriceLine(button.dataset.priceDelete));
   });
@@ -1529,6 +1638,8 @@ $("crmFileSearch").addEventListener("keydown", (event) => {
 });
 $("crmEditEstimateTotal").addEventListener("click", toggleEstimateAmountEdit);
 $("crmSaveEstimateAmount").addEventListener("click", saveEstimateAmountEdit);
+$("crmEditMaterialTotal").addEventListener("click", toggleMaterialAmountEdit);
+$("crmSaveMaterialAmount").addEventListener("click", saveMaterialAmountEdit);
 $("crmAddPriceLine").addEventListener("click", addPriceLine);
 $("crmNewFile").addEventListener("click", newCrmFile);
 $("crmImportApprovedEstimate").addEventListener("click", () => $("crmApprovedEstimateUpload").click());
@@ -1577,8 +1688,12 @@ $("crmFileStatus").addEventListener("change", () => {
 $("crmStatusDetail").addEventListener("change", handleStatusWorkflow);
 
 document.querySelectorAll("input, select, textarea").forEach((element) => {
-  if (["crmFileStatus", "crmStatusDetail", "crmEstimateAmountInput"].includes(element.id)) return;
-  element.addEventListener("change", saveActiveFile);
+  if (["crmFileStatus", "crmStatusDetail", "crmEstimateAmountInput", "crmMaterialAmountInput"].includes(element.id)) return;
+  element.addEventListener("change", (event) => {
+    handleCrmControlWorkflow(event);
+    saveActiveFile();
+    renderCrm();
+  });
 });
 
 applyFreshDashboardReset();

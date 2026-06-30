@@ -33,33 +33,25 @@
       <section class="crm-dashboard">
         <section class="crm-command-panel crm-dashboard-view">
           <div class="crm-command-grid">
-            <button type="button" class="crm-command-card active" data-crm-filter="all">
-              <span>All Files</span>
-              <strong id="allFilesCount">0</strong>
-            </button>
-            <button type="button" class="crm-command-card" data-crm-filter="new">
+            <button type="button" class="crm-command-card active" data-crm-filter="new">
               <span>New Leads</span>
               <strong id="newLeadCount">0</strong>
+            </button>
+            <button type="button" class="crm-command-card" data-crm-filter="contact">
+              <span>Pending Contact</span>
+              <strong id="pendingContactCount">0</strong>
             </button>
             <button type="button" class="crm-command-card" data-crm-filter="estimate">
               <span>Pending Estimates</span>
               <strong id="pendingEstimateCount">0</strong>
             </button>
-            <button type="button" class="crm-command-card" data-crm-filter="inspection">
-              <span>Inspections</span>
-              <strong id="inspectionCount">0</strong>
-            </button>
-            <button type="button" class="crm-command-card" data-crm-filter="won">
-              <span>Won Jobs</span>
-              <strong id="wonJobCount">0</strong>
+            <button type="button" class="crm-command-card" data-crm-filter="negotiation">
+              <span>In Negotiation</span>
+              <strong id="negotiationCount">0</strong>
             </button>
             <button type="button" class="crm-command-card" data-crm-filter="active">
               <span>Active Jobs</span>
               <strong id="activeJobCount">0</strong>
-            </button>
-            <button type="button" class="crm-command-card" data-crm-filter="review">
-              <span>Reviews</span>
-              <strong id="reviewCount">0</strong>
             </button>
             <button type="button" class="crm-command-card" data-crm-filter="archive">
               <span>Closed Files</span>
@@ -76,13 +68,11 @@
                 <h2 id="crmListTitle">All Files</h2>
               </div>
               <select id="crmFileFilter" aria-label="File filter">
-                <option value="all" selected>All Files</option>
-                <option value="new">New Leads</option>
+                <option value="new" selected>New Leads</option>
+                <option value="contact">Pending Contact</option>
                 <option value="estimate">Pending Estimates</option>
-                <option value="inspection">Inspections</option>
-                <option value="won">Won Jobs</option>
+                <option value="negotiation">In Negotiation</option>
                 <option value="active">Active Jobs</option>
-                <option value="review">Reviews</option>
                 <option value="archive">Closed Files</option>
               </select>
             </div>
@@ -157,6 +147,7 @@
                       <option>Contact Established</option>
                       <option>Contact Attempted</option>
                       <option>Inspection Completed</option>
+                      <option>In Negotiation</option>
                       <option>Job Won</option>
                       <option>In Progress</option>
                       <option>Work Completed</option>
@@ -186,9 +177,30 @@
 
               <section class="panel crm-detail-card">
                 <div class="panel-header">
-                  <h2>Schedule</h2>
+                  <h2>Contact</h2>
                 </div>
                 <div class="field-grid two-tight">
+                  <label>
+                    Contact Email Sent?
+                    <select id="crmContactEmailSent">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Contact Text Sent?
+                    <select id="crmContactTextSent">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Inspection Date Set?
+                    <select id="crmInspectionDateSet">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
                   <label>
                     Inspection Date
                     <input id="crmInspectionDate" type="date">
@@ -220,39 +232,38 @@
                     Anticipated Completion
                     <input id="crmAnticipatedCompletionDate" type="date">
                   </label>
-                  <label class="wide">
-                    Next Action
-                    <input id="crmNextAction" placeholder="Follow up, send estimate, confirm start date">
-                  </label>
                   <label>
                     Next Action Date
                     <input id="crmNextActionDate" type="date">
                   </label>
-                  <label>
-                    Warranty Details
-                    <select id="crmWarrantyStatus">
-                      <option>Not Sent</option>
-                      <option>Ready to Send</option>
-                      <option>Sent</option>
-                    </select>
+                  <label class="wide">
+                    Next Action
+                    <input id="crmNextAction" placeholder="Follow up, send estimate, confirm start date">
                   </label>
                 </div>
+                <input id="crmEstimateStatus" type="hidden" value="Not Started">
+                <input id="crmInvoiceStatus" type="hidden" value="Not Created">
+                <input id="crmReviewStatus" type="hidden" value="Not Ready">
+                <input id="crmReviewSent" type="hidden" value="No">
               </section>
 
               <section class="panel crm-detail-card">
                 <div class="panel-header">
-                  <h2>Money</h2>
+                  <h2>Financials</h2>
                 </div>
                 <div class="crm-money-grid">
                   <div class="crm-estimate-total-card">
-                    <span>Estimate</span>
+                    <span>Estimate Amount</span>
                     <strong id="crmEstimateTotal">$0.00</strong>
                     <button type="button" id="crmEditEstimateTotal">Edit</button>
                   </div>
-                  <div><span>Initial Deposit</span><strong id="crmDepositTotal">$0.00</strong></div>
-                  <div><span>Midpoint Deposit</span><strong id="crmMidpointDepositTotal">$0.00</strong></div>
-                  <div><span>Balance</span><strong id="crmBalanceTotal">$0.00</strong></div>
-                  <div><span>Materials</span><strong id="crmMaterialTotal">$0.00</strong></div>
+                  <div class="crm-estimate-total-card">
+                    <span>Materials</span>
+                    <strong id="crmMaterialTotal">$0.00</strong>
+                    <button type="button" id="crmEditMaterialTotal">Edit</button>
+                  </div>
+                  <div><span>Pending Amount Owed</span><strong id="crmBalanceTotal">$0.00</strong></div>
+                  <div><span>Total Estimate Paid</span><strong id="crmPaidTotal">$0.00</strong></div>
                 </div>
                 <div class="crm-estimate-edit" id="crmEstimateEditPanel" hidden>
                   <label>
@@ -261,31 +272,17 @@
                   </label>
                   <button type="button" id="crmSaveEstimateAmount">Save Amount</button>
                 </div>
+                <div class="crm-estimate-edit" id="crmMaterialEditPanel" hidden>
+                  <label>
+                    Materials Amount
+                    <input id="crmMaterialAmountInput" type="number" min="0" step="0.01">
+                  </label>
+                  <button type="button" id="crmSaveMaterialAmount">Save Materials</button>
+                </div>
                 <div class="field-grid two-tight crm-money-controls">
                   <label>
-                    Contact Email Sent?
-                    <select id="crmContactEmailSent">
-                      <option>No</option>
-                      <option>Yes</option>
-                    </select>
-                  </label>
-                  <label>
-                    Contact Text Sent?
-                    <select id="crmContactTextSent">
-                      <option>No</option>
-                      <option>Yes</option>
-                    </select>
-                  </label>
-                  <label>
-                    Deposit Secured?
-                    <select id="crmDepositSecured">
-                      <option>No</option>
-                      <option>Yes</option>
-                    </select>
-                  </label>
-                  <label>
-                    Paid in Full?
-                    <select id="crmPaidInFull">
+                    Initial Deposit Secured?
+                    <select id="crmInitialDepositSecured">
                       <option>No</option>
                       <option>Yes</option>
                     </select>
@@ -295,15 +292,15 @@
                     <input id="crmInitialDeposit" type="number" min="0" step="0.01">
                   </label>
                   <label>
-                    Midpoint Deposit
-                    <input id="crmMidpointDeposit" type="number" min="0" step="0.01">
-                  </label>
-                  <label>
-                    Closing Call Completed?
-                    <select id="crmClosingCallCompleted">
+                    Midpoint Deposit Secured?
+                    <select id="crmMidpointDepositSecured">
                       <option>No</option>
                       <option>Yes</option>
                     </select>
+                  </label>
+                  <label>
+                    Midpoint Deposit
+                    <input id="crmMidpointDeposit" type="number" min="0" step="0.01">
                   </label>
                   <label>
                     Final Payment Secured?
@@ -317,8 +314,8 @@
                     <input id="crmFinalPaymentAmount" type="number" min="0" step="0.01">
                   </label>
                   <label>
-                    Review Sent?
-                    <select id="crmReviewSent">
+                    Paid in Full?
+                    <select id="crmPaidInFull">
                       <option>No</option>
                       <option>Yes</option>
                     </select>
@@ -333,35 +330,32 @@
                 </div>
                 <div class="field-grid two-tight">
                   <label>
-                    Estimate Status
-                    <select id="crmEstimateStatus">
-                      <option>Not Started</option>
-                      <option>Pending</option>
-                      <option>Completed</option>
-                      <option>Sent</option>
-                      <option>Reviewed</option>
-                      <option>Approved</option>
-                      <option>Declined</option>
-                      <option>Needs Revision</option>
+                    Invoice Sent?
+                    <select id="crmInvoiceSent">
+                      <option>No</option>
+                      <option>Yes</option>
                     </select>
                   </label>
                   <label>
-                    Invoice Status
-                    <select id="crmInvoiceStatus">
-                      <option>Not Created</option>
-                      <option>Sent</option>
-                      <option>Deposit Paid</option>
-                      <option>Balance Due</option>
-                      <option>Paid</option>
+                    Review Requested?
+                    <select id="crmReviewRequested">
+                      <option>No</option>
+                      <option>Yes</option>
                     </select>
                   </label>
                   <label>
-                    Review Status
-                    <select id="crmReviewStatus">
-                      <option>Not Ready</option>
-                      <option>Ready to Request</option>
-                      <option>Requested</option>
-                      <option>Received</option>
+                    Closing Call Completed?
+                    <select id="crmClosingCallCompleted">
+                      <option>No</option>
+                      <option>Yes</option>
+                    </select>
+                  </label>
+                  <label>
+                    Warranty Details
+                    <select id="crmWarrantyStatus">
+                      <option>Not Sent</option>
+                      <option>Ready to Send</option>
+                      <option>Sent</option>
                     </select>
                   </label>
                 </div>
@@ -501,7 +495,7 @@
             </section>
             <section class="panel crm-detail-card">
               <div class="panel-header">
-                <h2>Current Custom Prices</h2>
+                <h2>Current Prices</h2>
               </div>
               <div class="crm-price-list" id="crmPriceList"></div>
             </section>
@@ -509,6 +503,7 @@
         </section>
       </section>
     </main>
+    <script src="materials-database.js"></script>
     <script src="revenue-data.js"></script>
     <script src="crm.js"></script>
   </body>
