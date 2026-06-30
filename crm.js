@@ -1789,13 +1789,13 @@ function renderInvoiceView() {
   if (!paper) return;
   if (!file) {
     paper.innerHTML = `<p class="crm-empty-state">Select a customer file to create an invoice.</p>`;
-    $("crmInvoicePaid").value = "No";
+    $("crmTogglePaidStamp").textContent = "Add Paid Stamp";
     return;
   }
   const invoice = invoiceData(file);
   const estimateTotal = Number(invoice.total) || invoiceTotal(invoice.rows, file.estimateTotal);
   const paid = file.paidInFull === "Yes" || file.invoicePaid === "Yes";
-  $("crmInvoicePaid").value = paid ? "Yes" : "No";
+  $("crmTogglePaidStamp").textContent = paid ? "Remove Paid Stamp" : "Add Paid Stamp";
   paper.innerHTML = `
     <div class="simple-sheet-header">
       <div class="logo-card">
@@ -1810,10 +1810,10 @@ function renderInvoiceView() {
       <div class="header-estimate-info">
         <span class="header-estimate-number">${escapeHtml(invoice.projectNumber || "")}</span>
         <div class="estimate-title-line">
-          <input class="crm-invoice-title-input" data-invoice-field="title" value="${escapeHtml(invoice.title)}" aria-label="Invoice title">
+          <h3 class="crm-inline-edit crm-invoice-title-input" data-invoice-field="title" contenteditable="true" aria-label="Invoice title">${escapeHtml(invoice.title || "Invoice")}</h3>
         </div>
         <dl>
-          <div><dt>Date</dt><dd><input data-invoice-field="date" type="date" value="${escapeHtml(invoice.date)}" aria-label="Invoice date"></dd></div>
+          <div><dt>Date</dt><dd class="crm-inline-edit" data-invoice-field="date" contenteditable="true" aria-label="Invoice date">${escapeHtml(invoice.date || todayIso(0))}</dd></div>
           <div><dt>Office</dt><dd><a href="tel:+12394698555">(239) 469-8555</a></dd></div>
           <div><dt>Address</dt><dd>${crmCompanyAddressHtml()}</dd></div>
           <div><dt>Email</dt><dd><a href="mailto:D2CarpentryandDesign@gmail.com">D2CarpentryandDesign@gmail.com</a></dd></div>
@@ -1823,11 +1823,11 @@ function renderInvoiceView() {
     <section class="client-block crm-invoice-client-block">
       <div>
         <span>Client Information</span>
-        <input data-invoice-field="billTo" value="${escapeHtml(invoice.billTo)}" aria-label="Bill to">
-        <p><input data-invoice-field="phone" value="${escapeHtml(invoice.phone)}" aria-label="Invoice phone"></p>
-        <p><input data-invoice-field="email" value="${escapeHtml(invoice.email)}" aria-label="Invoice email"></p>
-        <p><textarea data-invoice-field="address" rows="2" aria-label="Invoice address">${escapeHtml(invoice.address)}</textarea></p>
-        <input class="crm-invoice-project-number" data-invoice-field="projectNumber" value="${escapeHtml(invoice.projectNumber)}" aria-label="Project number">
+        <strong class="crm-inline-edit" data-invoice-field="billTo" contenteditable="true" aria-label="Bill to">${escapeHtml(invoice.billTo)}</strong>
+        <p><span class="crm-inline-edit" data-invoice-field="phone" contenteditable="true" aria-label="Invoice phone">${escapeHtml(invoice.phone)}</span></p>
+        <p><span class="crm-inline-edit" data-invoice-field="email" contenteditable="true" aria-label="Invoice email">${escapeHtml(invoice.email)}</span></p>
+        <p><span class="crm-inline-edit" data-invoice-field="address" contenteditable="true" aria-label="Invoice address">${escapeHtml(invoice.address)}</span></p>
+        <span class="crm-invoice-project-number crm-inline-edit" data-invoice-field="projectNumber" contenteditable="true" aria-label="Project number">${escapeHtml(invoice.projectNumber)}</span>
       </div>
     </section>
     <table>
@@ -1847,9 +1847,9 @@ function renderInvoiceView() {
         ${invoice.rows.map((item, index) => {
           return `
             <tr class="${item.type === "subline" ? "subline-preview-row crm-invoice-subline" : "description-preview-row"}">
-              <td><textarea data-invoice-row="${index}" data-invoice-row-field="description" rows="2">${escapeHtml(item.description || "Project total")}</textarea></td>
-              <td><input data-invoice-row="${index}" data-invoice-row-field="qty" value="${escapeHtml(item.qty || "")}"></td>
-              <td><input data-invoice-row="${index}" data-invoice-row-field="total" type="number" min="0" step="0.01" value="${escapeHtml(item.total || "")}"></td>
+              <td class="crm-inline-edit" data-invoice-row="${index}" data-invoice-row-field="description" contenteditable="true">${escapeHtml(item.description || "Project total")}</td>
+              <td class="crm-inline-edit" data-invoice-row="${index}" data-invoice-row-field="qty" contenteditable="true">${escapeHtml(item.qty || "")}</td>
+              <td class="crm-inline-edit" data-invoice-row="${index}" data-invoice-row-field="total" contenteditable="true">${escapeHtml(item.total || "")}</td>
             </tr>
           `;
         }).join("")}
@@ -1859,12 +1859,12 @@ function renderInvoiceView() {
       ${paid ? `<strong class="crm-paid-stamp">PAID IN FULL</strong>` : ""}
       <div class="grand-total">
         <span>Total</span>
-        <input data-invoice-field="total" type="number" min="0" step="0.01" value="${escapeHtml(estimateTotal || "")}" aria-label="Invoice total">
+        <strong class="crm-inline-edit" data-invoice-field="total" contenteditable="true" aria-label="Invoice total">${escapeHtml(estimateTotal || "")}</strong>
       </div>
     </div>
     <div class="notes crm-invoice-notes">
       <span>Notes</span>
-      <textarea data-invoice-field="notes" rows="4" aria-label="Invoice notes">${escapeHtml(invoice.notes)}</textarea>
+      <p class="crm-inline-edit" data-invoice-field="notes" contenteditable="true" aria-label="Invoice notes">${escapeHtml(invoice.notes)}</p>
     </div>
     <footer class="estimate-footer">
       <span><strong>Office:</strong> (239) 469-8555</span>
@@ -1877,19 +1877,19 @@ function renderInvoiceView() {
 function saveInvoiceStatus() {
   const file = normalizeCrmFile(activeFile());
   if (!file) return;
-  const paid = $("crmInvoicePaid").value;
+  const paid = file.invoicePaid === "Yes" || file.paidInFull === "Yes" ? "Yes" : "No";
   const oldValue = file.invoicePaid || "No";
   const rowCount = document.querySelectorAll("[data-invoice-row-field='description']").length;
   const rows = Array.from({ length: rowCount }, (_, index) => {
     const descriptionField = document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="description"]`);
     return {
-      description: descriptionField?.value.trim() || "",
-      qty: document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="qty"]`)?.value.trim() || "",
-      total: parseMoney(document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="total"]`)?.value || ""),
+      description: textFieldValue(descriptionField),
+      qty: textFieldValue(document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="qty"]`)),
+      total: parseMoney(textFieldValue(document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="total"]`))),
       type: descriptionField?.closest("tr")?.classList.contains("crm-invoice-subline") ? "subline" : "item",
     };
   }).filter((row) => row.description || row.qty || row.total);
-  const fieldValue = (field) => document.querySelector(`[data-invoice-field="${field}"]`)?.value.trim() || "";
+  const fieldValue = (field) => textFieldValue(document.querySelector(`[data-invoice-field="${field}"]`));
   file.invoice = {
     title: fieldValue("title") || "Invoice",
     date: fieldValue("date") || todayIso(0),
@@ -1908,6 +1908,25 @@ function saveInvoiceStatus() {
   file.invoiceSent = "Yes";
   file.invoiceStatus = paid === "Yes" ? "Paid" : "Sent";
   if (oldValue !== paid) addSystemNote(file, `Invoice paid status changed to ${paid}.`);
+  saveCrmFiles();
+  renderInvoiceView();
+  renderCrm();
+}
+
+function textFieldValue(element) {
+  if (!element) return "";
+  return ("value" in element ? element.value : element.textContent || "").trim();
+}
+
+function togglePaidStamp() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  saveInvoiceStatus();
+  const isPaid = file.invoicePaid === "Yes" || file.paidInFull === "Yes";
+  file.invoicePaid = isPaid ? "No" : "Yes";
+  file.paidInFull = file.invoicePaid;
+  file.invoiceStatus = file.invoicePaid === "Yes" ? "Paid" : "Sent";
+  addSystemNote(file, file.invoicePaid === "Yes" ? "Paid in full stamp added to invoice." : "Paid in full stamp removed from invoice.");
   saveCrmFiles();
   renderInvoiceView();
   renderCrm();
@@ -1951,6 +1970,9 @@ async function waitForCrmPdfAssets(host) {
 
 function prepareInvoicePdfClone(source) {
   const clone = source.cloneNode(true);
+  clone.querySelectorAll("[contenteditable]").forEach((element) => {
+    element.removeAttribute("contenteditable");
+  });
   clone.querySelectorAll("input, textarea").forEach((field) => {
     const replacement = document.createElement(field.matches("[data-invoice-field='title']") ? "h3" : "span");
     replacement.className = field.className || "";
@@ -2015,43 +2037,135 @@ async function createInvoicePdfDocument(file, sourceElement) {
     }
     return doc;
   } catch (error) {
-    console.warn("Invoice PDF generator failed; using print fallback.", error);
+    console.warn("Invoice visual PDF generator failed; using simple PDF fallback.", error);
     return null;
   } finally {
     host.remove();
   }
 }
 
-function printInvoiceFallback(file, sourceElement) {
-  if (!sourceElement) {
-    window.alert("Open an invoice first, then click Save PDF.");
-    return;
+function createSimpleInvoicePdfDocument(file) {
+  const JsPdf = getCrmJsPdf();
+  if (!JsPdf) return null;
+  const invoice = invoiceData(file);
+  const doc = new JsPdf({ unit: "mm", format: "letter" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  let y = 18;
+  const addPageIfNeeded = (needed = 10) => {
+    if (y + needed < pageHeight - margin) return;
+    doc.addPage("letter");
+    y = margin;
+  };
+  const writeWrapped = (text, x, maxWidth, lineHeight = 5) => {
+    const lines = doc.splitTextToSize(String(text || ""), maxWidth);
+    lines.forEach((line) => {
+      addPageIfNeeded(lineHeight);
+      doc.text(line, x, y);
+      y += lineHeight;
+    });
+  };
+
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(13, 74, 145);
+  doc.setFontSize(20);
+  doc.text("D2 Carpentry & Design", margin, y);
+  doc.setFontSize(22);
+  doc.text("INVOICE", pageWidth - margin, y, { align: "right" });
+  y += 8;
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(75, 85, 99);
+  doc.setFontSize(9);
+  doc.text("-Crafting Your Vision One Nail At A Time-", margin, y);
+  doc.text(invoice.projectNumber || file.fileNumber || "", pageWidth - margin, y, { align: "right" });
+  y += 10;
+  doc.setDrawColor(13, 74, 145);
+  doc.setLineWidth(1.2);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text("Client Information", margin, y);
+  doc.text("Invoice Details", pageWidth - 72, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  const clientStartY = y;
+  writeWrapped(invoice.billTo || file.clientName || "Client", margin, 80);
+  writeWrapped(invoice.phone || file.clientPhone || "", margin, 80);
+  writeWrapped(invoice.email || file.clientEmail || "", margin, 80);
+  writeWrapped(invoice.address || file.projectAddress || "", margin, 80);
+  const afterClientY = y;
+  y = clientStartY;
+  doc.text(displayDate(invoice.date || todayIso(0)), pageWidth - 72, y);
+  y += 5;
+  writeWrapped(`Project # ${invoice.projectNumber || file.fileNumber || ""}`, pageWidth - 72, 58);
+  y = Math.max(afterClientY, y) + 8;
+
+  doc.setFillColor(13, 74, 145);
+  doc.rect(margin, y - 5, pageWidth - margin * 2, 8, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text("Description", margin + 2, y);
+  doc.text("Qty", pageWidth - 52, y, { align: "right" });
+  doc.text("Total", pageWidth - margin - 2, y, { align: "right" });
+  y += 7;
+
+  doc.setTextColor(17, 24, 39);
+  doc.setFont("helvetica", "normal");
+  (invoice.rows || []).forEach((row) => {
+    addPageIfNeeded(14);
+    const rowY = y;
+    const descriptionLines = doc.splitTextToSize(String(row.description || ""), 112);
+    descriptionLines.forEach((line, index) => {
+      doc.text(line, row.type === "subline" ? margin + 7 : margin + 2, y + index * 5);
+    });
+    doc.text(String(row.qty || ""), pageWidth - 52, rowY, { align: "right" });
+    doc.text(row.total ? crmCurrency.format(Number(row.total) || 0) : "", pageWidth - margin - 2, rowY, { align: "right" });
+    y += Math.max(7, descriptionLines.length * 5 + 2);
+    doc.setDrawColor(215, 220, 229);
+    doc.line(margin, y - 2, pageWidth - margin, y - 2);
+  });
+
+  y += 8;
+  const total = Number(invoice.total) || invoiceTotal(invoice.rows, file.estimateTotal);
+  if (file.invoicePaid === "Yes" || file.paidInFull === "Yes") {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(185, 28, 28);
+    doc.setFontSize(13);
+    doc.text("PAID IN FULL", pageWidth - margin, y, { align: "right" });
+    y += 7;
   }
-  const invoiceHtml = prepareInvoicePdfClone(sourceElement).outerHTML;
-  const printWindow = window.open("", "_blank", "noopener");
-  if (!printWindow) {
-    window.alert("The invoice PDF window was blocked. Allow popups, then try again.");
-    return;
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(13, 74, 145);
+  doc.setFontSize(14);
+  doc.text("Total", pageWidth - 65, y);
+  doc.text(crmCurrency.format(total), pageWidth - margin, y, { align: "right" });
+  y += 12;
+
+  if (invoice.notes) {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(13, 74, 145);
+    doc.setFontSize(10);
+    doc.text("Notes", margin, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(17, 24, 39);
+    writeWrapped(invoice.notes, margin, pageWidth - margin * 2);
   }
-  printWindow.document.write(`
-    <!doctype html>
-    <html>
-      <head>
-        <title>${escapeHtml(invoiceFileName(file))}</title>
-        <link rel="stylesheet" href="styles.css">
-        <style>
-          body { margin: 0; padding: 20px; background: #fff; }
-          .crm-invoice-paper { box-shadow: none; margin: 0 auto; }
-          button { display: none !important; }
-          @page { size: letter; margin: 0.35in; }
-        </style>
-      </head>
-      <body>${invoiceHtml}</body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => printWindow.print(), 300);
+
+  y = Math.max(y + 10, pageHeight - 25);
+  doc.setDrawColor(215, 220, 229);
+  doc.line(margin, y - 5, pageWidth - margin, y - 5);
+  doc.setFontSize(8);
+  doc.setTextColor(75, 85, 99);
+  doc.text("Office: (239) 469-8555", margin, y);
+  doc.text("Email: D2CarpentryandDesign@gmail.com", pageWidth / 2, y, { align: "center" });
+  doc.text("Address: 2710 Del Prado Blvd S #2-184, Cape Coral, FL 33904", pageWidth - margin, y, { align: "right" });
+  return doc;
 }
 
 async function saveInvoicePdf() {
@@ -2064,7 +2178,12 @@ async function saveInvoicePdf() {
     doc.save(invoiceFileName(file));
     return;
   }
-  printInvoiceFallback(file, sourceElement);
+  const simpleDoc = createSimpleInvoicePdfDocument(file);
+  if (simpleDoc) {
+    simpleDoc.save(invoiceFileName(file));
+    return;
+  }
+  window.alert("The browser could not create the invoice PDF. Try refreshing the page, then click Save PDF again.");
 }
 
 async function emailInvoice() {
@@ -2076,7 +2195,7 @@ async function emailInvoice() {
   const subjectText = "Invoice - D2 Carpentry & Design";
   const bodyText = `Hi ${invoice.billTo || file.clientName || ""},\n\nPlease see your invoice from D2 Carpentry & Design.\n\nProject #: ${invoice.projectNumber || file.fileNumber || ""}\nTotal: ${total}\n\nThank you,\nD2 Carpentry & Design`;
   const sourceElement = $("crmInvoicePaper");
-  const doc = await createInvoicePdfDocument(file, sourceElement);
+  const doc = await createInvoicePdfDocument(file, sourceElement) || createSimpleInvoicePdfDocument(file);
   if (doc && navigator.canShare && navigator.share && window.File) {
     const pdfFile = new File([doc.output("blob")], invoiceFileName(file), { type: "application/pdf" });
     if (navigator.canShare({ files: [pdfFile] })) {
@@ -2152,6 +2271,7 @@ $("crmSaveMaterialAmount").addEventListener("click", saveMaterialAmountEdit);
 $("crmAddPriceLine").addEventListener("click", addPriceLine);
 $("crmPriceSearch").addEventListener("input", renderPriceDatabase);
 $("crmPriceSort").addEventListener("change", renderPriceDatabase);
+$("crmTogglePaidStamp").addEventListener("click", togglePaidStamp);
 $("crmSaveInvoiceStatus").addEventListener("click", saveInvoiceStatus);
 $("crmSaveInvoicePdf").addEventListener("click", () => {
   saveInvoicePdf().catch(() => window.alert("The invoice PDF could not be created. Try refreshing the page, then click Save PDF again."));
