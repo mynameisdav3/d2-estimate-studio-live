@@ -6,6 +6,7 @@ const crmCurrency = new Intl.NumberFormat("en-US", {
 const CRM_STORAGE_KEY = "d2CrmDemoFiles";
 const CRM_REVENUE_STORAGE_KEY = "d2CrmRevenueRows";
 const CRM_PRICE_DATABASE_KEY = "d2PriceDatabase";
+const CRM_PRICE_DELETED_KEY = "d2PriceDeletedIds";
 const CRM_RESET_VERSION_KEY = "d2CrmFreshDashboardVersion";
 const CRM_FRESH_DASHBOARD_VERSION = "approved-estimate-start-v1";
 
@@ -87,6 +88,7 @@ let activeFileId = crmFiles[0] ? crmFiles[0].id : null;
 let crmRevenueRows = loadRevenueRows();
 let activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
 let crmPriceRows = loadPriceRows();
+let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
 
 function applyFreshDashboardReset() {
@@ -302,6 +304,16 @@ function loadPriceRows() {
   }
 }
 
+function loadDeletedPriceIds() {
+  try {
+    const saved = localStorage.getItem(CRM_PRICE_DELETED_KEY);
+    const ids = saved ? JSON.parse(saved) : [];
+    return Array.isArray(ids) ? ids : [];
+  } catch (error) {
+    return [];
+  }
+}
+
 function saveCrmFiles() {
   try {
     localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify(crmFiles));
@@ -321,6 +333,14 @@ function saveRevenueRows() {
 function savePriceRows() {
   try {
     localStorage.setItem(CRM_PRICE_DATABASE_KEY, JSON.stringify(crmPriceRows));
+  } catch (error) {
+    // Local storage can be blocked in some browser privacy modes.
+  }
+}
+
+function saveDeletedPriceIds() {
+  try {
+    localStorage.setItem(CRM_PRICE_DELETED_KEY, JSON.stringify(crmDeletedPriceIds));
   } catch (error) {
     // Local storage can be blocked in some browser privacy modes.
   }
@@ -1542,18 +1562,36 @@ function importApprovedEstimateFile(file) {
 }
 
 function priceDatabaseRows() {
+  const deletedIds = new Set(crmDeletedPriceIds);
   const customRows = crmPriceRows.map((row) => ({ ...row, readonly: false }));
   const overriddenIds = new Set(customRows.map((row) => row.sourceId).filter(Boolean));
   const baseRows = Array.isArray(window.D2_MATERIALS_DATABASE)
     ? window.D2_MATERIALS_DATABASE
-        .filter((row) => !overriddenIds.has(row.id))
+        .filter((row) => !overriddenIds.has(row.id) && !deletedIds.has(row.id))
         .map((row) => ({ ...row, readonly: true }))
     : [];
-  return [...customRows, ...baseRows];
+  return [...customRows.filter((row) => !deletedIds.has(row.id) && !deletedIds.has(row.sourceId)), ...baseRows];
+}
+
+function visiblePriceDatabaseRows() {
+  const query = String($("crmPriceSearch")?.value || "").trim().toLowerCase();
+  const sort = $("crmPriceSort")?.value || "name";
+  const rows = priceDatabaseRows().filter((row) => {
+    if (!query) return true;
+    const haystack = [row.product, row.category, row.vendor, row.source, row.unit, row.id].join(" ").toLowerCase();
+    return haystack.includes(query);
+  });
+  const textValue = (row, key) => String(row[key] || "").toLowerCase();
+  return rows.sort((a, b) => {
+    if (sort === "price") return (Number(a.defaultPrice) || 0) - (Number(b.defaultPrice) || 0);
+    if (sort === "category") return textValue(a, "category").localeCompare(textValue(b, "category")) || textValue(a, "product").localeCompare(textValue(b, "product"));
+    if (sort === "vendor") return textValue(a, "vendor").localeCompare(textValue(b, "vendor")) || textValue(a, "product").localeCompare(textValue(b, "product"));
+    return textValue(a, "product").localeCompare(textValue(b, "product"));
+  });
 }
 
 function renderPriceDatabase() {
-  const rows = priceDatabaseRows();
+  const rows = visiblePriceDatabaseRows();
   $("crmPriceList").innerHTML = rows.length
     ? rows.map((row) => `
       ${row.id === editingPriceId ? renderEditablePriceRow(row) : renderReadonlyPriceRow(row)}
@@ -1589,7 +1627,8 @@ function renderReadonlyPriceRow(row) {
       <small>${escapeHtml(row.unit || "each")}</small>
       <strong>${crmCurrency.format(Number(row.defaultPrice) || 0)}</strong>
       <button type="button" data-price-edit="${escapeHtml(row.id)}">Edit</button>
-      ${row.readonly ? `<em>Estimator</em>` : `<button type="button" data-price-delete="${escapeHtml(row.id)}">Delete</button>`}
+      <button type="button" data-price-delete="${escapeHtml(row.id)}">Delete</button>
+      ${row.readonly ? `<em>Estimator</em>` : ""}
     </div>
   `;
 }
@@ -1678,7 +1717,15 @@ function addPriceLine() {
 }
 
 function deletePriceLine(id) {
-  crmPriceRows = crmPriceRows.filter((row) => row.id !== id);
+  const row = priceDatabaseRows().find((entry) => entry.id === id);
+  if (!row) return;
+  const confirmed = window.confirm(`Delete ${row.product || "this price line"} from the price database?`);
+  if (!confirmed) return;
+  crmPriceRows = crmPriceRows.filter((entry) => entry.id !== id);
+  if (row.readonly || row.sourceId) {
+    crmDeletedPriceIds = Array.from(new Set([...crmDeletedPriceIds, row.sourceId || row.id]));
+    saveDeletedPriceIds();
+  }
   savePriceRows();
   renderPriceDatabase();
 }
@@ -1719,6 +1766,23 @@ function invoiceTotal(rows, fallback = 0) {
   return total || Number(fallback) || 0;
 }
 
+function crmPhoneHref(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits ? `tel:+1${digits.slice(-10)}` : "#";
+}
+
+function crmEmailHref(value) {
+  return value ? `mailto:${value}` : "#";
+}
+
+function crmMapHref(value) {
+  return value ? `https://maps.google.com/?q=${encodeURIComponent(value)}` : "#";
+}
+
+function crmCompanyAddressHtml() {
+  return "2710 Del Prado Blvd S #2-184<br>Cape Coral, FL 33904";
+}
+
 function renderInvoiceView() {
   const file = normalizeCrmFile(activeFile());
   const paper = $("crmInvoicePaper");
@@ -1733,34 +1797,45 @@ function renderInvoiceView() {
   const paid = file.paidInFull === "Yes" || file.invoicePaid === "Yes";
   $("crmInvoicePaid").value = paid ? "Yes" : "No";
   paper.innerHTML = `
-    <header class="crm-invoice-header">
-      <div class="crm-invoice-brand">
+    <div class="simple-sheet-header">
+      <div class="logo-card">
         <img src="assets/d2-logo.png" alt="D2 Carpentry and Design logo">
-        <div>
+      </div>
+      <div class="simple-title">
+        <div class="brand-title-lockup">
           <h2>D2 Carpentry & Design</h2>
           <p>-Crafting Your Vision One Nail At A Time-</p>
         </div>
       </div>
-      <div class="crm-invoice-title">
-        <input data-invoice-field="title" value="${escapeHtml(invoice.title)}" aria-label="Invoice title">
-        <span>${escapeHtml(invoice.projectNumber || "")}</span>
+      <div class="header-estimate-info">
+        <span class="header-estimate-number">${escapeHtml(invoice.projectNumber || "")}</span>
+        <div class="estimate-title-line">
+          <input class="crm-invoice-title-input" data-invoice-field="title" value="${escapeHtml(invoice.title)}" aria-label="Invoice title">
+        </div>
+        <dl>
+          <div><dt>Date</dt><dd><input data-invoice-field="date" type="date" value="${escapeHtml(invoice.date)}" aria-label="Invoice date"></dd></div>
+          <div><dt>Office</dt><dd><a href="tel:+12394698555">(239) 469-8555</a></dd></div>
+          <div><dt>Address</dt><dd>${crmCompanyAddressHtml()}</dd></div>
+          <div><dt>Email</dt><dd><a href="mailto:D2CarpentryandDesign@gmail.com">D2CarpentryandDesign@gmail.com</a></dd></div>
+        </dl>
       </div>
-    </header>
-    <section class="crm-invoice-client">
+    </div>
+    <section class="client-block crm-invoice-client-block">
       <div>
-        <span>Bill To</span>
+        <span>Client Information</span>
         <input data-invoice-field="billTo" value="${escapeHtml(invoice.billTo)}" aria-label="Bill to">
-        <input data-invoice-field="phone" value="${escapeHtml(invoice.phone)}" aria-label="Invoice phone">
-        <input data-invoice-field="email" value="${escapeHtml(invoice.email)}" aria-label="Invoice email">
-        <textarea data-invoice-field="address" rows="2" aria-label="Invoice address">${escapeHtml(invoice.address)}</textarea>
-      </div>
-      <div>
-        <span>Invoice Details</span>
-        <input data-invoice-field="date" type="date" value="${escapeHtml(invoice.date)}" aria-label="Invoice date">
-        <input data-invoice-field="projectNumber" value="${escapeHtml(invoice.projectNumber)}" aria-label="Project number">
+        <p><input data-invoice-field="phone" value="${escapeHtml(invoice.phone)}" aria-label="Invoice phone"></p>
+        <p><input data-invoice-field="email" value="${escapeHtml(invoice.email)}" aria-label="Invoice email"></p>
+        <p><textarea data-invoice-field="address" rows="2" aria-label="Invoice address">${escapeHtml(invoice.address)}</textarea></p>
+        <input class="crm-invoice-project-number" data-invoice-field="projectNumber" value="${escapeHtml(invoice.projectNumber)}" aria-label="Project number">
       </div>
     </section>
-    <table class="crm-invoice-table">
+    <table>
+      <colgroup>
+        <col class="description-column">
+        <col class="qty-column">
+        <col class="total-column">
+      </colgroup>
       <thead>
         <tr>
           <th>Description</th>
@@ -1771,7 +1846,7 @@ function renderInvoiceView() {
       <tbody>
         ${invoice.rows.map((item, index) => {
           return `
-            <tr class="${item.type === "subline" ? "crm-invoice-subline" : ""}">
+            <tr class="${item.type === "subline" ? "subline-preview-row crm-invoice-subline" : "description-preview-row"}">
               <td><textarea data-invoice-row="${index}" data-invoice-row-field="description" rows="2">${escapeHtml(item.description || "Project total")}</textarea></td>
               <td><input data-invoice-row="${index}" data-invoice-row-field="qty" value="${escapeHtml(item.qty || "")}"></td>
               <td><input data-invoice-row="${index}" data-invoice-row-field="total" type="number" min="0" step="0.01" value="${escapeHtml(item.total || "")}"></td>
@@ -1780,21 +1855,21 @@ function renderInvoiceView() {
         }).join("")}
       </tbody>
     </table>
-    <section class="crm-invoice-notes">
-      <span>Notes</span>
-      <textarea data-invoice-field="notes" rows="4" aria-label="Invoice notes">${escapeHtml(invoice.notes)}</textarea>
-    </section>
-    <section class="crm-invoice-total">
+    <div class="totals crm-invoice-total">
       ${paid ? `<strong class="crm-paid-stamp">PAID IN FULL</strong>` : ""}
-      <div>
+      <div class="grand-total">
         <span>Total</span>
         <input data-invoice-field="total" type="number" min="0" step="0.01" value="${escapeHtml(estimateTotal || "")}" aria-label="Invoice total">
       </div>
-    </section>
-    <footer class="crm-invoice-footer">
+    </div>
+    <div class="notes crm-invoice-notes">
+      <span>Notes</span>
+      <textarea data-invoice-field="notes" rows="4" aria-label="Invoice notes">${escapeHtml(invoice.notes)}</textarea>
+    </div>
+    <footer class="estimate-footer">
       <span><strong>Office:</strong> (239) 469-8555</span>
       <span><strong>Email:</strong> D2CarpentryandDesign@gmail.com</span>
-      <span><strong>Address:</strong> 2710 Del Prado Blvd S #2-184, Cape Coral, FL 33904</span>
+      <span class="footer-address"><strong>Address:</strong> <span>${crmCompanyAddressHtml()}</span></span>
     </footer>
   `;
 }
@@ -1805,12 +1880,15 @@ function saveInvoiceStatus() {
   const paid = $("crmInvoicePaid").value;
   const oldValue = file.invoicePaid || "No";
   const rowCount = document.querySelectorAll("[data-invoice-row-field='description']").length;
-  const rows = Array.from({ length: rowCount }, (_, index) => ({
-    description: document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="description"]`)?.value.trim() || "",
-    qty: document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="qty"]`)?.value.trim() || "",
-    total: parseMoney(document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="total"]`)?.value || ""),
-    type: "",
-  })).filter((row) => row.description || row.qty || row.total);
+  const rows = Array.from({ length: rowCount }, (_, index) => {
+    const descriptionField = document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="description"]`);
+    return {
+      description: descriptionField?.value.trim() || "",
+      qty: document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="qty"]`)?.value.trim() || "",
+      total: parseMoney(document.querySelector(`[data-invoice-row="${index}"][data-invoice-row-field="total"]`)?.value || ""),
+      type: descriptionField?.closest("tr")?.classList.contains("crm-invoice-subline") ? "subline" : "item",
+    };
+  }).filter((row) => row.description || row.qty || row.total);
   const fieldValue = (field) => document.querySelector(`[data-invoice-field="${field}"]`)?.value.trim() || "";
   file.invoice = {
     title: fieldValue("title") || "Invoice",
@@ -1841,11 +1919,101 @@ function invoiceFileName(file) {
   return `${safeClient}${safeNumber ? ` - ${safeNumber}` : ""} Invoice.pdf`;
 }
 
-function saveInvoicePdf() {
+function getCrmJsPdf() {
+  return window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
+}
+
+function getCrmHtml2Canvas() {
+  return window.html2canvas || null;
+}
+
+async function waitForCrmPdfAssets(host) {
+  const images = Array.from(host.querySelectorAll("img"));
+  await Promise.all(images.map((image) => {
+    if (image.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      image.addEventListener("load", resolve, { once: true });
+      image.addEventListener("error", resolve, { once: true });
+    });
+  }));
+}
+
+function prepareInvoicePdfClone(source) {
+  const clone = source.cloneNode(true);
+  clone.querySelectorAll("input, textarea").forEach((field) => {
+    const replacement = document.createElement(field.matches("[data-invoice-field='title']") ? "h3" : "span");
+    replacement.className = field.className || "";
+    replacement.textContent = field.type === "date" && field.value ? displayDate(field.value) : field.value;
+    if (field.matches("[data-invoice-field='total']")) {
+      replacement.textContent = crmCurrency.format(parseMoney(field.value));
+      replacement.classList.add("crm-invoice-total-text");
+    }
+    if (field.tagName === "TEXTAREA") {
+      replacement.innerHTML = escapeHtml(field.value).replace(/\n/g, "<br>");
+    }
+    field.replaceWith(replacement);
+  });
+  return clone;
+}
+
+async function saveInvoicePdf() {
   const file = normalizeCrmFile(activeFile());
   if (!file) return;
   saveInvoiceStatus();
-  const invoiceHtml = $("crmInvoicePaper").outerHTML;
+  const sourceElement = $("crmInvoicePaper");
+  const JsPdf = getCrmJsPdf();
+  const html2canvas = getCrmHtml2Canvas();
+  if (JsPdf && html2canvas) {
+    const host = document.createElement("div");
+    host.className = "pdf-render-host";
+    host.style.position = "fixed";
+    host.style.left = "-10000px";
+    host.style.top = "0";
+    host.style.width = `${sourceElement.getBoundingClientRect().width || 820}px`;
+    host.style.background = "#ffffff";
+    host.style.pointerEvents = "none";
+    host.appendChild(prepareInvoicePdfClone(sourceElement));
+    document.body.appendChild(host);
+    try {
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      await waitForCrmPdfAssets(host);
+      const source = host.firstElementChild;
+      const sourceRect = source.getBoundingClientRect();
+      const canvas = await html2canvas(source, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        windowWidth: Math.ceil(source.scrollWidth || sourceRect.width),
+        windowHeight: Math.ceil(source.scrollHeight || sourceRect.height),
+      });
+      const doc = new JsPdf({ unit: "mm", format: "letter" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 8.9;
+      const imageWidth = pageWidth - margin * 2;
+      const pageImageHeight = pageHeight - margin * 2;
+      const pageCanvasHeight = Math.floor((pageImageHeight * canvas.width) / imageWidth);
+      const pageCount = Math.max(1, Math.ceil(canvas.height / pageCanvasHeight));
+      for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+        if (pageIndex > 0) doc.addPage("letter");
+        const sliceY = pageIndex * pageCanvasHeight;
+        const sliceHeight = Math.min(pageCanvasHeight, canvas.height - sliceY);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeight;
+        const context = sliceCanvas.getContext("2d");
+        context.drawImage(canvas, 0, sliceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+        const sliceImageHeight = (sliceHeight * imageWidth) / canvas.width;
+        doc.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imageWidth, sliceImageHeight, undefined, "FAST");
+      }
+      doc.save(invoiceFileName(file));
+      return;
+    } finally {
+      host.remove();
+    }
+  }
+
+  const invoiceHtml = prepareInvoicePdfClone(sourceElement).outerHTML;
   const printWindow = window.open("", "_blank", "noopener");
   if (!printWindow) {
     window.alert("The invoice PDF window was blocked. Allow popups, then try again.");
@@ -1860,7 +2028,6 @@ function saveInvoicePdf() {
         <style>
           body { margin: 0; padding: 20px; background: #fff; }
           .crm-invoice-paper { box-shadow: none; margin: 0 auto; }
-          input, textarea { border: 0 !important; background: transparent !important; resize: none; }
           button { display: none !important; }
           @page { size: letter; margin: 0.35in; }
         </style>
@@ -1878,7 +2045,7 @@ function emailInvoice() {
   if (!file) return;
   saveInvoiceStatus();
   const invoice = invoiceData(file);
-  const total = crmCurrency.format(invoiceTotal(invoice.rows, file.estimateTotal));
+  const total = crmCurrency.format(Number(invoice.total) || invoiceTotal(invoice.rows, file.estimateTotal));
   const subject = encodeURIComponent(`Invoice ${invoice.projectNumber || file.fileNumber || ""} - D2 Carpentry & Design`);
   const body = encodeURIComponent(`Hi ${invoice.billTo || file.clientName || ""},\n\nAttached/linked is your invoice from D2 Carpentry & Design.\n\nProject #: ${invoice.projectNumber || file.fileNumber || ""}\nTotal: ${total}\n\nThank you,\nD2 Carpentry & Design`);
   window.location.href = `mailto:${encodeURIComponent(invoice.email || file.clientEmail || "")}?subject=${subject}&body=${body}`;
@@ -1933,6 +2100,8 @@ $("crmSaveEstimateAmount").addEventListener("click", saveEstimateAmountEdit);
 $("crmEditMaterialTotal").addEventListener("click", toggleMaterialAmountEdit);
 $("crmSaveMaterialAmount").addEventListener("click", saveMaterialAmountEdit);
 $("crmAddPriceLine").addEventListener("click", addPriceLine);
+$("crmPriceSearch").addEventListener("input", renderPriceDatabase);
+$("crmPriceSort").addEventListener("change", renderPriceDatabase);
 $("crmSaveInvoiceStatus").addEventListener("click", saveInvoiceStatus);
 $("crmSaveInvoicePdf").addEventListener("click", saveInvoicePdf);
 $("crmEmailInvoice").addEventListener("click", emailInvoice);
@@ -1965,6 +2134,7 @@ $("crmArchiveFile").addEventListener("click", () => {
 $("crmDeleteFile").addEventListener("click", deleteActiveFile);
 $("crmOpenEstimate").addEventListener("click", () => openActiveEstimate(""));
 $("crmOpenAssignment").addEventListener("click", () => openActiveEstimate("#assignment"));
+$("crmOpenInvoice").addEventListener("click", () => switchCrmView("invoice"));
 $("crmImportRevenue").addEventListener("click", importRevenueRows);
 $("crmAddRevenueRow").addEventListener("click", addRevenueRow);
 $("crmUploadEstimateFile").addEventListener("click", () => $("crmEstimateFileUpload").click());

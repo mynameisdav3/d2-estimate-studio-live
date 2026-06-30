@@ -11,6 +11,7 @@ const STORAGE_KEY = "d2EstimateStudio";
 const ESTIMATE_SEQUENCE_KEY = "d2EstimateSequence";
 const DASHBOARD_STORAGE_KEY = "d2CrmDemoFiles";
 const PRICE_DATABASE_KEY = "d2PriceDatabase";
+const PRICE_DELETED_KEY = "d2PriceDeletedIds";
 const COMPANY_DEFAULTS = {
   name: "D2 Carpentry & Design",
   phone: "239-469-8555",
@@ -310,14 +311,25 @@ function materialSearchTerms(value) {
 function materialMatches(value) {
   const baseMaterials = Array.isArray(window.D2_MATERIALS_DATABASE) ? window.D2_MATERIALS_DATABASE : [];
   let customMaterials = [];
+  let deletedMaterialIds = [];
   try {
     const saved = JSON.parse(localStorage.getItem(PRICE_DATABASE_KEY) || "[]");
     customMaterials = Array.isArray(saved) ? saved : [];
   } catch (error) {
     customMaterials = [];
   }
+  try {
+    const savedDeleted = JSON.parse(localStorage.getItem(PRICE_DELETED_KEY) || "[]");
+    deletedMaterialIds = Array.isArray(savedDeleted) ? savedDeleted : [];
+  } catch (error) {
+    deletedMaterialIds = [];
+  }
+  const deletedIds = new Set(deletedMaterialIds);
   const overriddenIds = new Set(customMaterials.map((material) => material.sourceId).filter(Boolean));
-  const materials = [...customMaterials, ...baseMaterials.filter((material) => !overriddenIds.has(material.id))];
+  const materials = [
+    ...customMaterials.filter((material) => !deletedIds.has(material.id) && !deletedIds.has(material.sourceId)),
+    ...baseMaterials.filter((material) => !overriddenIds.has(material.id) && !deletedIds.has(material.id)),
+  ];
   const terms = materialSearchTerms(value);
   if (terms.length === 0) return [];
   return materials

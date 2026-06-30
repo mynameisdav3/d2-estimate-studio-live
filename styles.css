@@ -1891,9 +1891,16 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   gap: 10px;
 }
 
+.crm-price-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .crm-price-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   align-items: center;
   gap: 12px;
   border: 1px solid #d7dce5;
@@ -2180,6 +2187,127 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   border-top: 1px solid #d7dce5;
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.crm-invoice-paper {
+  width: min(900px, 100%);
+}
+
+.crm-invoice-title-input {
+  width: 180px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pine);
+  font-size: 1.72rem;
+  font-weight: 950;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.crm-invoice-client-block {
+  display: block;
+}
+
+.crm-invoice-client-block > div {
+  max-width: 420px;
+}
+
+.crm-invoice-client-block input,
+.crm-invoice-client-block textarea,
+.crm-invoice-paper table input,
+.crm-invoice-paper table textarea,
+.crm-invoice-notes textarea,
+.crm-invoice-project-number {
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  padding: 2px 4px;
+}
+
+.crm-invoice-client-block input:first-of-type {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.crm-invoice-client-block textarea,
+.crm-invoice-paper table textarea,
+.crm-invoice-notes textarea {
+  resize: vertical;
+}
+
+.crm-invoice-paper table input {
+  text-align: right;
+}
+
+.crm-invoice-title-input:focus,
+.crm-invoice-client-block input:focus,
+.crm-invoice-client-block textarea:focus,
+.crm-invoice-paper table input:focus,
+.crm-invoice-paper table textarea:focus,
+.crm-invoice-notes textarea:focus,
+.crm-invoice-total input:focus {
+  border-color: rgba(13, 74, 145, 0.35);
+  background: #ffffff;
+  outline: none;
+}
+
+.crm-invoice-project-number {
+  display: none;
+}
+
+.crm-invoice-total {
+  width: min(320px, 100%);
+  margin: 22px 0 0 auto;
+  padding-top: 10px;
+  border-top: 2px solid var(--ink);
+}
+
+.crm-invoice-total .grand-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: baseline;
+  color: #0d4a91;
+  font-size: 1.28rem;
+  font-weight: 900;
+}
+
+.crm-invoice-total input {
+  width: 170px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #0d4a91;
+  font-size: 1.28rem;
+  font-weight: 950;
+  text-align: right;
+}
+
+.crm-paid-stamp {
+  display: block;
+  margin-bottom: 8px;
+  color: #b91c1c;
+  font-size: 1.12rem;
+  font-weight: 950;
+  text-align: right;
+}
+
+.crm-invoice-total-text {
+  color: #0d4a91;
+  font-size: 1.28rem;
+  font-weight: 950;
+}
+
+.crm-invoice-paper .estimate-footer {
+  margin-top: 42px;
 }
 
 .crm-revenue-table-wrap {

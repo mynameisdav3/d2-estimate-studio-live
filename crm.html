@@ -29,7 +29,6 @@
         <button type="button" class="icon-button" id="crmImportApprovedEstimate">Import Approved Estimate</button>
         <button type="button" class="icon-button active" data-crm-view="dashboard">Dashboard</button>
         <button type="button" class="icon-button" data-crm-view="revenue">Revenue</button>
-        <button type="button" class="icon-button" data-crm-view="invoice">Invoice</button>
         <button type="button" class="icon-button" data-crm-view="prices">Price Database</button>
         <a class="icon-button" href="index.html">Estimator</a>
         <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
@@ -94,6 +93,7 @@
               <div class="crm-file-header-actions">
                 <button type="button" class="icon-button" id="crmOpenEstimate">Estimate</button>
                 <button type="button" class="icon-button" id="crmOpenAssignment">Assignment</button>
+                <button type="button" class="icon-button" id="crmOpenInvoice">Invoice</button>
                 <button type="button" class="icon-button" id="crmArchiveFile">Archive</button>
                 <button type="button" class="icon-button danger-action" id="crmDeleteFile">Delete File</button>
               </div>
@@ -470,7 +470,7 @@
           </section>
 
           <section class="crm-invoice-stage">
-            <article class="crm-invoice-paper" id="crmInvoicePaper"></article>
+            <article class="estimate-sheet crm-invoice-paper" id="crmInvoicePaper"></article>
           </section>
         </section>
 
@@ -517,6 +517,15 @@
               <div class="panel-header">
                 <h2>Current Prices</h2>
               </div>
+              <div class="crm-price-tools">
+                <input id="crmPriceSearch" type="search" placeholder="Search item, category, vendor, or unit">
+                <select id="crmPriceSort" aria-label="Sort price database">
+                  <option value="name">Sort by Name</option>
+                  <option value="price">Sort by Price</option>
+                  <option value="category">Sort by Category</option>
+                  <option value="vendor">Sort by Vendor</option>
+                </select>
+              </div>
               <div class="crm-price-list" id="crmPriceList"></div>
             </section>
           </section>
@@ -525,6 +534,8 @@
     </main>
     <script src="materials-database.js"></script>
     <script src="revenue-data.js"></script>
+    <script src="vendor/jspdf.umd.min.js"></script>
+    <script src="vendor/html2canvas.min.js"></script>
     <script src="crm.js"></script>
   </body>
 </html>
