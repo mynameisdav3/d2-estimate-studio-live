@@ -1913,6 +1913,17 @@ function saveInvoiceStatus() {
   renderCrm();
 }
 
+function addInvoiceLine() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  saveInvoiceStatus();
+  const freshFile = normalizeCrmFile(activeFile());
+  freshFile.invoice = freshFile.invoice || invoiceData(freshFile);
+  freshFile.invoice.rows = [...(freshFile.invoice.rows || []), { description: "", qty: "", total: "", type: "item" }];
+  saveCrmFiles();
+  renderInvoiceView();
+}
+
 function invoiceFileName(file) {
   const safeClient = String(file?.clientName || "D2 Invoice").replace(/[^a-z0-9]+/gi, " ").trim();
   const safeNumber = String(file?.fileNumber || "").replace(/[^a-z0-9-]+/gi, "");
@@ -1956,61 +1967,67 @@ function prepareInvoicePdfClone(source) {
   return clone;
 }
 
+async function createInvoicePdfDocument(file, sourceElement) {
+  const JsPdf = getCrmJsPdf();
+  const html2canvas = getCrmHtml2Canvas();
+  if (!JsPdf || !html2canvas) return null;
+  const host = document.createElement("div");
+  host.className = "pdf-render-host";
+  host.style.position = "fixed";
+  host.style.left = "-10000px";
+  host.style.top = "0";
+  host.style.width = `${sourceElement.getBoundingClientRect().width || 820}px`;
+  host.style.background = "#ffffff";
+  host.style.pointerEvents = "none";
+  host.appendChild(prepareInvoicePdfClone(sourceElement));
+  document.body.appendChild(host);
+  try {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await waitForCrmPdfAssets(host);
+    const source = host.firstElementChild;
+    const sourceRect = source.getBoundingClientRect();
+    const canvas = await html2canvas(source, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      useCORS: true,
+      windowWidth: Math.ceil(source.scrollWidth || sourceRect.width),
+      windowHeight: Math.ceil(source.scrollHeight || sourceRect.height),
+    });
+    const doc = new JsPdf({ unit: "mm", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 8.9;
+    const imageWidth = pageWidth - margin * 2;
+    const pageImageHeight = pageHeight - margin * 2;
+    const pageCanvasHeight = Math.floor((pageImageHeight * canvas.width) / imageWidth);
+    const pageCount = Math.max(1, Math.ceil(canvas.height / pageCanvasHeight));
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+      if (pageIndex > 0) doc.addPage("letter");
+      const sliceY = pageIndex * pageCanvasHeight;
+      const sliceHeight = Math.min(pageCanvasHeight, canvas.height - sliceY);
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceHeight;
+      const context = sliceCanvas.getContext("2d");
+      context.drawImage(canvas, 0, sliceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
+      const sliceImageHeight = (sliceHeight * imageWidth) / canvas.width;
+      doc.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imageWidth, sliceImageHeight, undefined, "FAST");
+    }
+    return doc;
+  } finally {
+    host.remove();
+  }
+}
+
 async function saveInvoicePdf() {
   const file = normalizeCrmFile(activeFile());
   if (!file) return;
   saveInvoiceStatus();
   const sourceElement = $("crmInvoicePaper");
-  const JsPdf = getCrmJsPdf();
-  const html2canvas = getCrmHtml2Canvas();
-  if (JsPdf && html2canvas) {
-    const host = document.createElement("div");
-    host.className = "pdf-render-host";
-    host.style.position = "fixed";
-    host.style.left = "-10000px";
-    host.style.top = "0";
-    host.style.width = `${sourceElement.getBoundingClientRect().width || 820}px`;
-    host.style.background = "#ffffff";
-    host.style.pointerEvents = "none";
-    host.appendChild(prepareInvoicePdfClone(sourceElement));
-    document.body.appendChild(host);
-    try {
-      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-      await waitForCrmPdfAssets(host);
-      const source = host.firstElementChild;
-      const sourceRect = source.getBoundingClientRect();
-      const canvas = await html2canvas(source, {
-        backgroundColor: "#ffffff",
-        scale: 2,
-        useCORS: true,
-        windowWidth: Math.ceil(source.scrollWidth || sourceRect.width),
-        windowHeight: Math.ceil(source.scrollHeight || sourceRect.height),
-      });
-      const doc = new JsPdf({ unit: "mm", format: "letter" });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 8.9;
-      const imageWidth = pageWidth - margin * 2;
-      const pageImageHeight = pageHeight - margin * 2;
-      const pageCanvasHeight = Math.floor((pageImageHeight * canvas.width) / imageWidth);
-      const pageCount = Math.max(1, Math.ceil(canvas.height / pageCanvasHeight));
-      for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
-        if (pageIndex > 0) doc.addPage("letter");
-        const sliceY = pageIndex * pageCanvasHeight;
-        const sliceHeight = Math.min(pageCanvasHeight, canvas.height - sliceY);
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceHeight;
-        const context = sliceCanvas.getContext("2d");
-        context.drawImage(canvas, 0, sliceY, canvas.width, sliceHeight, 0, 0, canvas.width, sliceHeight);
-        const sliceImageHeight = (sliceHeight * imageWidth) / canvas.width;
-        doc.addImage(sliceCanvas.toDataURL("image/png"), "PNG", margin, margin, imageWidth, sliceImageHeight, undefined, "FAST");
-      }
-      doc.save(invoiceFileName(file));
-      return;
-    } finally {
-      host.remove();
-    }
+  const doc = await createInvoicePdfDocument(file, sourceElement);
+  if (doc) {
+    doc.save(invoiceFileName(file));
+    return;
   }
 
   const invoiceHtml = prepareInvoicePdfClone(sourceElement).outerHTML;
@@ -2040,14 +2057,37 @@ async function saveInvoicePdf() {
   setTimeout(() => printWindow.print(), 300);
 }
 
-function emailInvoice() {
+async function emailInvoice() {
   const file = normalizeCrmFile(activeFile());
   if (!file) return;
   saveInvoiceStatus();
   const invoice = invoiceData(file);
   const total = crmCurrency.format(Number(invoice.total) || invoiceTotal(invoice.rows, file.estimateTotal));
-  const subject = encodeURIComponent(`Invoice ${invoice.projectNumber || file.fileNumber || ""} - D2 Carpentry & Design`);
-  const body = encodeURIComponent(`Hi ${invoice.billTo || file.clientName || ""},\n\nAttached/linked is your invoice from D2 Carpentry & Design.\n\nProject #: ${invoice.projectNumber || file.fileNumber || ""}\nTotal: ${total}\n\nThank you,\nD2 Carpentry & Design`);
+  const subjectText = "Invoice - D2 Carpentry & Design";
+  const bodyText = `Hi ${invoice.billTo || file.clientName || ""},\n\nPlease see your invoice from D2 Carpentry & Design.\n\nProject #: ${invoice.projectNumber || file.fileNumber || ""}\nTotal: ${total}\n\nThank you,\nD2 Carpentry & Design`;
+  const sourceElement = $("crmInvoicePaper");
+  const doc = await createInvoicePdfDocument(file, sourceElement);
+  if (doc && navigator.canShare && navigator.share && window.File) {
+    const pdfFile = new File([doc.output("blob")], invoiceFileName(file), { type: "application/pdf" });
+    if (navigator.canShare({ files: [pdfFile] })) {
+      try {
+        await navigator.share({
+          files: [pdfFile],
+          title: subjectText,
+          text: bodyText,
+        });
+        return;
+      } catch (error) {
+        // If sharing is cancelled or blocked, continue with the save + email draft fallback.
+      }
+    }
+  }
+  if (doc) {
+    doc.save(invoiceFileName(file));
+    window.alert("The invoice PDF was saved. Your email draft will open next; attach the saved PDF to send it.");
+  }
+  const subject = encodeURIComponent(subjectText);
+  const body = encodeURIComponent(bodyText);
   window.location.href = `mailto:${encodeURIComponent(invoice.email || file.clientEmail || "")}?subject=${subject}&body=${body}`;
 }
 
@@ -2103,8 +2143,12 @@ $("crmAddPriceLine").addEventListener("click", addPriceLine);
 $("crmPriceSearch").addEventListener("input", renderPriceDatabase);
 $("crmPriceSort").addEventListener("change", renderPriceDatabase);
 $("crmSaveInvoiceStatus").addEventListener("click", saveInvoiceStatus);
-$("crmSaveInvoicePdf").addEventListener("click", saveInvoicePdf);
-$("crmEmailInvoice").addEventListener("click", emailInvoice);
+$("crmSaveInvoicePdf").addEventListener("click", () => {
+  saveInvoicePdf().catch(() => window.alert("The invoice PDF could not be created. Try refreshing the page, then click Save PDF again."));
+});
+$("crmEmailInvoice").addEventListener("click", () => {
+  emailInvoice().catch(() => window.alert("The invoice email could not be opened. Save the PDF first, then attach it manually."));
+});
 $("crmNewFile").addEventListener("click", newCrmFile);
 $("crmImportApprovedEstimate").addEventListener("click", () => $("crmApprovedEstimateUpload").click());
 $("crmApprovedEstimateUpload").addEventListener("change", (event) => {
