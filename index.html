@@ -30,7 +30,7 @@
           <button class="icon-button" id="saveEstimate" title="Save estimate" aria-label="Save estimate">Save</button>
           <button class="icon-button" id="saveEditableEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
           <button class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
-          <button class="icon-button" id="submitEstimate" title="Save to Dashboard" aria-label="Save to Dashboard">Save Dashboard</button>
+          <button class="icon-button" id="submitEstimate" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
           <button class="icon-button" id="generatePaymentInvoice" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
           <button class="icon-button" id="generateAssignmentSheet" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
           <button class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
@@ -158,7 +158,7 @@
             </div>
           </section>
 
-          <section class="panel project-panel">
+          <section class="panel client-panel">
             <div class="panel-header">
               <h2>Client Information</h2>
             </div>
@@ -182,7 +182,7 @@
             </div>
           </section>
 
-          <section class="panel">
+          <section class="panel project-panel">
             <div class="panel-header">
               <h2>Project</h2>
             </div>
@@ -420,32 +420,32 @@
               <label>
                 Tax
                 <div class="unit-input">
-                  <input id="taxRate" type="number" min="0" step="0.01" value="6.5">
+                  <input id="taxRate" type="number" min="0" step="0.01">
                   <span>%</span>
                 </div>
               </label>
-              <label>
+              <label class="estimate-deposit-field">
                 Deposit
                 <div class="unit-input">
                   <input id="depositRate" type="number" min="0" max="100" step="1">
                   <span>%</span>
                 </div>
               </label>
-              <label class="invoice-payment-field">
-                Initial Deposit
+              <label class="invoice-payment-field invoice-initial-payment">
+                1st Deposit
                 <div class="unit-input">
                   <input id="invoiceInitialDeposit" type="number" min="0" step="0.01">
                   <span>$</span>
                 </div>
               </label>
-              <label class="invoice-payment-field">
-                Second Deposit
+              <label class="invoice-payment-field invoice-second-payment">
+                2nd Deposit
                 <div class="unit-input">
                   <input id="invoiceSecondDeposit" type="number" min="0" step="0.01">
                   <span>$</span>
                 </div>
               </label>
-              <label class="invoice-payment-field">
+              <label class="invoice-payment-field invoice-final-payment">
                 Final Payment
                 <div class="unit-input">
                   <input id="invoiceFinalPayment" type="number" min="0" step="0.01">
@@ -599,7 +599,7 @@
           <button class="icon-button" data-action-button="save" title="Save estimate" aria-label="Save estimate">Save</button>
           <button class="icon-button" data-action-button="save-file" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
           <button class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
-          <button class="icon-button" data-action-button="submit" title="Save to Dashboard" aria-label="Save to Dashboard">Save Dashboard</button>
+          <button class="icon-button" data-action-button="submit" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
           <button class="icon-button" data-action-button="payment" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
           <button class="icon-button" data-action-button="assignment" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
           <button class="icon-button primary-action" data-action-button="generate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>

@@ -1,4 +1,4 @@
-const CACHE_NAME = "alchemyist-estimate-studio-v108";
+const CACHE_NAME = "alchemyist-estimate-studio-v110";
 const APP_FILES = [
   "./",
   "./index.html",

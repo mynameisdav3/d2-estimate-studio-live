@@ -1,0 +1,8 @@
+D2 Dashboard / Estimate Studio
+CURRENT CORRECT SOURCE OF TRUTH
+Saved: 2026-07-03 19-58 EDT
+Source file provided by user:
+file:///Users/d2/Documents/Codex/2026-05-24/i-need-to-create-a-simple/crm.html
+
+Use this snapshot as the baseline before making any future changes.
+Do not overwrite this folder unless the user explicitly says a newer version is correct.

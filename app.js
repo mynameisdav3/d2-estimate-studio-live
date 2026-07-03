@@ -3,7 +3,8 @@ const currency = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
-const GOOGLE_SCRIPT_URL = "";
+const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
+const GOOGLE_SCRIPT_URL_STORAGE_KEY = "d2GoogleScriptUrl";
 const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/4gMdRagjk60Rdlw0xV7AI01";
 const ZELLE_ID = "D2carpentry";
 const MATERIAL_PERCENT = 0.25;
@@ -25,6 +26,19 @@ const COPY_MODE_LABELS = {
   team: "Team",
   supply: "Supplies",
 };
+
+function getGoogleScriptUrl() {
+  return localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || DEFAULT_GOOGLE_SCRIPT_URL;
+}
+
+function requestGoogleScriptUrl() {
+  const existing = getGoogleScriptUrl();
+  const value = window.prompt("Paste your D2 Google Drive save link here. You only need to do this once on this device.", existing);
+  if (!value) return "";
+  const cleanValue = value.trim();
+  localStorage.setItem(GOOGLE_SCRIPT_URL_STORAGE_KEY, cleanValue);
+  return cleanValue;
+}
 
 const OLD_LINE_EXAMPLES = new Set([
   "Custom shelf tower",
@@ -109,6 +123,7 @@ function applyInvoiceMode() {
   if (invoiceMode) {
     $("estimateTitle").value = "Invoice";
     if ($("taxRate").value === "6.5") $("taxRate").value = "";
+    $("depositRate").value = "";
   }
 }
 
@@ -326,7 +341,7 @@ function materialSearchTerms(value) {
   return Array.from(terms).filter((term) => term.length > 1);
 }
 
-function materialMatches(value) {
+function estimatorMaterialRows() {
   const baseMaterials = Array.isArray(window.D2_MATERIALS_DATABASE) ? window.D2_MATERIALS_DATABASE : [];
   let customMaterials = [];
   let deletedMaterialIds = [];
@@ -344,10 +359,18 @@ function materialMatches(value) {
   }
   const deletedIds = new Set(deletedMaterialIds);
   const overriddenIds = new Set(customMaterials.map((material) => material.sourceId).filter(Boolean));
-  const materials = [
+  return [
     ...customMaterials.filter((material) => !deletedIds.has(material.id) && !deletedIds.has(material.sourceId)),
     ...baseMaterials.filter((material) => !overriddenIds.has(material.id) && !deletedIds.has(material.id)),
   ];
+}
+
+function materialPrice(material) {
+  return Number(material?.defaultPrice ?? material?.price ?? material?.priceLow ?? 0) || 0;
+}
+
+function materialMatches(value) {
+  const materials = estimatorMaterialRows();
   const terms = materialSearchTerms(value);
   if (terms.length === 0) return [];
   return materials
@@ -371,7 +394,7 @@ function renderMaterialSuggestions(row, value) {
   panel.innerHTML = matches.map((material) => `
     <button type="button" class="material-suggestion" data-material-id="${escapeHtml(material.id)}">
       <span>${escapeHtml(material.product)}</span>
-      <strong>${currency.format(material.defaultPrice)}</strong>
+      <strong>${currency.format(materialPrice(material))}</strong>
     </button>
   `).join("");
 }
@@ -384,10 +407,11 @@ function closeMaterialSuggestions(row) {
 }
 
 function applyMaterialSuggestion(row, materialItem, materialId) {
-  const material = (window.D2_MATERIALS_DATABASE || []).find((entry) => entry.id === materialId);
+  const material = estimatorMaterialRows().find((entry) => entry.id === materialId);
   if (!material) return;
+  const price = materialPrice(material);
   materialItem.name = material.product;
-  materialItem.price = material.defaultPrice;
+  materialItem.price = price;
   materialItem.unit = material.unit;
   if (!(Number.parseFloat(materialItem.qty) > 0)) materialItem.qty = 1;
   const nameInput = row.querySelector('[data-field="name"]');
@@ -399,7 +423,7 @@ function applyMaterialSuggestion(row, materialItem, materialId) {
     autoGrowTextArea(nameInput);
   }
   if (qtyInput) qtyInput.value = materialItem.qty;
-  if (priceInput) priceInput.value = material.defaultPrice;
+  if (priceInput) priceInput.value = price;
   if (panel) closeMaterialSuggestions(row);
   updatePreview();
 }
@@ -897,6 +921,7 @@ function escapeHtml(value) {
 
 function calculateTotals() {
   if (isInvoiceMode() && $("taxRate").value === "6.5") $("taxRate").value = "";
+  if (isInvoiceMode()) $("depositRate").value = "";
   const finishMultiplier = $("projectType").value === "Other" ? 1 : numberValue("finishLevel") || 1;
   const lineSubtotal = state.lineItems.reduce((sum, item) => {
     if (item.type === "subline") return sum;
@@ -2166,6 +2191,78 @@ function saveEstimateToLocalDashboard(payloadData) {
   return saveLocalDashboardFiles(files);
 }
 
+function buildDashboardEstimatePayload() {
+  ensureEstimateNumber();
+  if (!$("estimateDate").value) {
+    $("estimateDate").value = new Date().toISOString().slice(0, 10);
+  }
+  if (!$("fileStatus").value) $("fileStatus").value = "New Lead";
+  if (!$("estimateStatus").value) $("estimateStatus").value = "Pending";
+  if (!$("leadSource").value) $("leadSource").value = "Manual";
+  updatePreview();
+  const payloadData = serializeEstimate();
+  payloadData.copies = buildSubmittedCopies();
+  return payloadData;
+}
+
+function postEstimatePayloadToGoogle(payloadData) {
+  const googleScriptUrl = getGoogleScriptUrl() || requestGoogleScriptUrl();
+  if (!googleScriptUrl) return Promise.resolve(false);
+
+  const body = new FormData();
+  body.append("payload", JSON.stringify(payloadData));
+  fetch(googleScriptUrl, {
+    method: "POST",
+    mode: "no-cors",
+    keepalive: true,
+    body,
+  }).catch(() => {});
+  return Promise.resolve(true);
+}
+
+function showDashboardImportStatus(message, includeDashboardLink = false) {
+  const status = $("submitStatus");
+  status.innerHTML = "";
+  const span = document.createElement("span");
+  span.textContent = message;
+  status.appendChild(span);
+  if (includeDashboardLink) {
+    status.appendChild(document.createTextNode(" "));
+    const link = document.createElement("a");
+    link.href = "crm.html";
+    link.textContent = "Open Dashboard";
+    link.style.fontWeight = "900";
+    link.style.color = "var(--pine)";
+    status.appendChild(link);
+  }
+}
+
+async function importEstimateToDashboard() {
+  const importButton = $("submitEstimate");
+  if (importButton) importButton.textContent = "Importing...";
+  saveEstimate({ silent: true });
+  const payloadData = buildDashboardEstimatePayload();
+  const savedLocally = saveEstimateToLocalDashboard(payloadData);
+  const postedToGoogle = await postEstimatePayloadToGoogle(payloadData);
+
+  if (importButton) {
+    importButton.textContent = "Imported";
+    setTimeout(() => {
+      importButton.textContent = "Create Lead";
+    }, 1400);
+  }
+
+  if (savedLocally && postedToGoogle) {
+    showDashboardImportStatus(`Imported ${payloadData.estimateNumber} to Dashboard and sent it to Google Drive.`, true);
+  } else if (savedLocally) {
+    showDashboardImportStatus(`Imported ${payloadData.estimateNumber} to the local Dashboard. Google Drive sync is not connected on this device.`, true);
+  } else if (postedToGoogle) {
+    showDashboardImportStatus(`Sent ${payloadData.estimateNumber} to Google Drive, but this browser blocked local Dashboard storage.`, true);
+  } else {
+    showDashboardImportStatus("Dashboard import could not be completed. Check browser storage and the Google Drive connection.");
+  }
+}
+
 function formatDateTimeForDashboard(value) {
   return new Date(value).toLocaleString("en-US", {
     month: "short",
@@ -2369,7 +2466,7 @@ function createCrmFile() {
   if (!$("fileStatus").value) $("fileStatus").value = "New Lead";
   if (!$("estimateStatus").value) $("estimateStatus").value = "Pending";
   if (!$("leadSource").value) $("leadSource").value = "Manual";
-  $("submitStatus").textContent = `Dashboard file ${$("estimateNumber").value} is ready. Add client info, then Save Dashboard to send it to Google Drive once connected.`;
+  $("submitStatus").textContent = `Dashboard file ${$("estimateNumber").value} is ready. When the estimate is finished, click Create Lead to send it to the Dashboard.`;
   updatePreview();
 }
 
@@ -2461,48 +2558,7 @@ async function startNewEstimate() {
 }
 
 async function submitEstimateToGoogle() {
-  const status = $("submitStatus");
-  saveEstimate({ silent: true });
-  const payloadData = serializeEstimate();
-  payloadData.copies = buildSubmittedCopies();
-  const savedLocally = saveEstimateToLocalDashboard(payloadData);
-
-  if (!GOOGLE_SCRIPT_URL) {
-    status.textContent = savedLocally
-      ? "Saved to local Dashboard. Google Drive sync is not connected yet."
-      : "Google Drive sync is not connected yet, and this browser blocked local Dashboard storage.";
-    return;
-  }
-
-  status.textContent = "Saving to Dashboard and Google Drive...";
-
-  const iframeName = "googleSubmitFrame";
-  let iframe = document.querySelector(`iframe[name="${iframeName}"]`);
-  if (!iframe) {
-    iframe = document.createElement("iframe");
-    iframe.name = iframeName;
-    iframe.hidden = true;
-    document.body.appendChild(iframe);
-  }
-
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = GOOGLE_SCRIPT_URL;
-  form.target = iframeName;
-  form.hidden = true;
-
-  const payload = document.createElement("input");
-  payload.type = "hidden";
-  payload.name = "payload";
-  payload.value = JSON.stringify(payloadData);
-  form.appendChild(payload);
-
-  document.body.appendChild(form);
-  iframe.addEventListener("load", () => {
-    status.textContent = "Dashboard file saved to Google Drive.";
-    form.remove();
-  }, { once: true });
-  form.submit();
+  await importEstimateToDashboard();
 }
 
 function loadEstimate() {
@@ -2585,7 +2641,7 @@ function resetEstimate() {
   $("flatTotal").value = "";
   $("discount").value = "";
   $("discountType").value = "dollar";
-  $("taxRate").value = "6.5";
+  $("taxRate").value = "";
   $("depositRate").value = "";
   $("invoiceInitialDeposit").value = "";
   $("invoiceSecondDeposit").value = "";
@@ -2627,7 +2683,6 @@ fields.forEach((field) => {
 $("useLinearTotal").addEventListener("click", () => useCalculatedTotal("linear"));
 $("useSquareTotal").addEventListener("click", () => useCalculatedTotal("square"));
 $("createCrmFile").addEventListener("click", () => createCrmFile());
-
 $("estimateNumber").addEventListener("input", () => {
   state.autoEstimateNumber = false;
   state.estimateNumberCommitted = false;

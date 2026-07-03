@@ -1,33 +1,39 @@
-# D2 Dashboard Foundation Setup
+# D2 Dashboard Live Setup
 
-This version adds the first Dashboard layer to the estimate app.
+This build is ready for a live Dashboard with Google Drive storage.
 
-## What the app now captures
+## Website Access
 
-- Lead source
-- File status
-- Contact status
-- Customer temperature
-- Estimate status
-- Inspection date and time
-- Start date and arrival window
-- Warranty status
-- Next action and next action date
-- Customer details
-- Estimate details
-- Materials, line items, notes, photos, and totals
+Use Wix as the front door:
 
-## Google Drive structure
+`https://theoutchemist.wixsite.com/d2carpentry/blog`
+
+Add a button or private link on that Wix page named:
+
+`Open D2 Dashboard`
+
+Point that button to the live GitHub Pages Dashboard:
+
+`https://mynameisdav3.github.io/d2-estimate-studio-live/crm.html`
+
+Do not embed the Dashboard inside Wix unless absolutely needed. Opening it as a full page avoids the scrolling issue.
+
+## Google Drive Storage
 
 The Google Apps Script backend uses this parent folder:
 
 `1SjVGZKYbdWzWqbbZ7zJ3mx1jNLtBi_4r`
 
-When connected, every saved CRM file creates a customer folder:
+When connected, it creates or updates:
 
-`FILE-NUMBER - Client Name`
+- `D2 Dashboard Database`
+- `Files`
+- `Revenue`
+- `Price Database`
+- `Estimate Submissions`
+- Customer folders named `FILE-NUMBER - Client Name`
 
-Inside each customer folder, it creates:
+Each customer folder includes:
 
 - `01 Estimates`
 - `02 Photos`
@@ -36,20 +42,16 @@ Inside each customer folder, it creates:
 - `05 Materials and Receipts`
 - `06 Warranty`
 
-It also creates or updates a Google Sheet named:
-
-`D2 CRM Database`
-
-## Connection step still needed
-
-The app is ready, but `GOOGLE_SCRIPT_URL` in `app.js` is still blank.
-
-To connect it:
+## Connection Steps
 
 1. Open Google Apps Script.
-2. Paste the contents of `google-apps-script-backend.js`.
-3. Deploy it as a web app.
-4. Copy the web app URL.
-5. Paste that URL into `GOOGLE_SCRIPT_URL` in `app.js`.
+2. Create a new project named `D2 Dashboard Google Drive Backend`.
+3. Paste the contents of `google-apps-script-backend.js`.
+4. Deploy it as a Web App.
+5. Set it to run as you.
+6. Set access to anyone with the link.
+7. Copy the Web App URL.
+8. Open the Dashboard and click `Save Dashboard`.
+9. Paste the Web App URL when the app asks for it.
 
-After that, the `Save Dashboard` / Google save flow will send the file into Google Drive and the database.
+The app remembers that Google link on that device after the first paste.

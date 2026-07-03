@@ -7,8 +7,12 @@ const CRM_STORAGE_KEY = "d2CrmDemoFiles";
 const CRM_REVENUE_STORAGE_KEY = "d2CrmRevenueRows";
 const CRM_PRICE_DATABASE_KEY = "d2PriceDatabase";
 const CRM_PRICE_DELETED_KEY = "d2PriceDeletedIds";
-const CRM_RESET_VERSION_KEY = "d2CrmFreshDashboardVersion";
-const CRM_FRESH_DASHBOARD_VERSION = "approved-estimate-start-v1";
+const CRM_STORAGE_BACKUP_KEY = "d2CrmDemoFilesBackup";
+const CRM_REVENUE_BACKUP_KEY = "d2CrmRevenueRowsBackup";
+const CRM_PRICE_BACKUP_KEY = "d2PriceDatabaseBackup";
+const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
+const GOOGLE_SCRIPT_URL_STORAGE_KEY = "d2GoogleScriptUrl";
+const NOTE_EDIT_WINDOW_MS = 12 * 60 * 60 * 1000;
 
 const CRM_STATUS_DESCRIPTIONS = {
   "New Lead": "Inquiry received from your website, social media, or local referral.",
@@ -87,21 +91,22 @@ let crmFiles = loadCrmFiles();
 let activeFileId = crmFiles[0] ? crmFiles[0].id : null;
 let crmRevenueRows = loadRevenueRows();
 let activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
+let crmRevenueDateSort = "newest";
 let crmPriceRows = loadPriceRows();
 let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
 
-function applyFreshDashboardReset() {
-  try {
-    if (localStorage.getItem(CRM_RESET_VERSION_KEY) === CRM_FRESH_DASHBOARD_VERSION) return;
-    localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify([]));
-    localStorage.setItem(CRM_RESET_VERSION_KEY, CRM_FRESH_DASHBOARD_VERSION);
-    crmFiles = [];
-    activeFileId = null;
-  } catch (error) {
-    crmFiles = [];
-    activeFileId = null;
-  }
+function getGoogleScriptUrl() {
+  return localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || DEFAULT_GOOGLE_SCRIPT_URL;
+}
+
+function requestGoogleScriptUrl() {
+  const existing = getGoogleScriptUrl();
+  const value = window.prompt("Paste your D2 Google Drive save link here. You only need to do this once on this device.", existing);
+  if (!value) return "";
+  const cleanValue = value.trim();
+  localStorage.setItem(GOOGLE_SCRIPT_URL_STORAGE_KEY, cleanValue);
+  return cleanValue;
 }
 
 function todayIso(offset = 0) {
@@ -268,20 +273,39 @@ function defaultRevenueRows() {
 function loadCrmFiles() {
   try {
     const saved = localStorage.getItem(CRM_STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const files = JSON.parse(saved);
+      if (Array.isArray(files) && files.length) return files;
+      const backup = localStorage.getItem(CRM_STORAGE_BACKUP_KEY);
+      const backupFiles = backup ? JSON.parse(backup) : [];
+      if (Array.isArray(backupFiles) && backupFiles.length) return backupFiles;
+      return Array.isArray(files) ? files : defaultFiles();
+    }
   } catch (error) {
     // Local demo storage may be unavailable in some browsers.
+  }
+  if (Array.isArray(window.D2_DASHBOARD_RESTORE?.files) && window.D2_DASHBOARD_RESTORE.files.length) {
+    return window.D2_DASHBOARD_RESTORE.files.map((file) => ({ ...file }));
   }
   return defaultFiles();
 }
 
 function loadRevenueRows() {
+  const restoredRows = Array.isArray(window.D2_DASHBOARD_RESTORE?.revenue)
+    ? window.D2_DASHBOARD_RESTORE.revenue.map((row) => ({ ...row }))
+    : [];
   const spreadsheetRows = defaultRevenueRows();
   try {
     const saved = localStorage.getItem(CRM_REVENUE_STORAGE_KEY);
     if (saved) {
       const rows = JSON.parse(saved);
       if (Array.isArray(rows)) {
+        if (!rows.length) {
+          const backup = localStorage.getItem(CRM_REVENUE_BACKUP_KEY);
+          const backupRows = backup ? JSON.parse(backup) : [];
+          if (Array.isArray(backupRows) && backupRows.length) return backupRows;
+          if (restoredRows.length) return restoredRows;
+        }
         if (Array.isArray(window.D2_REVENUE_ROWS) && rows.length < spreadsheetRows.length) {
           return spreadsheetRows;
         }
@@ -291,6 +315,7 @@ function loadRevenueRows() {
   } catch (error) {
     // Local demo storage may be unavailable in some browsers.
   }
+  if (restoredRows.length) return restoredRows;
   return spreadsheetRows;
 }
 
@@ -298,9 +323,16 @@ function loadPriceRows() {
   try {
     const saved = localStorage.getItem(CRM_PRICE_DATABASE_KEY);
     const rows = saved ? JSON.parse(saved) : [];
+    if (Array.isArray(rows) && rows.length) return rows;
+    const backup = localStorage.getItem(CRM_PRICE_BACKUP_KEY);
+    const backupRows = backup ? JSON.parse(backup) : [];
+    if (Array.isArray(backupRows) && backupRows.length) return backupRows;
+    if (Array.isArray(window.D2_DASHBOARD_RESTORE?.prices) && window.D2_DASHBOARD_RESTORE.prices.length) {
+      return window.D2_DASHBOARD_RESTORE.prices.map((row) => ({ ...row }));
+    }
     return Array.isArray(rows) ? rows : [];
   } catch (error) {
-    return [];
+    return Array.isArray(window.D2_DASHBOARD_RESTORE?.prices) ? window.D2_DASHBOARD_RESTORE.prices.map((row) => ({ ...row })) : [];
   }
 }
 
@@ -316,6 +348,9 @@ function loadDeletedPriceIds() {
 
 function saveCrmFiles() {
   try {
+    if (Array.isArray(crmFiles) && crmFiles.length) {
+      localStorage.setItem(CRM_STORAGE_BACKUP_KEY, JSON.stringify(crmFiles));
+    }
     localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify(crmFiles));
   } catch (error) {
     // Google Drive will become the real storage layer.
@@ -324,6 +359,9 @@ function saveCrmFiles() {
 
 function saveRevenueRows() {
   try {
+    if (Array.isArray(crmRevenueRows) && crmRevenueRows.length) {
+      localStorage.setItem(CRM_REVENUE_BACKUP_KEY, JSON.stringify(crmRevenueRows));
+    }
     localStorage.setItem(CRM_REVENUE_STORAGE_KEY, JSON.stringify(crmRevenueRows));
   } catch (error) {
     // Google Drive will become the real storage layer.
@@ -332,6 +370,9 @@ function saveRevenueRows() {
 
 function savePriceRows() {
   try {
+    if (Array.isArray(crmPriceRows) && crmPriceRows.length) {
+      localStorage.setItem(CRM_PRICE_BACKUP_KEY, JSON.stringify(crmPriceRows));
+    }
     localStorage.setItem(CRM_PRICE_DATABASE_KEY, JSON.stringify(crmPriceRows));
   } catch (error) {
     // Local storage can be blocked in some browser privacy modes.
@@ -344,6 +385,60 @@ function saveDeletedPriceIds() {
   } catch (error) {
     // Local storage can be blocked in some browser privacy modes.
   }
+}
+
+function persistRestoredDashboardIfNeeded() {
+  if (Array.isArray(crmFiles) && crmFiles.length) saveCrmFiles();
+  if (Array.isArray(crmRevenueRows) && crmRevenueRows.length) saveRevenueRows();
+  if (Array.isArray(crmPriceRows) && crmPriceRows.length) savePriceRows();
+}
+
+function buildDashboardSyncPayload() {
+  return {
+    action: "dashboardSync",
+    syncedAt: new Date().toISOString(),
+    source: "D2 Dashboard",
+    dashboardFiles: crmFiles,
+    revenueRows: crmRevenueRows,
+    priceRows: crmPriceRows,
+    deletedPriceIds: crmDeletedPriceIds,
+  };
+}
+
+function postPayloadToGoogle(payload) {
+  const googleScriptUrl = getGoogleScriptUrl() || requestGoogleScriptUrl();
+  if (!googleScriptUrl) return Promise.resolve(false);
+
+  const body = new FormData();
+  body.append("payload", JSON.stringify(payload));
+
+  fetch(googleScriptUrl, {
+    method: "POST",
+    mode: "no-cors",
+    keepalive: true,
+    body,
+  }).catch(() => {});
+  return Promise.resolve(true);
+}
+
+async function saveDashboardToGoogle() {
+  saveActiveFile();
+  saveCrmFiles();
+  saveRevenueRows();
+  savePriceRows();
+  saveDeletedPriceIds();
+  $("crmSaveDemo").textContent = "Saving...";
+  const posted = await postPayloadToGoogle(buildDashboardSyncPayload());
+  if (!posted) {
+    $("crmSaveDemo").textContent = "Save Dashboard";
+    window.alert("Google Drive save is not connected yet. After we deploy the Google save link, paste it here once.");
+  } else {
+    $("crmSaveDemo").textContent = "Saved";
+    window.setTimeout(() => {
+      $("crmSaveDemo").textContent = "Save Dashboard";
+    }, 1400);
+  }
+  renderCrm();
 }
 
 function activeFile() {
@@ -412,6 +507,7 @@ function isOpenCrmFile(file) {
 function visibleFiles() {
   const filter = $("crmFileFilter").value;
   const openFiles = crmFiles.filter(isOpenCrmFile);
+  if (filter === "all") return crmFiles;
   if (filter === "new") return openFiles.filter((file) => file.fileStatus === "New Lead");
   if (filter === "contact") return openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus));
   if (filter === "estimate") return openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail));
@@ -423,6 +519,7 @@ function visibleFiles() {
 
 function renderCounts() {
   const openFiles = crmFiles.filter(isOpenCrmFile);
+  $("allFileCount").textContent = crmFiles.length;
   $("newLeadCount").textContent = openFiles.filter((file) => file.fileStatus === "New Lead").length;
   $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus)).length;
   $("pendingEstimateCount").textContent = openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail)).length;
@@ -778,6 +875,9 @@ function handleStatusWorkflow() {
   }
 
   saveActiveFile();
+  const savedFile = normalizeCrmFile(activeFile());
+  ensureRevenueRowForFile(savedFile);
+  saveCrmFiles();
   renderCrm();
 }
 
@@ -792,20 +892,33 @@ function formatNoteTimestamp(value) {
   });
 }
 
+function canEditLatestNote(notes, index) {
+  if (!Array.isArray(notes) || index !== notes.length - 1) return false;
+  const createdAt = new Date(notes[index]?.at || "");
+  if (Number.isNaN(createdAt.getTime())) return false;
+  return Date.now() - createdAt.getTime() <= NOTE_EDIT_WINDOW_MS;
+}
+
 function renderNotes(file) {
   const notes = Array.isArray(file.notes) ? file.notes : [];
   $("crmNoteList").innerHTML = notes.length
     ? notes
-        .slice()
+        .map((note, index) => ({ note, index }))
         .reverse()
-        .map((note) => `
+        .map(({ note, index }) => `
           <article class="crm-note-entry">
-            <time>${escapeHtml(formatNoteTimestamp(note.at))}</time>
+            <div class="crm-note-meta">
+              <time>${escapeHtml(formatNoteTimestamp(note.at))}${note.editedAt ? ` · Edited ${escapeHtml(formatNoteTimestamp(note.editedAt))}` : ""}</time>
+              ${canEditLatestNote(notes, index) ? `<button type="button" data-note-edit="${index}">Edit</button>` : ""}
+            </div>
             <p>${escapeHtml(note.text)}</p>
           </article>
         `)
         .join("")
     : `<p class="crm-empty-state">No notes yet. Add the first note above.</p>`;
+  document.querySelectorAll("[data-note-edit]").forEach((button) => {
+    button.addEventListener("click", () => editCrmNote(Number(button.dataset.noteEdit)));
+  });
 }
 
 function addCrmNote() {
@@ -817,6 +930,31 @@ function addCrmNote() {
   file.notes.push({ at: timestamp, text });
   file.timeline = [...(file.timeline || []), `Note added ${formatNoteTimestamp(timestamp)}`];
   $("crmNewNote").value = "";
+  saveCrmFiles();
+  renderCrm();
+}
+
+function editCrmNote(index) {
+  const file = normalizeCrmFile(activeFile());
+  if (!file || !canEditLatestNote(file.notes, index)) {
+    window.alert("Only the latest note can be edited, and only within 12 hours.");
+    return;
+  }
+  const currentText = file.notes[index].text || "";
+  const updatedText = window.prompt("Edit the latest note:", currentText);
+  if (updatedText === null) return;
+  const cleanText = updatedText.trim();
+  if (!cleanText) {
+    window.alert("A note cannot be blank.");
+    return;
+  }
+  const timestamp = new Date().toISOString();
+  file.notes[index] = {
+    ...file.notes[index],
+    text: cleanText,
+    editedAt: timestamp,
+  };
+  file.timeline = [...(file.timeline || []), `Latest note edited ${formatNoteTimestamp(timestamp)}`];
   saveCrmFiles();
   renderCrm();
 }
@@ -882,9 +1020,9 @@ function deleteActiveFile() {
     return;
   }
 
-  const passcode = window.prompt(`Enter the delete passcode for ${file.fileNumber}.`);
+  const passcode = window.prompt(`Enter delete passcode D2 for ${file.fileNumber}.`);
   if (passcode === null) return;
-  if (passcode !== "1111") {
+  if (passcode.trim().toUpperCase() !== "D2") {
     window.alert("Incorrect passcode. File was not deleted.");
     return;
   }
@@ -1296,6 +1434,77 @@ function revenueProfit(row) {
   return (Number(row.gross) || 0) - (Number(row.expenses) || 0) - (Number(row.labor) || 0);
 }
 
+function revenueDateValue(row) {
+  const parsed = Date.parse(row.date || "");
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function sortedRevenueRows() {
+  return [...crmRevenueRows].sort((a, b) => {
+    const difference = revenueDateValue(a) - revenueDateValue(b);
+    return crmRevenueDateSort === "oldest" ? difference : -difference;
+  });
+}
+
+function revenueRowForDashboardFile(file) {
+  if (!file) return null;
+  return crmRevenueRows.find((row) => {
+    return row.dashboardFileId === file.id
+      || row.attachedEstimate?.dashboardFileId === file.id
+      || row.attachedEstimate?.fileNumber === file.fileNumber
+      || row.fileNumber === file.fileNumber;
+  }) || null;
+}
+
+function ensureRevenueRowForFile(file) {
+  if (!file || !["In Progress", "Work Completed"].includes(file.fileStatus)) return null;
+  const existing = revenueRowForDashboardFile(file);
+  const estimateTotal = Number(file.estimateTotal) || Number(file.editableEstimate?.totals?.total) || 0;
+  const materialTotal = Number(file.materialTotal) || Number(file.editableEstimate?.backend?.estimatedMaterialCost) || 0;
+  const fileNumber = file.fileNumber || makeCrmFileNumber();
+  const baseRow = existing || {
+    id: makeCrmId("rev-file"),
+    date: todayIso(0),
+    labor: 0,
+    receiptNotes: "",
+    laborAssigns: "",
+  };
+  const row = {
+    ...baseRow,
+    dashboardFileId: file.id,
+    fileNumber,
+    clientJob: `${file.clientName || "Unnamed Client"} - ${fileNumber}`,
+    gross: estimateTotal,
+    expenses: materialTotal,
+    profit: estimateTotal - materialTotal - (Number(baseRow.labor) || 0),
+    attachedEstimate: {
+      ...(baseRow.attachedEstimate || {}),
+      ...(file.editableEstimate || {}),
+      dashboardFileId: file.id,
+      fileNumber,
+      estimateNumber: fileNumber,
+      clientName: file.clientName || "",
+      clientPhone: file.clientPhone || "",
+      clientEmail: file.clientEmail || "",
+      projectAddress: file.projectAddress || "",
+      total: estimateTotal,
+      materialTotal,
+      materialItems: Array.isArray(file.materialItems) ? file.materialItems : baseRow.attachedEstimate?.materialItems || [],
+      savedAt: new Date().toISOString(),
+    },
+  };
+  if (existing) {
+    const index = crmRevenueRows.findIndex((entry) => entry.id === existing.id);
+    if (index >= 0) crmRevenueRows[index] = row;
+  } else {
+    crmRevenueRows.unshift(row);
+    activeRevenueId = row.id;
+    addSystemNote(file, `Revenue row created for ${file.fileStatus}.`);
+  }
+  saveRevenueRows();
+  return row;
+}
+
 function findFileForRevenue(row) {
   if (row.dashboardFileId) {
     const linkedFile = crmFiles.find((file) => file.id === row.dashboardFileId);
@@ -1324,7 +1533,10 @@ function renderRevenue() {
   $("crmRevenueLabor").textContent = crmCurrency.format(totals.labor);
   $("crmRevenueProfit").textContent = crmCurrency.format(totals.profit);
 
-  $("crmRevenueRows").innerHTML = crmRevenueRows
+  const sortControl = $("crmRevenueDateSort");
+  if (sortControl) sortControl.value = crmRevenueDateSort;
+
+  $("crmRevenueRows").innerHTML = sortedRevenueRows()
     .map((row) => {
       const file = findFileForRevenue(row);
       return `
@@ -2309,11 +2521,6 @@ $("crmEmailInvoice").addEventListener("click", () => {
   emailInvoice().catch(() => window.alert("The invoice email could not be opened. Save the PDF first, then attach it manually."));
 });
 $("crmNewFile").addEventListener("click", newCrmFile);
-$("crmImportApprovedEstimate").addEventListener("click", () => $("crmApprovedEstimateUpload").click());
-$("crmApprovedEstimateUpload").addEventListener("change", (event) => {
-  importApprovedEstimateFile(event.target.files[0]);
-  event.target.value = "";
-});
 $("crmAddNote").addEventListener("click", addCrmNote);
 $("crmNewNote").addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -2322,8 +2529,7 @@ $("crmNewNote").addEventListener("keydown", (event) => {
   }
 });
 $("crmSaveDemo").addEventListener("click", () => {
-  saveActiveFile();
-  renderCrm();
+  saveDashboardToGoogle();
 });
 $("crmArchiveFile").addEventListener("click", () => {
   const file = activeFile();
@@ -2340,6 +2546,10 @@ $("crmOpenAssignment").addEventListener("click", () => openActiveEstimate("#assi
 $("crmOpenInvoice").addEventListener("click", openActiveInvoice);
 $("crmImportRevenue").addEventListener("click", importRevenueRows);
 $("crmAddRevenueRow").addEventListener("click", addRevenueRow);
+$("crmRevenueDateSort").addEventListener("change", (event) => {
+  crmRevenueDateSort = event.target.value;
+  renderRevenue();
+});
 $("crmUploadEstimateFile").addEventListener("click", () => $("crmEstimateFileUpload").click());
 $("crmEstimateFileUpload").addEventListener("change", (event) => {
   uploadEstimateToRevenue(event.target.files[0]);
@@ -2356,7 +2566,7 @@ $("crmFileStatus").addEventListener("change", () => {
 $("crmStatusDetail").addEventListener("change", handleStatusWorkflow);
 
 document.querySelectorAll("input, select, textarea").forEach((element) => {
-  if (["crmFileStatus", "crmStatusDetail", "crmEstimateAmountInput", "crmMaterialAmountInput"].includes(element.id)) return;
+  if (["crmFileStatus", "crmStatusDetail", "crmEstimateAmountInput", "crmMaterialAmountInput", "crmNewNote"].includes(element.id)) return;
   element.addEventListener("change", (event) => {
     handleCrmControlWorkflow(event);
     saveActiveFile();
@@ -2364,6 +2574,6 @@ document.querySelectorAll("input, select, textarea").forEach((element) => {
   });
 });
 
-applyFreshDashboardReset();
+persistRestoredDashboardIfNeeded();
 switchCrmView("dashboard");
 renderCrm();

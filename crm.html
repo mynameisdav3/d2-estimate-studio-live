@@ -26,19 +26,21 @@
 
       <nav class="crm-actions crm-nav-actions" aria-label="Dashboard actions">
         <button type="button" class="icon-button primary-action" id="crmNewFile">+ New File</button>
-        <button type="button" class="icon-button" id="crmImportApprovedEstimate">Import Approved Estimate</button>
         <button type="button" class="icon-button active" data-crm-view="dashboard">Dashboard</button>
         <button type="button" class="icon-button" data-crm-view="revenue">Revenue</button>
         <button type="button" class="icon-button" data-crm-view="prices">Price Database</button>
         <a class="icon-button" href="index.html">Estimator</a>
         <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
-        <input id="crmApprovedEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
       </nav>
 
       <section class="crm-dashboard">
         <section class="crm-command-panel crm-dashboard-view">
           <div class="crm-command-grid">
-            <button type="button" class="crm-command-card active" data-crm-filter="new">
+            <button type="button" class="crm-command-card active" data-crm-filter="all">
+              <span>All Files</span>
+              <strong id="allFileCount">0</strong>
+            </button>
+            <button type="button" class="crm-command-card" data-crm-filter="new">
               <span>New Leads</span>
               <strong id="newLeadCount">0</strong>
             </button>
@@ -73,7 +75,8 @@
                 <h2 id="crmListTitle">All Files</h2>
               </div>
               <select id="crmFileFilter" aria-label="File filter">
-                <option value="new" selected>New Leads</option>
+                <option value="all" selected>All Files</option>
+                <option value="new">New Leads</option>
                 <option value="contact">Pending Contact</option>
                 <option value="estimate">Pending Estimates</option>
                 <option value="negotiation">In Negotiation</option>
@@ -405,6 +408,13 @@
                   <h2>Working Revenue Sheet</h2>
                 </div>
                 <div class="crm-panel-actions">
+                  <label class="crm-inline-control">
+                    <span>Sort</span>
+                    <select id="crmRevenueDateSort">
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                    </select>
+                  </label>
                   <button type="button" id="crmUploadEstimateFile">Upload Estimate File</button>
                   <button type="button" id="crmAddRevenueRow">Add Revenue Row</button>
                 </div>
@@ -528,6 +538,7 @@
       </section>
     </main>
     <script src="materials-database.js"></script>
+    <script src="dashboard-restore-data.js"></script>
     <script src="revenue-data.js"></script>
     <script src="vendor/jspdf.umd.min.js"></script>
     <script src="vendor/html2canvas.min.js"></script>

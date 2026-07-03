@@ -207,6 +207,13 @@ h2 {
   white-space: nowrap;
 }
 
+.panel-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1050,11 +1057,20 @@ body.invoice-mode .assignment-panel,
 body.invoice-mode .calculations-panel,
 body.invoice-mode #generateAssignmentSheet,
 body.invoice-mode #generatePaymentInvoice {
+  display: none !important;
+}
+
+body.invoice-mode .estimate-deposit-field {
   display: none;
 }
 
 body.invoice-mode .invoice-payment-field {
   display: grid;
+}
+
+body.invoice-mode .invoice-final-payment {
+  grid-column: 1 / -1;
+  max-width: 360px;
 }
 
 .notes {
@@ -2553,6 +2569,34 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   justify-content: flex-end;
 }
 
+.crm-inline-control {
+  align-items: center;
+  background: #f4f7fb;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  display: inline-flex;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.crm-inline-control span {
+  color: #506070;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.crm-inline-control select {
+  background: transparent;
+  border: 0;
+  color: #17202a;
+  font: inherit;
+  font-weight: 700;
+  min-width: 118px;
+  outline: none;
+}
+
 .crm-attached-estimate {
   display: grid;
   gap: 4px;
@@ -2604,6 +2648,23 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   border-radius: 8px;
   background: #f8fafc;
   padding: 12px;
+}
+
+.crm-note-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.crm-note-meta button {
+  min-height: 28px;
+  border-radius: 7px;
+  padding: 0 10px;
+  background: #ffffff;
+  color: var(--blue);
+  font-size: 0.74rem;
+  font-weight: 900;
 }
 
 .crm-note-entry time {
