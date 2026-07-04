@@ -35,13 +35,17 @@ function saveDashboardSync_(payload, parentFolder, spreadsheet) {
   const files = Array.isArray(payload.dashboardFiles) ? payload.dashboardFiles : [];
   const revenueRows = Array.isArray(payload.revenueRows) ? payload.revenueRows : [];
   const priceRows = Array.isArray(payload.priceRows) ? payload.priceRows : [];
+  const backupFolder = getOrCreateChildFolder_(parentFolder, "00 Dashboard Backups");
+  const backupStamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH-mm-ss");
+  const dashboardPayload = JSON.stringify(payload, null, 2);
 
   upsertTextFile_(
     parentFolder,
     "D2 Dashboard Sync - latest.json",
-    JSON.stringify(payload, null, 2),
+    dashboardPayload,
     MimeType.PLAIN_TEXT
   );
+  backupFolder.createFile(`D2 Dashboard Sync - ${backupStamp}.json`, dashboardPayload, MimeType.PLAIN_TEXT);
 
   const fileSheet = getSheet_(spreadsheet, SHEETS.files, fileHeaders_());
   replaceRows_(fileSheet, fileHeaders_(), files.map((file) => {

@@ -338,20 +338,60 @@ function loadRevenueRows() {
 }
 
 function loadPriceRows() {
+  const restoredRows = restoredPriceRows();
   try {
     const saved = localStorage.getItem(CRM_PRICE_DATABASE_KEY);
     const rows = saved ? JSON.parse(saved) : [];
-    if (Array.isArray(rows) && rows.length) return rows;
+    if (Array.isArray(rows) && rows.length) return mergePriceRows(restoredRows, rows);
     const backup = localStorage.getItem(CRM_PRICE_BACKUP_KEY);
     const backupRows = backup ? JSON.parse(backup) : [];
-    if (Array.isArray(backupRows) && backupRows.length) return backupRows;
-    if (Array.isArray(window.D2_DASHBOARD_RESTORE?.prices) && window.D2_DASHBOARD_RESTORE.prices.length) {
-      return window.D2_DASHBOARD_RESTORE.prices.map((row) => ({ ...row }));
-    }
+    if (Array.isArray(backupRows) && backupRows.length) return mergePriceRows(restoredRows, backupRows);
+    if (restoredRows.length) return restoredRows;
     return Array.isArray(rows) ? rows : [];
   } catch (error) {
-    return Array.isArray(window.D2_DASHBOARD_RESTORE?.prices) ? window.D2_DASHBOARD_RESTORE.prices.map((row) => ({ ...row })) : [];
+    return restoredRows;
   }
+}
+
+function normalizedPriceRow(row = {}) {
+  const product = row.product || row.name || row.item || "";
+  const vendor = row.vendor || row.source || "";
+  return {
+    ...row,
+    id: row.id || row.sourceId || makeCrmId("price"),
+    product,
+    name: row.name || product,
+    vendor,
+    source: row.source || vendor,
+    category: row.category || "Custom",
+    unit: row.unit || "each",
+    defaultPrice: Number(row.defaultPrice ?? row.price ?? row.priceLow ?? row.priceHigh) || 0,
+  };
+}
+
+function restoredPriceRows() {
+  return Array.isArray(window.D2_DASHBOARD_RESTORE?.prices)
+    ? window.D2_DASHBOARD_RESTORE.prices.map((row) => normalizedPriceRow(row))
+    : [];
+}
+
+function priceRowKey(row = {}) {
+  return String(row.sourceId || row.id || row.product || row.name || "")
+    .trim()
+    .toLowerCase();
+}
+
+function mergePriceRows(primary = [], secondary = []) {
+  const merged = [];
+  const seen = new Set();
+  [...primary, ...secondary].forEach((row) => {
+    const normalized = normalizedPriceRow(row);
+    const key = priceRowKey(normalized);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push(normalized);
+  });
+  return merged;
 }
 
 function loadDeletedPriceIds() {
@@ -1840,12 +1880,12 @@ function importApprovedEstimateFile(file) {
 
 function priceDatabaseRows() {
   const deletedIds = new Set(crmDeletedPriceIds);
-  const customRows = crmPriceRows.map((row) => ({ ...row, readonly: false }));
+  const customRows = crmPriceRows.map((row) => ({ ...normalizedPriceRow(row), readonly: false }));
   const overriddenIds = new Set(customRows.map((row) => row.sourceId).filter(Boolean));
   const baseRows = Array.isArray(window.D2_MATERIALS_DATABASE)
     ? window.D2_MATERIALS_DATABASE
         .filter((row) => !overriddenIds.has(row.id) && !deletedIds.has(row.id))
-        .map((row) => ({ ...row, readonly: true }))
+        .map((row) => ({ ...normalizedPriceRow(row), readonly: true }))
     : [];
   return [...customRows.filter((row) => !deletedIds.has(row.id) && !deletedIds.has(row.sourceId)), ...baseRows];
 }
@@ -1855,7 +1895,7 @@ function visiblePriceDatabaseRows() {
   const sort = $("crmPriceSort")?.value || "name";
   const rows = priceDatabaseRows().filter((row) => {
     if (!query) return true;
-    const haystack = [row.product, row.category, row.vendor, row.source, row.unit, row.id].join(" ").toLowerCase();
+    const haystack = [row.product, row.name, row.category, row.vendor, row.source, row.unit, row.id].join(" ").toLowerCase();
     return haystack.includes(query);
   });
   const textValue = (row, key) => String(row[key] || "").toLowerCase();
@@ -1895,10 +1935,11 @@ function renderPriceDatabase() {
 }
 
 function renderReadonlyPriceRow(row) {
+  const product = row.product || row.name || "Unnamed item";
   return `
     <div class="crm-price-row">
       <div>
-        <strong>${escapeHtml(row.product)}</strong>
+        <strong>${escapeHtml(product)}</strong>
         <span>${escapeHtml([row.category, row.vendor].filter(Boolean).join(" - "))}</span>
       </div>
       <small>${escapeHtml(row.unit || "each")}</small>
@@ -1911,9 +1952,10 @@ function renderReadonlyPriceRow(row) {
 }
 
 function renderEditablePriceRow(row) {
+  const product = row.product || row.name || "";
   return `
     <div class="crm-price-row crm-price-row-editing">
-      <input data-price-field="product" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(row.product)}" placeholder="Item name">
+      <input data-price-field="product" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(product)}" placeholder="Item name">
       <input data-price-field="defaultPrice" data-price-id="${escapeHtml(row.id)}" type="number" min="0" step="0.01" value="${escapeHtml(Number(row.defaultPrice) || "")}" placeholder="Price">
       <input data-price-field="unit" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(row.unit || "each")}" placeholder="Unit">
       <input data-price-field="category" data-price-id="${escapeHtml(row.id)}" value="${escapeHtml(row.category || "")}" placeholder="Category">
@@ -1941,7 +1983,8 @@ function savePriceLineEdit(id) {
     ...(existing.readonly ? {} : existing),
     id: existing.readonly ? `custom-${makeCrmId("price")}` : existing.id,
     sourceId: existing.readonly ? existing.id : existing.sourceId,
-    product: fieldValue("product") || existing.product,
+    product: fieldValue("product") || existing.product || existing.name,
+    name: fieldValue("product") || existing.product || existing.name,
     category: fieldValue("category") || "Custom",
     unit: fieldValue("unit") || "each",
     vendor: fieldValue("vendor"),
@@ -1996,7 +2039,7 @@ function addPriceLine() {
 function deletePriceLine(id) {
   const row = priceDatabaseRows().find((entry) => entry.id === id);
   if (!row) return;
-  const confirmed = window.confirm(`Delete ${row.product || "this price line"} from the price database?`);
+  const confirmed = window.confirm(`Delete ${row.product || row.name || "this price line"} from the price database?`);
   if (!confirmed) return;
   crmPriceRows = crmPriceRows.filter((entry) => entry.id !== id);
   if (row.readonly || row.sourceId) {
