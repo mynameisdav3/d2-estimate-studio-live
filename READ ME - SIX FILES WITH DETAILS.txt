@@ -1,0 +1,12 @@
+Corrected Dashboard package based on July 3 screenshots.
+
+Includes six files:
+- Christina Corso
+- James Goodman
+- DEIRDRE BLODNICK
+- David Hennessy
+- Rob Larsen
+- Reese Aliance
+
+Also includes updated customer/status/financial details and visible Revenue rows from screenshots.
+Upload the CONTENTS of this folder to GitHub.

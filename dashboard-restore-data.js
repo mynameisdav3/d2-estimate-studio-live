@@ -4,22 +4,22 @@ window.D2_DASHBOARD_RESTORE = {
       "id": "file-restored-26-a1006-1",
       "fileNumber": "26-A1006-1",
       "clientName": "Christina Corso",
-      "clientPhone": "",
-      "clientEmail": "",
-      "projectAddress": "",
-      "leadSource": "Manual",
+      "clientPhone": "(239) 961-6014",
+      "clientEmail": "hsamson2728@gmail.com",
+      "projectAddress": "3318 SW 1st Ave Cape Coral FL 33914",
+      "leadSource": "Phone",
       "fileStatus": "Closed / Paid",
-      "statusDetail": "",
+      "statusDetail": "Invoice Sent",
       "projectType": "Other",
-      "projectStage": "",
+      "projectStage": "Paid",
       "estimateStatus": "Pending",
-      "estimateTotal": 0,
+      "estimateTotal": 450,
       "materialTotal": 0,
       "initialDeposit": "",
       "midpointDeposit": "",
       "finalPaymentAmount": "",
-      "paidInFull": "Yes",
-      "invoiceStatus": "",
+      "paidInFull": "No",
+      "invoiceStatus": "Sent",
       "reviewStatus": "",
       "nextAction": "",
       "nextActionDate": "",
@@ -28,34 +28,50 @@ window.D2_DASHBOARD_RESTORE = {
         {
           "at": "2026-07-04T00:26:56.098Z",
           "text": "Restored from local Dashboard screenshot."
+        },
+        {
+          "at": "2026-07-04T00:34:30.559Z",
+          "text": "Details restored from July 3 screenshots."
         }
       ],
       "timeline": [
-        "Restored from local Dashboard screenshot"
+        "Restored from local Dashboard screenshot",
+        "Details restored from July 3 screenshots"
       ],
       "createdAt": "2026-07-04T00:26:56.098Z",
-      "updatedAt": "2026-07-04T00:26:56.098Z"
+      "updatedAt": "2026-07-04T00:34:30.559Z",
+      "contactEmailSent": "No",
+      "contactTextSent": "No",
+      "inspectionDateSet": "Yes",
+      "inspectionDate": "2026-07-03",
+      "inspectionTime": "",
+      "startDate": "",
+      "arrivalWindow": "Open",
+      "followUpDate": "",
+      "initialDepositSecured": "No",
+      "midpointDepositSecured": "No",
+      "finalPaymentSecured": "No"
     },
     {
       "id": "file-restored-26-a1005",
       "fileNumber": "26-A1005",
       "clientName": "James Goodman",
-      "clientPhone": "",
-      "clientEmail": "",
-      "projectAddress": "",
-      "leadSource": "Manual",
+      "clientPhone": "(239) 633-8267",
+      "clientEmail": "jgt0522@gmail.com",
+      "projectAddress": "5617 Harbour Cir Cape Coral FL 33914",
+      "leadSource": "Angi",
       "fileStatus": "Closed / Paid",
-      "statusDetail": "",
+      "statusDetail": "Invoice Sent",
       "projectType": "Other",
-      "projectStage": "",
+      "projectStage": "Paid",
       "estimateStatus": "Pending",
-      "estimateTotal": 0,
+      "estimateTotal": 2410,
       "materialTotal": 0,
       "initialDeposit": "",
       "midpointDeposit": "",
-      "finalPaymentAmount": "",
+      "finalPaymentAmount": "2410",
       "paidInFull": "Yes",
-      "invoiceStatus": "",
+      "invoiceStatus": "Sent",
       "reviewStatus": "",
       "nextAction": "Archived for future marketing",
       "nextActionDate": "",
@@ -64,34 +80,50 @@ window.D2_DASHBOARD_RESTORE = {
         {
           "at": "2026-07-04T00:26:56.098Z",
           "text": "Restored from local Dashboard screenshot."
+        },
+        {
+          "at": "2026-07-04T00:34:30.559Z",
+          "text": "Details restored from July 3 screenshots."
         }
       ],
       "timeline": [
-        "Restored from local Dashboard screenshot"
+        "Restored from local Dashboard screenshot",
+        "Details restored from July 3 screenshots"
       ],
       "createdAt": "2026-07-04T00:26:56.098Z",
-      "updatedAt": "2026-07-04T00:26:56.098Z"
+      "updatedAt": "2026-07-04T00:34:30.559Z",
+      "contactEmailSent": "No",
+      "contactTextSent": "No",
+      "inspectionDateSet": "No",
+      "inspectionDate": "",
+      "inspectionTime": "",
+      "startDate": "",
+      "arrivalWindow": "Open",
+      "followUpDate": "",
+      "initialDepositSecured": "No",
+      "midpointDepositSecured": "No",
+      "finalPaymentSecured": "Yes"
     },
     {
       "id": "file-restored-26-a1004",
       "fileNumber": "26-A1004",
       "clientName": "DEIRDRE BLODNICK",
-      "clientPhone": "",
-      "clientEmail": "",
-      "projectAddress": "",
-      "leadSource": "Manual",
+      "clientPhone": "(239) 898-8297",
+      "clientEmail": "2blnd4u@gmail.com",
+      "projectAddress": "20160 Trailside Dr, Estero, FL 33928",
+      "leadSource": "Angi",
       "fileStatus": "In Negotiation",
       "statusDetail": "Follow-Up Scheduled",
       "projectType": "Cabinetry",
-      "projectStage": "",
+      "projectStage": "Estimate",
       "estimateStatus": "Sent",
-      "estimateTotal": 0,
-      "materialTotal": 0,
-      "initialDeposit": "",
+      "estimateTotal": 5850,
+      "materialTotal": 714,
+      "initialDeposit": "1755",
       "midpointDeposit": "",
       "finalPaymentAmount": "",
       "paidInFull": "No",
-      "invoiceStatus": "",
+      "invoiceStatus": "Not Created",
       "reviewStatus": "",
       "nextAction": "Follow up on negotiation",
       "nextActionDate": "",
@@ -100,13 +132,29 @@ window.D2_DASHBOARD_RESTORE = {
         {
           "at": "2026-07-04T00:26:56.098Z",
           "text": "Restored from local Dashboard screenshot."
+        },
+        {
+          "at": "2026-07-04T00:34:30.559Z",
+          "text": "Details restored from July 3 screenshots."
         }
       ],
       "timeline": [
-        "Restored from local Dashboard screenshot"
+        "Restored from local Dashboard screenshot",
+        "Details restored from July 3 screenshots"
       ],
       "createdAt": "2026-07-04T00:26:56.098Z",
-      "updatedAt": "2026-07-04T00:26:56.098Z"
+      "updatedAt": "2026-07-04T00:34:30.559Z",
+      "contactEmailSent": "Yes",
+      "contactTextSent": "Yes",
+      "inspectionDateSet": "Yes",
+      "inspectionDate": "2026-07-01",
+      "inspectionTime": "17:15",
+      "startDate": "",
+      "arrivalWindow": "Open",
+      "followUpDate": "",
+      "initialDepositSecured": "Yes",
+      "midpointDepositSecured": "No",
+      "finalPaymentSecured": "No"
     },
     {
       "id": "file-restored-d2-260621-001",
@@ -135,13 +183,19 @@ window.D2_DASHBOARD_RESTORE = {
         {
           "at": "2026-07-02T03:03:36.403Z",
           "text": "Restored from Google Drive Dashboard Database."
+        },
+        {
+          "at": "2026-07-04T00:34:30.559Z",
+          "text": "Details restored from July 3 screenshots."
         }
       ],
       "timeline": [
-        "Restored from Google Drive Dashboard Database"
+        "Restored from Google Drive Dashboard Database",
+        "Details restored from July 3 screenshots"
       ],
       "createdAt": "2026-07-02T03:03:36.413Z",
-      "updatedAt": "2026-07-02T03:03:36.413Z"
+      "updatedAt": "2026-07-04T00:34:30.559Z",
+      "estimateStatus": "Sent"
     },
     {
       "id": "file-restored-a-260607-002",
@@ -150,18 +204,18 @@ window.D2_DASHBOARD_RESTORE = {
       "clientPhone": "906-323-8350",
       "clientEmail": "dcring5@aol.com",
       "projectAddress": "13275 Turnleaf Blvd. Punta Gorda, FL 33955",
-      "leadSource": "Manual",
+      "leadSource": "",
       "fileStatus": "Closed / Paid",
-      "statusDetail": "",
+      "statusDetail": "Invoice Sent",
       "projectType": "Other",
-      "projectStage": "",
+      "projectStage": "Paid",
       "estimateTotal": 350,
       "materialTotal": 0,
-      "initialDeposit": "0",
-      "midpointDeposit": "0",
-      "finalPaymentAmount": "0",
+      "initialDeposit": "",
+      "midpointDeposit": "",
+      "finalPaymentAmount": "350",
       "paidInFull": "Yes",
-      "invoiceStatus": "",
+      "invoiceStatus": "Sent",
       "reviewStatus": "",
       "nextAction": "Archived for future marketing",
       "nextActionDate": "2026-06-20",
@@ -170,13 +224,30 @@ window.D2_DASHBOARD_RESTORE = {
         {
           "at": "2026-07-02T03:03:36.413Z",
           "text": "Restored from Google Drive Dashboard Database."
+        },
+        {
+          "at": "2026-07-04T00:34:30.559Z",
+          "text": "Details restored from July 3 screenshots."
         }
       ],
       "timeline": [
-        "Restored from Google Drive Dashboard Database"
+        "Restored from Google Drive Dashboard Database",
+        "Details restored from July 3 screenshots"
       ],
       "createdAt": "2026-07-02T03:03:36.413Z",
-      "updatedAt": "2026-07-02T03:03:36.413Z"
+      "updatedAt": "2026-07-04T00:34:30.559Z",
+      "estimateStatus": "Approved",
+      "contactEmailSent": "No",
+      "contactTextSent": "No",
+      "inspectionDateSet": "No",
+      "inspectionDate": "",
+      "inspectionTime": "",
+      "startDate": "2026-06-08",
+      "arrivalWindow": "10:00 AM",
+      "followUpDate": "",
+      "initialDepositSecured": "No",
+      "midpointDepositSecured": "No",
+      "finalPaymentSecured": "Yes"
     },
     {
       "id": "file-restored-estimate",
@@ -189,14 +260,14 @@ window.D2_DASHBOARD_RESTORE = {
       "fileStatus": "Job Lost / Closed",
       "statusDetail": "Future Marketing Follow-Up",
       "projectType": "Other",
-      "projectStage": "",
+      "projectStage": "Closed",
       "estimateTotal": 8000,
       "materialTotal": 0,
       "initialDeposit": "2250",
       "midpointDeposit": "2250",
       "finalPaymentAmount": "8000",
       "paidInFull": "Yes",
-      "invoiceStatus": "",
+      "invoiceStatus": "Sent",
       "reviewStatus": "",
       "nextAction": "Archived for future marketing",
       "nextActionDate": "2026-06-20",
@@ -205,16 +276,149 @@ window.D2_DASHBOARD_RESTORE = {
         {
           "at": "2026-07-02T03:03:36.413Z",
           "text": "Restored from Google Drive Dashboard Database."
+        },
+        {
+          "at": "2026-07-04T00:34:30.559Z",
+          "text": "Details restored from July 3 screenshots."
         }
       ],
       "timeline": [
-        "Restored from Google Drive Dashboard Database"
+        "Restored from Google Drive Dashboard Database",
+        "Details restored from July 3 screenshots"
       ],
       "createdAt": "2026-07-02T03:03:36.413Z",
-      "updatedAt": "2026-07-02T03:03:36.413Z"
+      "updatedAt": "2026-07-04T00:34:30.559Z",
+      "estimateStatus": "Approved",
+      "contactEmailSent": "Yes",
+      "contactTextSent": "Yes",
+      "inspectionDateSet": "Yes",
+      "inspectionDate": "2026-06-01",
+      "inspectionTime": "",
+      "startDate": "2026-06-15",
+      "arrivalWindow": "Open",
+      "followUpDate": "",
+      "initialDepositSecured": "Yes",
+      "midpointDepositSecured": "Yes",
+      "finalPaymentSecured": "Yes"
     }
   ],
   "revenue": [
+    {
+      "id": "rev-26-a1006-1",
+      "date": "2026-07-03",
+      "clientJob": "Christina Corso",
+      "gross": 450,
+      "expenses": 50,
+      "labor": 0,
+      "profit": 400,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": "file-restored-26-a1006-1",
+      "fileNumber": "26-A1006-1",
+      "attachedEstimate": {
+        "fileNumber": "26-A1006-1",
+        "dashboardFileId": "file-restored-26-a1006-1",
+        "clientName": "Christina Corso"
+      }
+    },
+    {
+      "id": "rev-26-a1005",
+      "date": "2026-07-01",
+      "clientJob": "Jim Goodman-Cabinet Staining",
+      "gross": 2410,
+      "expenses": 380.94,
+      "labor": 550,
+      "profit": 1479.06,
+      "receiptNotes": "Home Depot receipts and Amazon receipts from job.",
+      "laborAssigns": "",
+      "dashboardFileId": "file-restored-26-a1005",
+      "fileNumber": "26-A1005",
+      "attachedEstimate": {
+        "fileNumber": "26-A1005",
+        "dashboardFileId": "file-restored-26-a1005",
+        "clientName": "James Goodman"
+      }
+    },
+    {
+      "id": "rev-ana-abi-closet",
+      "date": "2026-06-11",
+      "clientJob": "Ana - Abi Closet",
+      "gross": 1850,
+      "expenses": 573.62,
+      "labor": 0,
+      "profit": 1276.38,
+      "receiptNotes": "IMECA-$237.96\nHD: $38.04 + additional receipts\nAmazon: $125.57",
+      "laborAssigns": "",
+      "dashboardFileId": "",
+      "fileNumber": ""
+    },
+    {
+      "id": "rev-d2-260621-001",
+      "date": "2026-06-09",
+      "clientJob": "David Hennessy - D2-260621-001",
+      "gross": 0,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 0,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": "file-restored-d2-260621-001",
+      "fileNumber": "D2-260621-001",
+      "attachedEstimate": {
+        "fileNumber": "D2-260621-001",
+        "dashboardFileId": "file-restored-d2-260621-001",
+        "clientName": "David Hennessy"
+      }
+    },
+    {
+      "id": "rev-a-260607-002",
+      "date": "2026-06-08",
+      "clientJob": "Rob Larsen - A-260607-002",
+      "gross": 350,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 350,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": "file-restored-a-260607-002",
+      "fileNumber": "A-260607-002",
+      "attachedEstimate": {
+        "fileNumber": "A-260607-002",
+        "dashboardFileId": "file-restored-a-260607-002",
+        "clientName": "Rob Larsen"
+      }
+    },
+    {
+      "id": "rev-deb-fan-lights",
+      "date": "2026-06-01",
+      "clientJob": "Deb-Fan and Lights",
+      "gross": 542,
+      "expenses": 272.04,
+      "labor": 0,
+      "profit": 269.96,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": "",
+      "fileNumber": ""
+    },
+    {
+      "id": "rev-reese-pantry-console-closets",
+      "date": "2026-06-01",
+      "clientJob": "Reese-Pantry/Console/Closets",
+      "gross": 8000,
+      "expenses": 2470,
+      "labor": 2200,
+      "profit": 3330,
+      "receiptNotes": "Tools: 656.19\nHD: 74.28\nAmazon receipts",
+      "laborAssigns": "",
+      "dashboardFileId": "file-restored-estimate",
+      "fileNumber": "Estimate",
+      "attachedEstimate": {
+        "fileNumber": "Estimate",
+        "dashboardFileId": "file-restored-estimate",
+        "clientName": "Reese Aliance"
+      }
+    },
     {
       "id": "rev-restored-david-hennessy-d2-260621-001-0",
       "date": "2026-06-09",
@@ -252,102 +456,6 @@ window.D2_DASHBOARD_RESTORE = {
       "dashboardFileId": ""
     },
     {
-      "id": "rev-restored-fredman-church-3",
-      "date": "2026-01-23",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-4",
-      "date": "2026-01-30",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-5",
-      "date": "2026-02-06",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-6",
-      "date": "2026-02-13",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-7",
-      "date": "2026-02-20",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-8",
-      "date": "2026-02-27",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-9",
-      "date": "2026-03-06",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-10",
-      "date": "2026-01-09",
-      "clientJob": "Fredman - Church",
-      "gross": 1250,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1250,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
       "id": "rev-restored-mike-misc-11",
       "date": "2026-03-03",
       "clientJob": "Mike-Misc",
@@ -360,54 +468,6 @@ window.D2_DASHBOARD_RESTORE = {
       "dashboardFileId": ""
     },
     {
-      "id": "rev-restored-mike-misc-12",
-      "date": "2026-03-03",
-      "clientJob": "Mike-Misc",
-      "gross": 520,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 520,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-mike-misc-13",
-      "date": "2026-03-03",
-      "clientJob": "Mike-Misc",
-      "gross": 500,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 500,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-mike-misc-14",
-      "date": "2026-03-03",
-      "clientJob": "Mike-Misc",
-      "gross": 350,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 350,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-mike-misc-15",
-      "date": "2026-03-15",
-      "clientJob": "Mike-Misc",
-      "gross": 1200,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 1200,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
       "id": "rev-restored-brian-16",
       "date": "2026-03-21",
       "clientJob": "Brian",
@@ -415,18 +475,6 @@ window.D2_DASHBOARD_RESTORE = {
       "expenses": 1500,
       "labor": 0,
       "profit": 2500,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-fredman-church-17",
-      "date": "2026-03-22",
-      "clientJob": "Fredman - Church",
-      "gross": 750,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 750,
       "receiptNotes": "",
       "laborAssigns": "",
       "dashboardFileId": ""
@@ -528,18 +576,6 @@ window.D2_DASHBOARD_RESTORE = {
       "dashboardFileId": ""
     },
     {
-      "id": "rev-restored-jake-fascia-board-26",
-      "date": "2026-05-08",
-      "clientJob": "Jake - Fascia Board",
-      "gross": 350,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 350,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
       "id": "rev-restored-jim-goodman-cabinet-staining-27",
       "date": "2026-05-18",
       "clientJob": "Jim Goodman-Cabinet Staining",
@@ -561,30 +597,6 @@ window.D2_DASHBOARD_RESTORE = {
       "profit": 1768.28,
       "receiptNotes": "SW: $18.09\nHD: $364.99\nAmazon: $10.64",
       "laborAssigns": "Nesto",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-deb-fan-and-lights-29",
-      "date": "2026-06-01",
-      "clientJob": "Deb-Fan and Lights",
-      "gross": 542,
-      "expenses": 272.04,
-      "labor": 0,
-      "profit": 269.96,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": ""
-    },
-    {
-      "id": "rev-restored-ana-abi-closet-30",
-      "date": "2026-06-11",
-      "clientJob": "Ana - Abi Closet",
-      "gross": 1850,
-      "expenses": 573.62,
-      "labor": 0,
-      "profit": 1276.38,
-      "receiptNotes": "IMECA-$237.96 + 72.85\nHD: $38.04 + 7.43 + 11.98\nAmazon: $125.57\nSW: 54.78",
-      "laborAssigns": "",
       "dashboardFileId": ""
     },
     {

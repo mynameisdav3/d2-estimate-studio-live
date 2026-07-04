@@ -323,6 +323,7 @@ function loadRevenueRows() {
           if (Array.isArray(backupRows) && backupRows.length) return backupRows;
           if (restoredRows.length) return restoredRows;
         }
+        if (restoredRows.length) return mergeRevenueRows(restoredRows, rows);
         if (Array.isArray(window.D2_REVENUE_ROWS) && rows.length < spreadsheetRows.length) {
           return spreadsheetRows;
         }
@@ -1461,6 +1462,24 @@ function sortedRevenueRows() {
     const difference = revenueDateValue(a) - revenueDateValue(b);
     return crmRevenueDateSort === "oldest" ? difference : -difference;
   });
+}
+
+function revenueRowKey(row) {
+  return String(row.fileNumber || row.attachedEstimate?.fileNumber || row.dashboardFileId || row.clientJob || row.id || "")
+    .trim()
+    .toLowerCase();
+}
+
+function mergeRevenueRows(primary = [], secondary = []) {
+  const merged = [];
+  const seen = new Set();
+  [...primary, ...secondary].forEach((row) => {
+    const key = revenueRowKey(row);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push({ ...row });
+  });
+  return merged;
 }
 
 function revenueRowForDashboardFile(file) {
