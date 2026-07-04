@@ -1,0 +1,11 @@
+This is the corrected Dashboard upload package.
+It includes the six Dashboard files visible in the user's screenshots:
+- Christina Corso
+- James Goodman
+- DEIRDRE BLODNICK
+- David Hennessy
+- Rob Larsen
+- Reese Aliance
+
+Upload the CONTENTS of this folder to GitHub.
+Make sure dashboard-restore-data.js and crm.html are included.

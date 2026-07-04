@@ -141,6 +141,24 @@ function defaultFiles() {
   return [];
 }
 
+function restoredDashboardFiles() {
+  return Array.isArray(window.D2_DASHBOARD_RESTORE?.files)
+    ? window.D2_DASHBOARD_RESTORE.files.map((file) => ({ ...file }))
+    : [];
+}
+
+function mergeDashboardFiles(primary = [], secondary = []) {
+  const merged = [];
+  const seen = new Set();
+  [...primary, ...secondary].forEach((file) => {
+    const key = String(file.fileNumber || file.id || file.clientName || "").trim().toLowerCase();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push({ ...file });
+  });
+  return merged;
+}
+
 function defaultRevenueRows() {
   if (Array.isArray(window.D2_REVENUE_ROWS)) {
     return window.D2_REVENUE_ROWS.map((row) => ({ ...row }));
@@ -271,22 +289,21 @@ function defaultRevenueRows() {
 }
 
 function loadCrmFiles() {
+  const restoredFiles = restoredDashboardFiles();
   try {
     const saved = localStorage.getItem(CRM_STORAGE_KEY);
     if (saved) {
       const files = JSON.parse(saved);
-      if (Array.isArray(files) && files.length) return files;
+      if (Array.isArray(files) && files.length) return mergeDashboardFiles(restoredFiles, files);
       const backup = localStorage.getItem(CRM_STORAGE_BACKUP_KEY);
       const backupFiles = backup ? JSON.parse(backup) : [];
-      if (Array.isArray(backupFiles) && backupFiles.length) return backupFiles;
+      if (Array.isArray(backupFiles) && backupFiles.length) return mergeDashboardFiles(restoredFiles, backupFiles);
       return Array.isArray(files) ? files : defaultFiles();
     }
   } catch (error) {
     // Local demo storage may be unavailable in some browsers.
   }
-  if (Array.isArray(window.D2_DASHBOARD_RESTORE?.files) && window.D2_DASHBOARD_RESTORE.files.length) {
-    return window.D2_DASHBOARD_RESTORE.files.map((file) => ({ ...file }));
-  }
+  if (restoredFiles.length) return restoredFiles;
   return defaultFiles();
 }
 

@@ -1,6 +1,114 @@
 window.D2_DASHBOARD_RESTORE = {
   "files": [
     {
+      "id": "file-restored-26-a1006-1",
+      "fileNumber": "26-A1006-1",
+      "clientName": "Christina Corso",
+      "clientPhone": "",
+      "clientEmail": "",
+      "projectAddress": "",
+      "leadSource": "Manual",
+      "fileStatus": "Closed / Paid",
+      "statusDetail": "",
+      "projectType": "Other",
+      "projectStage": "",
+      "estimateStatus": "Pending",
+      "estimateTotal": 0,
+      "materialTotal": 0,
+      "initialDeposit": "",
+      "midpointDeposit": "",
+      "finalPaymentAmount": "",
+      "paidInFull": "Yes",
+      "invoiceStatus": "",
+      "reviewStatus": "",
+      "nextAction": "",
+      "nextActionDate": "",
+      "driveFolder": "",
+      "notes": [
+        {
+          "at": "2026-07-04T00:26:56.098Z",
+          "text": "Restored from local Dashboard screenshot."
+        }
+      ],
+      "timeline": [
+        "Restored from local Dashboard screenshot"
+      ],
+      "createdAt": "2026-07-04T00:26:56.098Z",
+      "updatedAt": "2026-07-04T00:26:56.098Z"
+    },
+    {
+      "id": "file-restored-26-a1005",
+      "fileNumber": "26-A1005",
+      "clientName": "James Goodman",
+      "clientPhone": "",
+      "clientEmail": "",
+      "projectAddress": "",
+      "leadSource": "Manual",
+      "fileStatus": "Closed / Paid",
+      "statusDetail": "",
+      "projectType": "Other",
+      "projectStage": "",
+      "estimateStatus": "Pending",
+      "estimateTotal": 0,
+      "materialTotal": 0,
+      "initialDeposit": "",
+      "midpointDeposit": "",
+      "finalPaymentAmount": "",
+      "paidInFull": "Yes",
+      "invoiceStatus": "",
+      "reviewStatus": "",
+      "nextAction": "Archived for future marketing",
+      "nextActionDate": "",
+      "driveFolder": "",
+      "notes": [
+        {
+          "at": "2026-07-04T00:26:56.098Z",
+          "text": "Restored from local Dashboard screenshot."
+        }
+      ],
+      "timeline": [
+        "Restored from local Dashboard screenshot"
+      ],
+      "createdAt": "2026-07-04T00:26:56.098Z",
+      "updatedAt": "2026-07-04T00:26:56.098Z"
+    },
+    {
+      "id": "file-restored-26-a1004",
+      "fileNumber": "26-A1004",
+      "clientName": "DEIRDRE BLODNICK",
+      "clientPhone": "",
+      "clientEmail": "",
+      "projectAddress": "",
+      "leadSource": "Manual",
+      "fileStatus": "In Negotiation",
+      "statusDetail": "Follow-Up Scheduled",
+      "projectType": "Cabinetry",
+      "projectStage": "",
+      "estimateStatus": "Sent",
+      "estimateTotal": 0,
+      "materialTotal": 0,
+      "initialDeposit": "",
+      "midpointDeposit": "",
+      "finalPaymentAmount": "",
+      "paidInFull": "No",
+      "invoiceStatus": "",
+      "reviewStatus": "",
+      "nextAction": "Follow up on negotiation",
+      "nextActionDate": "",
+      "driveFolder": "",
+      "notes": [
+        {
+          "at": "2026-07-04T00:26:56.098Z",
+          "text": "Restored from local Dashboard screenshot."
+        }
+      ],
+      "timeline": [
+        "Restored from local Dashboard screenshot"
+      ],
+      "createdAt": "2026-07-04T00:26:56.098Z",
+      "updatedAt": "2026-07-04T00:26:56.098Z"
+    },
+    {
       "id": "file-restored-d2-260621-001",
       "fileNumber": "D2-260621-001",
       "clientName": "David Hennessy",
