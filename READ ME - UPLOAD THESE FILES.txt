@@ -1,0 +1,12 @@
+This folder contains the exact current D2 Dashboard / Estimate Studio version to upload to GitHub.
+
+Important files:
+- crm.html = Dashboard page
+- crm.js = Dashboard behavior
+- dashboard-restore-data.js = the built-in Dashboard data that prevents the live page from showing zeroes
+- styles.css = visual design
+- index.html + app.js = Estimator
+- assets folder = logo/images
+- vendor folder = PDF tools
+
+Upload the CONTENTS of this folder to GitHub, not the folder itself.
