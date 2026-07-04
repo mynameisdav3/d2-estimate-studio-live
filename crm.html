@@ -36,11 +36,7 @@
       <section class="crm-dashboard">
         <section class="crm-command-panel crm-dashboard-view">
           <div class="crm-command-grid">
-            <button type="button" class="crm-command-card active" data-crm-filter="all">
-              <span>All Files</span>
-              <strong id="allFileCount">0</strong>
-            </button>
-            <button type="button" class="crm-command-card" data-crm-filter="new">
+            <button type="button" class="crm-command-card active" data-crm-filter="new">
               <span>New Leads</span>
               <strong id="newLeadCount">0</strong>
             </button>
@@ -72,11 +68,10 @@
             <div class="crm-panel-heading">
               <div>
                 <p class="eyebrow">Files</p>
-                <h2 id="crmListTitle">All Files</h2>
+                <h2 id="crmListTitle">New Leads</h2>
               </div>
               <select id="crmFileFilter" aria-label="File filter">
-                <option value="all" selected>All Files</option>
-                <option value="new">New Leads</option>
+                <option value="new" selected>New Leads</option>
                 <option value="contact">Pending Contact</option>
                 <option value="estimate">Pending Estimates</option>
                 <option value="negotiation">In Negotiation</option>

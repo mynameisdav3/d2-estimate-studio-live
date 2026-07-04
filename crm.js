@@ -577,7 +577,6 @@ function visibleFiles() {
 
 function renderCounts() {
   const openFiles = crmFiles.filter(isOpenCrmFile);
-  $("allFileCount").textContent = crmFiles.length;
   $("newLeadCount").textContent = openFiles.filter((file) => file.fileStatus === "New Lead").length;
   $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus)).length;
   $("pendingEstimateCount").textContent = openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail)).length;
@@ -1532,8 +1531,12 @@ function revenueRowForDashboardFile(file) {
   }) || null;
 }
 
+function shouldCreateRevenueRowForFile(file) {
+  return !!file && ["In Negotiation", "Job Won", "In Progress", "Work Completed", "Closed / Paid"].includes(file.fileStatus);
+}
+
 function ensureRevenueRowForFile(file) {
-  if (!file || !["In Progress", "Work Completed"].includes(file.fileStatus)) return null;
+  if (!shouldCreateRevenueRowForFile(file)) return null;
   const existing = revenueRowForDashboardFile(file);
   const estimateTotal = Number(file.estimateTotal) || Number(file.editableEstimate?.totals?.total) || 0;
   const materialTotal = Number(file.materialTotal) || Number(file.editableEstimate?.backend?.estimatedMaterialCost) || 0;

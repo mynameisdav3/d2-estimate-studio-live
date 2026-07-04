@@ -20,6 +20,8 @@ const COMPANY_DEFAULTS = {
   address: "2710 Del Prado Blvd S #2-184 Cape Coral, FL 33904",
 };
 
+const FOOTER_VALUE_NOTE = "At D2 Carpentry & Design, our goal as a company is to provide exceptional value alongside quality craftsmanship and an outstanding customer experience. We understand that every project and budget is unique, and we are committed to helping our clients achieve the best possible outcome for their investment. When appropriate, we are happy to discuss alternative materials, design modifications, or review comparable proposals for potential price matching. Our goal is to ensure that price alone is not the only factor considered when selecting the right partner for your project.";
+
 const COPY_MODE_LABELS = {
   customer: "Customer",
   internal: "Office",
@@ -93,6 +95,7 @@ const fields = [
   "invoiceFinalPayment",
   "notes",
   "additionalNotes",
+  "addFooterValueNote",
   "assignmentLanguage",
   "assignmentStartDate",
   "assignmentArrivalTime",
@@ -1040,6 +1043,8 @@ function updatePreview() {
   const additionalNotes = $("additionalNotes").value.trim();
   $("previewAdditionalNotes").textContent = additionalNotes;
   $("previewAdditionalNotesBlock").hidden = !additionalNotes;
+  $("previewFooterValueNote").textContent = FOOTER_VALUE_NOTE;
+  $("previewFooterValueNoteBlock").hidden = !$("addFooterValueNote").checked;
 
   const tbody = $("previewRows");
   tbody.innerHTML = "";
@@ -2088,6 +2093,7 @@ function serializeEstimate() {
   });
   data.showEstimateNumber = $("showEstimateNumber").checked;
   data.useSpanishScope = $("useSpanishScope").checked;
+  data.addFooterValueNote = $("addFooterValueNote").checked;
   data.invoicePaid = state.invoicePaid === true;
   return data;
 }
@@ -2310,6 +2316,7 @@ function applyEstimateData(data) {
   });
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
   $("useSpanishScope").checked = data.useSpanishScope === true;
+  $("addFooterValueNote").checked = data.addFooterValueNote === true || data.addFooterValueNote === "Yes" || data.addFooterValueNote === "on";
   state.invoicePaid = data.invoicePaid === true || data.invoicePaid === "Yes";
   $("invoicePaidCheckbox").checked = state.invoicePaid;
   applyCompanyDefaults();
@@ -2493,6 +2500,7 @@ function hasWorkInProgress() {
     "depositRate",
     "notes",
     "additionalNotes",
+    "addFooterValueNote",
     "assignmentLanguage",
     "assignmentStartDate",
     "assignmentArrivalTime",
@@ -2655,6 +2663,7 @@ function resetEstimate() {
   state.invoicePaid = false;
   $("notes").value = "";
   $("additionalNotes").value = "";
+  $("addFooterValueNote").checked = false;
   $("assignmentLanguage").value = "en";
   $("assignmentStartDate").value = "";
   $("assignmentArrivalTime").value = "Open";

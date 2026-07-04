@@ -783,6 +783,18 @@ th {
   line-height: 1.45;
 }
 
+.footer-value-note {
+  margin-top: 30px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.footer-value-note p {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
 .submit-status {
   min-height: 22px;
   margin: 12px 0 0;
@@ -1158,6 +1170,7 @@ body[data-copy-mode="supply"] .estimate-sheet > table,
 body[data-copy-mode="supply"] .totals,
 body[data-copy-mode="supply"] .notes,
 body[data-copy-mode="supply"] .additional-notes,
+body[data-copy-mode="supply"] .footer-value-note,
 body[data-copy-mode="supply"] .project-images,
 body[data-copy-mode="supply"] .internal-summary > div:not(.internal-material-list) {
   display: none;
