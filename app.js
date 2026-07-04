@@ -92,6 +92,7 @@ const fields = [
   "invoiceSecondDeposit",
   "invoiceFinalPayment",
   "notes",
+  "additionalNotes",
   "assignmentLanguage",
   "assignmentStartDate",
   "assignmentArrivalTime",
@@ -1036,6 +1037,9 @@ function updatePreview() {
   $("previewAddress").textContent = $("projectAddress").value;
   $("previewAddress").href = mapHref($("projectAddress").value);
   $("previewNotes").textContent = $("notes").value;
+  const additionalNotes = $("additionalNotes").value.trim();
+  $("previewAdditionalNotes").textContent = additionalNotes;
+  $("previewAdditionalNotesBlock").hidden = !additionalNotes;
 
   const tbody = $("previewRows");
   tbody.innerHTML = "";
@@ -2380,7 +2384,7 @@ function openEditableEstimateFile(file) {
       if (!applyEstimateData(data)) throw new Error("Invalid estimate file");
       $("submitStatus").textContent = "Editable estimate file opened.";
     } catch (error) {
-      window.alert(`${error.message || "That file could not be opened."} Please choose the editable D2 estimate file saved with Save File.`);
+      window.alert(`${error.message || "That file could not be opened."} Please choose the editable D2 estimate file saved with Save.`);
     }
   });
   reader.readAsText(file);
@@ -2488,6 +2492,7 @@ function hasWorkInProgress() {
     "discount",
     "depositRate",
     "notes",
+    "additionalNotes",
     "assignmentLanguage",
     "assignmentStartDate",
     "assignmentArrivalTime",
@@ -2649,6 +2654,7 @@ function resetEstimate() {
   $("invoicePaidCheckbox").checked = false;
   state.invoicePaid = false;
   $("notes").value = "";
+  $("additionalNotes").value = "";
   $("assignmentLanguage").value = "en";
   $("assignmentStartDate").value = "";
   $("assignmentArrivalTime").value = "Open";
@@ -2740,8 +2746,7 @@ $("projectType").addEventListener("change", () => {
   syncProjectMode();
 });
 $("newEstimate").addEventListener("click", () => runButtonAction(startNewEstimate));
-$("saveEstimate").addEventListener("click", () => runButtonAction(saveEstimate));
-$("saveEditableEstimate").addEventListener("click", () => runButtonAction(downloadEditableEstimate));
+$("saveEstimate").addEventListener("click", () => runButtonAction(downloadEditableEstimate));
 $("openEditableEstimate").addEventListener("click", () => runButtonAction(openEditableEstimatePicker));
 $("editableEstimateUpload").addEventListener("change", (event) => {
   openEditableEstimateFile(event.target.files[0]);
@@ -2767,8 +2772,7 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
   button.addEventListener("click", () => {
     const action = button.dataset.actionButton;
     if (action === "new") runButtonAction(startNewEstimate);
-    if (action === "save") runButtonAction(saveEstimate);
-    if (action === "save-file") runButtonAction(downloadEditableEstimate);
+    if (action === "save") runButtonAction(downloadEditableEstimate);
     if (action === "open-file") runButtonAction(openEditableEstimatePicker);
     if (action === "submit") runButtonAction(submitEstimateToGoogle);
     if (action === "payment") generatePaymentInvoice();

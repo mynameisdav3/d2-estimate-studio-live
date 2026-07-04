@@ -772,6 +772,17 @@ th {
   border-top: 1px solid var(--line);
 }
 
+.additional-notes {
+  margin-top: 28px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.additional-notes p {
+  color: var(--ink);
+  line-height: 1.45;
+}
+
 .submit-status {
   min-height: 22px;
   margin: 12px 0 0;
@@ -1146,6 +1157,7 @@ body.invoice-mode .invoice-final-payment {
 body[data-copy-mode="supply"] .estimate-sheet > table,
 body[data-copy-mode="supply"] .totals,
 body[data-copy-mode="supply"] .notes,
+body[data-copy-mode="supply"] .additional-notes,
 body[data-copy-mode="supply"] .project-images,
 body[data-copy-mode="supply"] .internal-summary > div:not(.internal-material-list) {
   display: none;

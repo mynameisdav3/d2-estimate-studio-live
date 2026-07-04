@@ -27,8 +27,7 @@
           </div>
           <button class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
           <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
-          <button class="icon-button" id="saveEstimate" title="Save estimate" aria-label="Save estimate">Save</button>
-          <button class="icon-button" id="saveEditableEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
+          <button class="icon-button" id="saveEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
           <button class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
           <button class="icon-button" id="submitEstimate" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
           <button class="icon-button" id="generatePaymentInvoice" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
@@ -460,6 +459,10 @@
                 Notes
                 <textarea id="notes" rows="4"></textarea>
               </label>
+              <label class="wide">
+                Additional Notes
+                <textarea id="additionalNotes" rows="3"></textarea>
+              </label>
             </div>
             <p class="submit-status" id="submitStatus" role="status"></p>
           </section>
@@ -538,6 +541,10 @@
               <p id="previewNotes"></p>
             </div>
 
+            <div class="notes additional-notes" id="previewAdditionalNotesBlock" hidden>
+              <p id="previewAdditionalNotes"></p>
+            </div>
+
             <div class="project-images" id="previewPhotosSection">
               <span>Project Images</span>
               <div class="project-image-grid" id="previewPhotos"></div>
@@ -596,8 +603,7 @@
           </div>
           <button class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
           <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
-          <button class="icon-button" data-action-button="save" title="Save estimate" aria-label="Save estimate">Save</button>
-          <button class="icon-button" data-action-button="save-file" title="Save editable estimate file" aria-label="Save editable estimate file">Save File</button>
+          <button class="icon-button" data-action-button="save" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
           <button class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
           <button class="icon-button" data-action-button="submit" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
           <button class="icon-button" data-action-button="payment" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
