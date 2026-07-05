@@ -711,6 +711,7 @@ function saveActiveFile() {
     file.notes.push({ at: timestamp, text: changeNotes.join("\n") });
     file.timeline.push(`File updated ${formatNoteTimestamp(timestamp)}`);
   }
+  ensureRevenueRowForFile(file);
   saveCrmFiles();
 }
 
@@ -1161,6 +1162,22 @@ function searchCrmFile() {
   activeFileId = match.id;
   activateCrmFilter(filterForCrmFile(match));
   renderCrm();
+}
+
+function applyInitialFileRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const target = String(params.get("file") || params.get("lead") || params.get("project") || "").trim().toLowerCase();
+  if (!target) return;
+  const match = crmFiles.find((file) => {
+    return String(file.fileNumber || "").toLowerCase() === target
+      || String(file.id || "").toLowerCase() === target
+      || String(file.clientName || "").toLowerCase() === target
+      || String(file.fileNumber || "").toLowerCase().includes(target)
+      || String(file.clientName || "").toLowerCase().includes(target);
+  });
+  if (!match) return;
+  activeFileId = match.id;
+  activateCrmFilter(filterForCrmFile(match));
 }
 
 function filterForCrmFile(file) {
@@ -2640,6 +2657,9 @@ $("crmEstimateFileUpload").addEventListener("change", (event) => {
 document.querySelectorAll("[data-crm-view]").forEach((button) => {
   button.addEventListener("click", () => switchCrmView(button.dataset.crmView));
 });
+document.querySelectorAll("[data-reset-page]").forEach((button) => {
+  button.addEventListener("click", () => window.location.reload());
+});
 
 $("crmFileStatus").addEventListener("change", () => {
   renderStatusDetailOptions(activeFile());
@@ -2658,4 +2678,5 @@ document.querySelectorAll("input, select, textarea").forEach((element) => {
 
 persistRestoredDashboardIfNeeded();
 switchCrmView("dashboard");
+applyInitialFileRoute();
 renderCrm();

@@ -1,4 +1,4 @@
-const CACHE_NAME = "d2-estimate-studio-v112-six-file-dashboard";
+const CACHE_NAME = "d2-estimate-studio-v113-lead-deeplink-reset-revenue";
 const APP_FILES = [
   "./",
   "./index.html",

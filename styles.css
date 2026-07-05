@@ -151,6 +151,16 @@ h2 {
   color: #a83232;
 }
 
+.reset-page-button {
+  min-width: 42px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
 .workspace {
   display: grid;
   gap: 26px;
@@ -1584,7 +1594,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 
 .crm-header-search {
   display: grid;
-  grid-template-columns: minmax(220px, 340px) auto;
+  grid-template-columns: minmax(220px, 340px) auto auto;
   gap: 8px;
   align-items: center;
 }

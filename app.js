@@ -2247,6 +2247,29 @@ function showDashboardImportStatus(message, includeDashboardLink = false) {
   }
 }
 
+function dashboardLeadUrl(estimateNumber) {
+  const url = new URL("crm.html", window.location.href);
+  url.searchParams.set("file", estimateNumber || $("estimateNumber").value || "");
+  return url.toString();
+}
+
+function openDashboardLead(estimateNumber) {
+  const target = dashboardLeadUrl(estimateNumber);
+  const opened = window.open(target, "_blank", "noopener");
+  if (!opened) {
+    const status = $("submitStatus");
+    status.appendChild(document.createTextNode(" "));
+    const link = document.createElement("a");
+    link.href = target;
+    link.textContent = "Open lead";
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.style.fontWeight = "900";
+    link.style.color = "var(--pine)";
+    status.appendChild(link);
+  }
+}
+
 async function importEstimateToDashboard() {
   const importButton = $("submitEstimate");
   if (importButton) importButton.textContent = "Importing...";
@@ -2271,6 +2294,7 @@ async function importEstimateToDashboard() {
   } else {
     showDashboardImportStatus("Dashboard import could not be completed. Check browser storage and the Google Drive connection.");
   }
+  if (savedLocally) openDashboardLead(payloadData.estimateNumber);
 }
 
 function formatDateTimeForDashboard(value) {
@@ -2789,6 +2813,9 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
     if (action === "generate") generateEstimatePreview();
     if (action === "print") printEstimateCopy();
   });
+});
+document.querySelectorAll("[data-reset-page]").forEach((button) => {
+  button.addEventListener("click", () => window.location.reload());
 });
 setCopyMode("customer");
 
