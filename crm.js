@@ -296,7 +296,7 @@ function loadCrmFiles() {
     const saved = localStorage.getItem(CRM_STORAGE_KEY);
     if (saved) {
       const files = JSON.parse(saved);
-      if (Array.isArray(files) && files.length) return mergeDashboardFiles(restoredFiles, files);
+      if (Array.isArray(files) && files.length) return mergeDashboardFiles(files, restoredFiles);
       const backup = localStorage.getItem(CRM_STORAGE_BACKUP_KEY);
       const backupFiles = backup ? JSON.parse(backup) : [];
       if (Array.isArray(backupFiles) && backupFiles.length) return mergeDashboardFiles(restoredFiles, backupFiles);
@@ -325,7 +325,7 @@ function loadRevenueRows() {
           if (Array.isArray(backupRows) && backupRows.length) return backupRows;
           if (restoredRows.length) return restoredRows;
         }
-        if (restoredRows.length) return mergeRevenueRows(restoredRows, rows);
+        if (restoredRows.length) return mergeRevenueRows(rows, restoredRows);
         if (Array.isArray(window.D2_REVENUE_ROWS) && rows.length < spreadsheetRows.length) {
           return spreadsheetRows;
         }
@@ -742,6 +742,7 @@ function saveEstimateAmountEdit() {
     addSystemNote(file, `Estimate amount changed from ${crmCurrency.format(oldAmount)} to ${crmCurrency.format(newAmount)}.`);
   }
   $("crmEstimateEditPanel").hidden = true;
+  ensureRevenueRowForFile(file);
   saveCrmFiles();
   renderCrm();
 }
@@ -765,6 +766,8 @@ function saveMaterialAmountEdit() {
     addSystemNote(file, `Materials amount changed from ${crmCurrency.format(oldAmount)} to ${crmCurrency.format(newAmount)}.`);
   }
   $("crmMaterialEditPanel").hidden = true;
+  if (file.editableEstimate?.backend) file.editableEstimate.backend.estimatedMaterialCost = newAmount;
+  ensureRevenueRowForFile(file);
   saveCrmFiles();
   renderCrm();
 }
