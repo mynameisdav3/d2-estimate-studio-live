@@ -6,7 +6,7 @@
     <title>D2 Dashboard</title>
     <meta name="theme-color" content="#0d4a91">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=20260703-six-files">
+    <link rel="stylesheet" href="styles.css?v=20260713-estimate-options">
   </head>
   <body class="crm-body">
     <main class="crm-shell">
@@ -533,6 +533,19 @@
         </section>
       </section>
     </main>
+    <div class="crm-modal-backdrop" id="crmEstimateChoiceModal" hidden>
+      <section class="crm-choice-modal" role="dialog" aria-modal="true" aria-labelledby="crmEstimateChoiceTitle">
+        <button type="button" class="crm-modal-close" id="crmEstimateChoiceClose" aria-label="Close">×</button>
+        <p class="eyebrow">Estimate Options</p>
+        <h2 id="crmEstimateChoiceTitle">Estimate</h2>
+        <p id="crmEstimateChoiceStatus" class="crm-choice-status"></p>
+        <div class="crm-choice-actions">
+          <button type="button" class="icon-button primary-action" id="crmEstimateChoiceCreate">Create New Estimate</button>
+          <button type="button" class="icon-button" id="crmEstimateChoiceUpload">Upload Current Estimate</button>
+          <button type="button" class="icon-button" id="crmEstimateChoiceView">View Current Estimate</button>
+        </div>
+      </section>
+    </div>
     <script src="materials-database.js?v=20260703-price-recover"></script>
     <script src="dashboard-restore-data.js?v=20260713-ann-costa"></script>
     <script src="revenue-data.js?v=20260703-six-files"></script>
@@ -548,6 +561,6 @@
         caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
       }
     </script>
-    <script src="crm.js?v=20260713-ann-costa"></script>
+    <script src="crm.js?v=20260713-estimate-options"></script>
   </body>
 </html>

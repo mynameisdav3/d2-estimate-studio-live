@@ -1685,6 +1685,68 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   color: #ffffff;
 }
 
+.crm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(17, 24, 39, 0.42);
+}
+
+.crm-choice-modal {
+  position: relative;
+  width: min(560px, 100%);
+  border: 1px solid rgba(13, 74, 145, 0.18);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.24);
+  padding: 24px;
+}
+
+.crm-choice-modal h2 {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: clamp(1.55rem, 4vw, 2.3rem);
+}
+
+.crm-choice-status {
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.crm-choice-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.crm-choice-actions .icon-button {
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+}
+
+.crm-choice-actions .icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.crm-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #d7dce5;
+  border-radius: 50%;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
 .crm-layout {
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);

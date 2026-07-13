@@ -97,6 +97,7 @@ let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
 let pendingEstimateUploadFileId = "";
 let openEstimateAfterUpload = false;
+let estimateChoiceTarget = "";
 
 function getGoogleScriptUrl() {
   return localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || DEFAULT_GOOGLE_SCRIPT_URL;
@@ -1224,8 +1225,10 @@ function attachEditableEstimateToFile(file, data, fileName = "") {
 function uploadEstimateForActiveFile(file) {
   const targetId = pendingEstimateUploadFileId;
   const shouldOpen = openEstimateAfterUpload;
+  const target = estimateChoiceTarget;
   pendingEstimateUploadFileId = "";
   openEstimateAfterUpload = false;
+  estimateChoiceTarget = "";
   if (!file || !targetId) return;
   const reader = new FileReader();
   reader.addEventListener("load", () => {
@@ -1237,7 +1240,7 @@ function uploadEstimateForActiveFile(file) {
       activeFileId = targetFile.id;
       saveCrmFiles();
       renderCrm();
-      if (shouldOpen) openActiveEstimate("");
+      if (shouldOpen) sendEstimateToEstimator(targetFile.editableEstimate, target);
     } catch (error) {
       window.alert(`${error.message || "That file could not be uploaded."} Please choose an editable D2 estimate file ending in .d2estimate.`);
     }
@@ -1245,15 +1248,26 @@ function uploadEstimateForActiveFile(file) {
   reader.readAsText(file);
 }
 
-function askToCreateOrAttachEstimate(file) {
-  const createNew = window.confirm(
-    "No editable estimate is attached to this customer file yet.\n\nClick OK to create a new estimate from this file.\nClick Cancel to upload an existing .d2estimate file."
-  );
-  if (!createNew) {
-    pendingEstimateUploadFileId = file.id;
-    openEstimateAfterUpload = true;
-    $("crmEstimateFileUpload").click();
-    return;
+function closeEstimateChoiceDialog() {
+  const modal = $("crmEstimateChoiceModal");
+  if (modal) modal.hidden = true;
+  estimateChoiceTarget = "";
+}
+
+function startEstimateUploadForFile(file, target = "") {
+  if (!file) return;
+  closeEstimateChoiceDialog();
+  pendingEstimateUploadFileId = file.id;
+  openEstimateAfterUpload = true;
+  estimateChoiceTarget = target;
+  $("crmEstimateFileUpload").click();
+}
+
+function createEstimateForFile(file, target = "") {
+  if (!file) return;
+  if (file.editableEstimate) {
+    const replaceCurrent = window.confirm("This file already has an estimate attached. Create a new estimate and replace the current attached estimate?");
+    if (!replaceCurrent) return;
   }
   const estimateData = estimateDataFromCrmFile(file);
   file.editableEstimate = estimateData;
@@ -1261,7 +1275,25 @@ function askToCreateOrAttachEstimate(file) {
   addSystemNote(file, "New editable estimate started from this Dashboard file.");
   saveCrmFiles();
   renderCrm();
-  sendEstimateToEstimator(estimateData);
+  closeEstimateChoiceDialog();
+  sendEstimateToEstimator(estimateData, target);
+}
+
+function showEstimateChoiceDialog(target = "") {
+  saveActiveFile();
+  const file = activeFile();
+  if (!file) {
+    window.alert("Select a customer file first.");
+    return;
+  }
+  estimateChoiceTarget = target;
+  const hasEstimate = Boolean(file.editableEstimate);
+  $("crmEstimateChoiceTitle").textContent = file.clientName || file.fileNumber || "Estimate";
+  $("crmEstimateChoiceStatus").textContent = hasEstimate
+    ? `Current estimate attached${file.editableEstimate?.estimateNumber ? `: ${file.editableEstimate.estimateNumber}` : "."}`
+    : "No estimate is attached yet. Create a new one or upload an existing .d2estimate file.";
+  $("crmEstimateChoiceView").disabled = !hasEstimate;
+  $("crmEstimateChoiceModal").hidden = false;
 }
 
 function openActiveEstimate(target = "") {
@@ -1276,7 +1308,7 @@ function openActiveEstimate(target = "") {
       window.alert("This customer file does not have an attached editable estimate yet. Open Estimate first, then create or upload one.");
       return;
     }
-    askToCreateOrAttachEstimate(file);
+    showEstimateChoiceDialog(target);
     return;
   }
   sendEstimateToEstimator(file.editableEstimate, target);
@@ -2806,9 +2838,25 @@ $("crmArchiveFile").addEventListener("click", () => {
   renderCrm();
 });
 $("crmDeleteFile").addEventListener("click", deleteActiveFile);
-$("crmOpenEstimate").addEventListener("click", () => openActiveEstimate(""));
+$("crmOpenEstimate").addEventListener("click", () => showEstimateChoiceDialog(""));
 $("crmOpenAssignment").addEventListener("click", () => openActiveEstimate("#assignment"));
 $("crmOpenInvoice").addEventListener("click", openActiveInvoice);
+$("crmEstimateChoiceClose").addEventListener("click", closeEstimateChoiceDialog);
+$("crmEstimateChoiceModal").addEventListener("click", (event) => {
+  if (event.target.id === "crmEstimateChoiceModal") closeEstimateChoiceDialog();
+});
+$("crmEstimateChoiceCreate").addEventListener("click", () => createEstimateForFile(activeFile(), estimateChoiceTarget));
+$("crmEstimateChoiceUpload").addEventListener("click", () => startEstimateUploadForFile(activeFile(), estimateChoiceTarget));
+$("crmEstimateChoiceView").addEventListener("click", () => {
+  const file = activeFile();
+  if (!file?.editableEstimate) return;
+  const target = estimateChoiceTarget;
+  closeEstimateChoiceDialog();
+  sendEstimateToEstimator(file.editableEstimate, target);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("crmEstimateChoiceModal").hidden) closeEstimateChoiceDialog();
+});
 $("crmImportRevenue").addEventListener("click", importRevenueRows);
 $("crmAddRevenueRow").addEventListener("click", addRevenueRow);
 $("crmRevenueDateSort").addEventListener("change", (event) => {
