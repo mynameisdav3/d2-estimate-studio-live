@@ -110,6 +110,7 @@ const state = {
   materialItems: [],
   photos: [],
   assignmentPhotos: [],
+  dashboardFileId: "",
   autoEstimateNumber: false,
   estimateNumberCommitted: false,
   estimateSequence: {},
@@ -2086,6 +2087,7 @@ function serializeEstimate() {
       estimatedGrossProfit: totals.total - calculateMaterialCost(),
       materialPercent: MATERIAL_PERCENT * 100,
     },
+    dashboardFileId: state.dashboardFileId || "",
     submittedAt: new Date().toISOString(),
   };
   fields.forEach((field) => {
@@ -2156,12 +2158,15 @@ function saveEstimateToLocalDashboard(payloadData) {
   const backend = payloadData.backend || {};
   const fileNumber = payloadData.estimateNumber || `D2-${Date.now()}`;
   const files = loadLocalDashboardFiles();
-  const existingIndex = files.findIndex((file) => file.fileNumber === fileNumber);
+  const existingIndex = files.findIndex((file) => {
+    return (payloadData.dashboardFileId && file.id === payloadData.dashboardFileId)
+      || file.fileNumber === fileNumber;
+  });
   const existing = existingIndex >= 0 ? files[existingIndex] : {};
   const importedAt = new Date().toISOString();
   const dashboardFile = {
     ...existing,
-    id: existing.id || `file-${Date.now()}`,
+    id: existing.id || payloadData.dashboardFileId || `file-${Date.now()}`,
     fileNumber,
     clientName: payloadData.clientName || "Unnamed Client",
     clientPhone: payloadData.clientPhone || "",
@@ -2189,7 +2194,7 @@ function saveEstimateToLocalDashboard(payloadData) {
       : makeDashboardNote(payloadData.notes || ""),
     timeline: [
       ...(Array.isArray(existing.timeline) ? existing.timeline : []),
-      existingIndex >= 0 ? `Estimate updated ${formatDateTimeForDashboard(importedAt)}` : `Estimate imported ${formatDateTimeForDashboard(importedAt)}`,
+      existingIndex >= 0 ? `Estimate saved from Estimator ${formatDateTimeForDashboard(importedAt)}` : `Estimate imported ${formatDateTimeForDashboard(importedAt)}`,
     ],
   };
 
@@ -2199,6 +2204,19 @@ function saveEstimateToLocalDashboard(payloadData) {
     files.unshift(dashboardFile);
   }
   return saveLocalDashboardFiles(files);
+}
+
+function dashboardFileExistsForEstimate(payloadData) {
+  const fileNumber = payloadData.estimateNumber || "";
+  return loadLocalDashboardFiles().some((file) => {
+    return (payloadData.dashboardFileId && file.id === payloadData.dashboardFileId)
+      || (fileNumber && file.fileNumber === fileNumber);
+  });
+}
+
+function syncEstimateToLinkedDashboard(payloadData) {
+  if (!payloadData || (!payloadData.dashboardFileId && !dashboardFileExistsForEstimate(payloadData))) return false;
+  return saveEstimateToLocalDashboard(payloadData);
 }
 
 function buildDashboardEstimatePayload() {
@@ -2318,10 +2336,14 @@ async function downloadEditableEstimate() {
     return;
   }
   const blob = new Blob([estimateText], { type: "application/octet-stream" });
+  const syncedToDashboard = syncEstimateToLinkedDashboard(estimate);
 
   try {
     const link = createEditableDownloadLink(blob, fileName);
     link.click();
+    if (syncedToDashboard) {
+      $("submitStatus").appendChild(document.createTextNode(" Dashboard file updated."));
+    }
   } catch (error) {
     window.alert("The editable estimate file is ready, but this browser blocked the automatic download. Use the download link shown near the Notes/Adjustments area.");
   }
@@ -2341,6 +2363,7 @@ function applyEstimateData(data) {
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
   $("useSpanishScope").checked = data.useSpanishScope === true;
   $("addFooterValueNote").checked = data.addFooterValueNote === true || data.addFooterValueNote === "Yes" || data.addFooterValueNote === "on";
+  state.dashboardFileId = data.dashboardFileId || "";
   state.invoicePaid = data.invoicePaid === true || data.invoicePaid === "Yes";
   $("invoicePaidCheckbox").checked = state.invoicePaid;
   applyCompanyDefaults();
@@ -2463,6 +2486,7 @@ function saveEstimate(options = {}) {
   } catch (error) {
     // Some direct file previews block storage; PDF saving still works.
   }
+  syncEstimateToLinkedDashboard(estimate);
 
   if (!options.silent) {
     $("saveEstimate").textContent = "PDF";
@@ -2699,6 +2723,7 @@ function resetEstimate() {
   state.materialItems = [{ id: createId(), name: "", qty: "", price: "", unit: "" }];
   state.photos = [];
   state.assignmentPhotos = [];
+  state.dashboardFileId = "";
   renderLineItems();
   renderMaterialItems();
   renderPhotos();

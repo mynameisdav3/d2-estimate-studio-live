@@ -1113,6 +1113,7 @@ function estimateDataFromCrmFile(file) {
   return {
     fileType: "D2_ESTIMATE_EDITABLE",
     fileVersion: 1,
+    dashboardFileId: file.id || "",
     companyName: "D2 Carpentry & Design",
     estimateTitle: "Estimate",
     companyPhone: "239-469-8555",
