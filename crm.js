@@ -95,6 +95,8 @@ let crmRevenueDateSort = "newest";
 let crmPriceRows = loadPriceRows();
 let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
+let pendingEstimateUploadFileId = "";
+let openEstimateAfterUpload = false;
 
 function getGoogleScriptUrl() {
   return localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || DEFAULT_GOOGLE_SCRIPT_URL;
@@ -562,13 +564,18 @@ function isOpenCrmFile(file) {
   return !["Job Lost / Closed", "Closed / Paid"].includes(file.fileStatus);
 }
 
+function isPendingEstimateFile(file) {
+  return (file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail))
+    || (file.fileStatus === "Contact Established" && file.statusDetail === "Inspection Pending");
+}
+
 function visibleFiles() {
   const filter = $("crmFileFilter").value;
   const openFiles = crmFiles.filter(isOpenCrmFile);
   if (filter === "all") return crmFiles;
   if (filter === "new") return openFiles.filter((file) => file.fileStatus === "New Lead");
-  if (filter === "contact") return openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus));
-  if (filter === "estimate") return openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail));
+  if (filter === "contact") return openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus) && !isPendingEstimateFile(file));
+  if (filter === "estimate") return openFiles.filter(isPendingEstimateFile);
   if (filter === "negotiation") return openFiles.filter((file) => file.fileStatus === "In Negotiation");
   if (filter === "active") return openFiles.filter((file) => file.fileStatus !== "In Negotiation" && (["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage)));
   if (filter === "archive") return crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus));
@@ -578,8 +585,8 @@ function visibleFiles() {
 function renderCounts() {
   const openFiles = crmFiles.filter(isOpenCrmFile);
   $("newLeadCount").textContent = openFiles.filter((file) => file.fileStatus === "New Lead").length;
-  $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus)).length;
-  $("pendingEstimateCount").textContent = openFiles.filter((file) => file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail)).length;
+  $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus) && !isPendingEstimateFile(file)).length;
+  $("pendingEstimateCount").textContent = openFiles.filter(isPendingEstimateFile).length;
   $("negotiationCount").textContent = openFiles.filter((file) => file.fileStatus === "In Negotiation").length;
   $("activeJobCount").textContent = openFiles.filter((file) => file.fileStatus !== "In Negotiation" && (["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage))).length;
   $("archivedCount").textContent = crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus)).length;
@@ -1096,6 +1103,163 @@ function deleteActiveFile() {
   renderCrm();
 }
 
+function estimateDataFromCrmFile(file) {
+  const estimateTotal = Number(file.estimateTotal) || 0;
+  const materialTotal = Number(file.materialTotal) || 0;
+  const depositTotal = Number(file.depositTotal || file.initialDeposit) || 0;
+  return {
+    fileType: "D2_ESTIMATE_EDITABLE",
+    fileVersion: 1,
+    companyName: "D2 Carpentry & Design",
+    estimateTitle: "Estimate",
+    companyPhone: "239-469-8555",
+    companyEmail: "D2CarpentryandDesign@gmail.com",
+    companyAddress: "2710 Del Prado Blvd S #2-184 Cape Coral, FL 33904",
+    estimateNumber: file.fileNumber || makeCrmFileNumber(),
+    showEstimateNumber: true,
+    estimateDate: todayIso(0),
+    leadSource: file.leadSource || "Manual",
+    fileStatus: file.fileStatus || "New Lead",
+    estimateStatus: file.estimateStatus || "Pending",
+    warrantyStatus: file.warrantyStatus || "Not Sent",
+    inspectionDate: file.inspectionDate || "",
+    inspectionTime: file.inspectionTime || "",
+    nextActionDate: file.nextActionDate || file.followUpDate || "",
+    nextAction: file.nextAction || "",
+    clientName: file.clientName || "",
+    clientPhone: file.clientPhone || "",
+    clientEmail: file.clientEmail || "",
+    projectAddress: file.projectAddress || "",
+    projectType: file.projectType || "Other",
+    finishLevel: "",
+    widthFeet: "",
+    heightFeet: "",
+    linearFeet: "",
+    linearRate: "500",
+    squareLength: "",
+    squareWidth: "",
+    squareRate: "75",
+    flatTotal: estimateTotal ? String(estimateTotal) : "",
+    discount: "",
+    discountType: "dollar",
+    taxRate: "",
+    depositRate: "",
+    invoiceInitialDeposit: file.initialDeposit || "",
+    invoiceSecondDeposit: file.midpointDeposit || "",
+    invoiceFinalPayment: file.finalPaymentAmount || "",
+    notes: "",
+    additionalNotes: "",
+    addFooterValueNote: false,
+    assignmentLanguage: "en",
+    assignmentStartDate: file.startDate || "",
+    assignmentArrivalTime: file.arrivalWindow || "Open",
+    assignmentScope: "",
+    useSpanishScope: false,
+    assignmentScopeSpanish: "",
+    assignmentNotes: "",
+    lineItems: [{ id: makeCrmId("line"), type: "item", name: "", qty: "", price: "" }],
+    materialItems: Array.isArray(file.materialItems) && file.materialItems.length
+      ? file.materialItems.map((item) => ({ ...item }))
+      : [{ id: makeCrmId("material"), name: "", qty: "", unit: "", price: "" }],
+    photos: [],
+    assignmentPhotos: [],
+    totals: {
+      subtotal: estimateTotal,
+      discount: 0,
+      tax: 0,
+      total: estimateTotal,
+      deposit: depositTotal,
+      finishMultiplier: 1,
+      hasFlatTotal: Boolean(estimateTotal),
+      discountType: "dollar",
+      discountValue: 0,
+      depositRate: "",
+      lineSubtotal: 0,
+      showDiscount: false,
+      showTax: false,
+      showDeposit: Boolean(depositTotal),
+      showSubtotal: false,
+    },
+    backend: {
+      estimatedMaterialCost: materialTotal,
+      fallbackMaterialCost: estimateTotal * 0.25,
+      estimatedGrossProfit: estimateTotal - materialTotal,
+      materialPercent: 25,
+    },
+    submittedAt: new Date().toISOString(),
+  };
+}
+
+function sendEstimateToEstimator(estimateData, target = "") {
+  try {
+    localStorage.setItem("d2EstimateStudio", JSON.stringify(estimateData));
+  } catch (error) {
+    window.alert("The estimate could not be loaded into this browser. Try refreshing and opening it again.");
+    return false;
+  }
+  window.open(`index.html${target}`, "_blank", "noopener");
+  return true;
+}
+
+function attachEditableEstimateToFile(file, data, fileName = "") {
+  const totals = data.totals || {};
+  file.editableEstimate = data;
+  file.estimateTotal = Number(totals.total) || parseMoney(data.total) || Number(file.estimateTotal) || 0;
+  file.depositTotal = Number(totals.deposit) || Number(file.depositTotal) || 0;
+  file.materialTotal = estimateMaterialTotal(data) || Number(file.materialTotal) || 0;
+  file.materialItems = estimateMaterialItems(data);
+  file.clientName = file.clientName || data.clientName || "";
+  file.clientPhone = file.clientPhone || data.clientPhone || "";
+  file.clientEmail = file.clientEmail || data.clientEmail || "";
+  file.projectAddress = file.projectAddress || data.projectAddress || data.clientAddress || "";
+  file.projectType = file.projectType || data.projectType || "Other";
+  file.estimateStatus = data.estimateStatus || file.estimateStatus || "Pending";
+  addSystemNote(file, `Editable estimate attached${fileName ? ` from ${fileName}` : ""}.`);
+}
+
+function uploadEstimateForActiveFile(file) {
+  const targetId = pendingEstimateUploadFileId;
+  const shouldOpen = openEstimateAfterUpload;
+  pendingEstimateUploadFileId = "";
+  openEstimateAfterUpload = false;
+  if (!file || !targetId) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const data = parseEstimateFileText(reader.result);
+      const targetFile = crmFiles.find((entry) => entry.id === targetId);
+      if (!targetFile) throw new Error("That customer file is no longer selected.");
+      attachEditableEstimateToFile(targetFile, data, file.name);
+      activeFileId = targetFile.id;
+      saveCrmFiles();
+      renderCrm();
+      if (shouldOpen) openActiveEstimate("");
+    } catch (error) {
+      window.alert(`${error.message || "That file could not be uploaded."} Please choose an editable D2 estimate file ending in .d2estimate.`);
+    }
+  });
+  reader.readAsText(file);
+}
+
+function askToCreateOrAttachEstimate(file) {
+  const createNew = window.confirm(
+    "No editable estimate is attached to this customer file yet.\n\nClick OK to create a new estimate from this file.\nClick Cancel to upload an existing .d2estimate file."
+  );
+  if (!createNew) {
+    pendingEstimateUploadFileId = file.id;
+    openEstimateAfterUpload = true;
+    $("crmEstimateFileUpload").click();
+    return;
+  }
+  const estimateData = estimateDataFromCrmFile(file);
+  file.editableEstimate = estimateData;
+  file.estimateStatus = file.estimateStatus || "Pending";
+  addSystemNote(file, "New editable estimate started from this Dashboard file.");
+  saveCrmFiles();
+  renderCrm();
+  sendEstimateToEstimator(estimateData);
+}
+
 function openActiveEstimate(target = "") {
   saveActiveFile();
   const file = activeFile();
@@ -1104,16 +1268,14 @@ function openActiveEstimate(target = "") {
     return;
   }
   if (!file.editableEstimate) {
-    window.alert("This customer file does not have an attached editable estimate yet. Import an approved estimate first.");
+    if (target) {
+      window.alert("This customer file does not have an attached editable estimate yet. Open Estimate first, then create or upload one.");
+      return;
+    }
+    askToCreateOrAttachEstimate(file);
     return;
   }
-  try {
-    localStorage.setItem("d2EstimateStudio", JSON.stringify(file.editableEstimate));
-  } catch (error) {
-    window.alert("The estimate could not be loaded into this browser. Try refreshing and opening it again.");
-    return;
-  }
-  window.open(`index.html${target}`, "_blank", "noopener");
+  sendEstimateToEstimator(file.editableEstimate, target);
 }
 
 function openActiveInvoice() {
@@ -1183,8 +1345,8 @@ function applyInitialFileRoute() {
 function filterForCrmFile(file) {
   if (!isOpenCrmFile(file)) return "archive";
   if (file.fileStatus === "New Lead") return "new";
+  if (isPendingEstimateFile(file)) return "estimate";
   if (["Contact Established", "Contact Attempted"].includes(file.fileStatus)) return "contact";
-  if (file.fileStatus === "Inspection Completed") return "estimate";
   if (file.fileStatus === "In Negotiation") return "negotiation";
   return "active";
 }
@@ -2651,7 +2813,11 @@ $("crmRevenueDateSort").addEventListener("change", (event) => {
 });
 $("crmUploadEstimateFile").addEventListener("click", () => $("crmEstimateFileUpload").click());
 $("crmEstimateFileUpload").addEventListener("change", (event) => {
-  uploadEstimateToRevenue(event.target.files[0]);
+  if (pendingEstimateUploadFileId) {
+    uploadEstimateForActiveFile(event.target.files[0]);
+  } else {
+    uploadEstimateToRevenue(event.target.files[0]);
+  }
   event.target.value = "";
 });
 document.querySelectorAll("[data-crm-view]").forEach((button) => {
