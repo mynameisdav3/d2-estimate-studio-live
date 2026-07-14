@@ -163,13 +163,12 @@
                   <label>
                     Project Type
                     <select id="crmProjectType">
-                      <option>Other</option>
                       <option>Closet</option>
-                      <option>Cabinetry</option>
                       <option>Pantry</option>
-                      <option>Garage</option>
+                      <option>Cabinetry</option>
+                      <option>Refinishing</option>
                       <option>Built-In</option>
-                      <option>Trim</option>
+                      <option>Other</option>
                     </select>
                   </label>
                   <p class="crm-status-description wide" id="crmStatusDescription"></p>
@@ -561,6 +560,6 @@
         caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
       }
     </script>
-    <script src="crm.js?v=20260713-revenue-in-progress"></script>
+    <script src="crm.js?v=20260713-project-types"></script>
   </body>
 </html>

@@ -29,6 +29,14 @@ const COPY_MODE_LABELS = {
   supply: "Supplies",
 };
 
+const PROJECT_TYPES = ["Closet", "Pantry", "Cabinetry", "Refinishing", "Built-In", "Other"];
+
+function normalizeProjectType(value) {
+  const cleaned = String(value || "").trim().toLowerCase();
+  const match = PROJECT_TYPES.find((type) => type.toLowerCase() === cleaned);
+  return match || "Other";
+}
+
 function getGoogleScriptUrl() {
   return localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || DEFAULT_GOOGLE_SCRIPT_URL;
 }
@@ -2175,7 +2183,7 @@ function saveEstimateToLocalDashboard(payloadData) {
     leadSource: payloadData.leadSource || existing.leadSource || "Manual",
     fileStatus: payloadData.fileStatus || existing.fileStatus || "Inspection Completed",
     statusDetail: payloadData.statusDetail || existing.statusDetail || "Estimate Pending",
-    projectType: payloadData.projectType || "Other",
+    projectType: normalizeProjectType(payloadData.projectType),
     inspectionDate: payloadData.inspectionDate || existing.inspectionDate || "",
     inspectionTime: payloadData.inspectionTime || existing.inspectionTime || "",
     startDate: payloadData.assignmentStartDate || existing.startDate || "",
@@ -2360,6 +2368,7 @@ function applyEstimateData(data) {
   fields.forEach((field) => {
     if (data[field] !== undefined) $(field).value = data[field];
   });
+  $("projectType").value = normalizeProjectType($("projectType").value);
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
   $("useSpanishScope").checked = data.useSpanishScope === true;
   $("addFooterValueNote").checked = data.addFooterValueNote === true || data.addFooterValueNote === "Yes" || data.addFooterValueNote === "on";

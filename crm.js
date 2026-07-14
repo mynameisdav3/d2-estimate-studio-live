@@ -40,6 +40,14 @@ const CRM_STATUS_DETAILS = {
   "Job Lost / Closed": ["Future Marketing Follow-Up"],
 };
 
+const CRM_PROJECT_TYPES = ["Closet", "Pantry", "Cabinetry", "Refinishing", "Built-In", "Other"];
+
+function normalizeProjectType(value) {
+  const cleaned = String(value || "").trim().toLowerCase();
+  const match = CRM_PROJECT_TYPES.find((type) => type.toLowerCase() === cleaned);
+  return match || "Other";
+}
+
 const crmFields = [
   "clientName",
   "clientPhone",
@@ -512,6 +520,7 @@ function normalizeCrmFile(file) {
   if (!Array.isArray(file.notes)) file.notes = [];
   if (!Array.isArray(file.timeline)) file.timeline = [];
   file.projectStage = file.projectStage || inferProjectStage(file.fileStatus);
+  file.projectType = normalizeProjectType(file.projectType);
   file.estimateStatus = file.estimateStatus || inferEstimateStatus(file.fileStatus, file.statusDetail);
   file.invoiceStatus = file.invoiceStatus || (file.fileStatus === "Closed / Paid" ? "Paid" : "Not Created");
   file.reviewStatus = file.reviewStatus || (file.fileStatus === "Closed / Paid" ? "Requested" : "Not Ready");
@@ -1137,7 +1146,7 @@ function estimateDataFromCrmFile(file) {
     clientPhone: file.clientPhone || "",
     clientEmail: file.clientEmail || "",
     projectAddress: file.projectAddress || "",
-    projectType: file.projectType || "Other",
+    projectType: normalizeProjectType(file.projectType),
     finishLevel: "",
     widthFeet: "",
     heightFeet: "",
@@ -1219,7 +1228,7 @@ function attachEditableEstimateToFile(file, data, fileName = "") {
   file.clientPhone = file.clientPhone || data.clientPhone || "";
   file.clientEmail = file.clientEmail || data.clientEmail || "";
   file.projectAddress = file.projectAddress || data.projectAddress || data.clientAddress || "";
-  file.projectType = file.projectType || data.projectType || "Other";
+  file.projectType = normalizeProjectType(file.projectType || data.projectType);
   file.estimateStatus = data.estimateStatus || file.estimateStatus || "Pending";
   addSystemNote(file, `Editable estimate attached${fileName ? ` from ${fileName}` : ""}.`);
 }
@@ -1543,7 +1552,7 @@ function dashboardFileFromEstimate(data, row) {
     leadSource: data.leadSource || existing?.leadSource || "Estimate Upload",
     fileStatus: data.fileStatus || existing?.fileStatus || "New Lead",
     statusDetail: existing?.statusDetail || data.statusDetail || "Needs Contact",
-    projectType: data.projectType || existing?.projectType || "Other",
+    projectType: normalizeProjectType(data.projectType || existing?.projectType),
     projectStage: existing?.projectStage || "Lead",
     contactEmailSent: existing?.contactEmailSent || "No",
     contactTextSent: existing?.contactTextSent || "No",
