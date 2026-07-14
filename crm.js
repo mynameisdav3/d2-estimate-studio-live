@@ -323,21 +323,21 @@ function loadRevenueRows() {
         if (!rows.length) {
           const backup = localStorage.getItem(CRM_REVENUE_BACKUP_KEY);
           const backupRows = backup ? JSON.parse(backup) : [];
-          if (Array.isArray(backupRows) && backupRows.length) return backupRows;
-          if (restoredRows.length) return restoredRows;
+          if (Array.isArray(backupRows) && backupRows.length) return dedupeRevenueRows(backupRows);
+          if (restoredRows.length) return dedupeRevenueRows(restoredRows);
         }
-        if (restoredRows.length) return mergeRevenueRows(rows, restoredRows);
+        if (restoredRows.length) return dedupeRevenueRows(mergeRevenueRows(rows, restoredRows));
         if (Array.isArray(window.D2_REVENUE_ROWS) && rows.length < spreadsheetRows.length) {
-          return spreadsheetRows;
+          return dedupeRevenueRows(spreadsheetRows);
         }
-        return rows;
+        return dedupeRevenueRows(rows);
       }
     }
   } catch (error) {
     // Local demo storage may be unavailable in some browsers.
   }
-  if (restoredRows.length) return restoredRows;
-  return spreadsheetRows;
+  if (restoredRows.length) return dedupeRevenueRows(restoredRows);
+  return dedupeRevenueRows(spreadsheetRows);
 }
 
 function loadPriceRows() {
@@ -420,6 +420,7 @@ function saveCrmFiles() {
 
 function saveRevenueRows() {
   try {
+    crmRevenueRows = dedupeRevenueRows(crmRevenueRows);
     if (Array.isArray(crmRevenueRows) && crmRevenueRows.length) {
       localStorage.setItem(CRM_REVENUE_BACKUP_KEY, JSON.stringify(crmRevenueRows));
     }
@@ -719,7 +720,7 @@ function saveActiveFile() {
     file.notes.push({ at: timestamp, text: changeNotes.join("\n") });
     file.timeline.push(`File updated ${formatNoteTimestamp(timestamp)}`);
   }
-  ensureRevenueRowForFile(file);
+  if (file.fileStatus === "In Progress") ensureRevenueRowForFile(file);
   saveCrmFiles();
 }
 
@@ -743,7 +744,7 @@ function saveEstimateAmountEdit() {
     addSystemNote(file, `Estimate amount changed from ${crmCurrency.format(oldAmount)} to ${crmCurrency.format(newAmount)}.`);
   }
   $("crmEstimateEditPanel").hidden = true;
-  ensureRevenueRowForFile(file);
+  if (file.fileStatus === "In Progress") ensureRevenueRowForFile(file);
   saveCrmFiles();
   renderCrm();
 }
@@ -768,7 +769,7 @@ function saveMaterialAmountEdit() {
   }
   $("crmMaterialEditPanel").hidden = true;
   if (file.editableEstimate?.backend) file.editableEstimate.backend.estimatedMaterialCost = newAmount;
-  ensureRevenueRowForFile(file);
+  if (file.fileStatus === "In Progress") ensureRevenueRowForFile(file);
   saveCrmFiles();
   renderCrm();
 }
@@ -896,6 +897,7 @@ function handleStatusWorkflow() {
   }
 
   if (status === "In Progress") {
+    file.revenueExcluded = false;
     if (!$("crmAnticipatedCompletionDate").value) {
       $("crmNextAction").value = "Set anticipated completion date";
       openDateField("crmAnticipatedCompletionDate");
@@ -1736,6 +1738,18 @@ function mergeRevenueRows(primary = [], secondary = []) {
   return merged;
 }
 
+function dedupeRevenueRows(rows = []) {
+  const merged = [];
+  const seen = new Set();
+  rows.forEach((row) => {
+    const key = revenueRowKey(row);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    merged.push({ ...row });
+  });
+  return merged;
+}
+
 function revenueRowForDashboardFile(file) {
   if (!file) return null;
   return crmRevenueRows.find((row) => {
@@ -1747,7 +1761,7 @@ function revenueRowForDashboardFile(file) {
 }
 
 function shouldCreateRevenueRowForFile(file) {
-  return !!file && ["In Negotiation", "Job Won", "In Progress", "Work Completed", "Closed / Paid"].includes(file.fileStatus);
+  return !!file && file.fileStatus === "In Progress" && file.revenueExcluded !== true;
 }
 
 function ensureRevenueRowForFile(file) {
@@ -1793,8 +1807,9 @@ function ensureRevenueRowForFile(file) {
   } else {
     crmRevenueRows.unshift(row);
     activeRevenueId = row.id;
-    addSystemNote(file, `Revenue row created for ${file.fileStatus}.`);
+    addSystemNote(file, "Revenue row created because this file was marked In Progress.");
   }
+  crmRevenueRows = dedupeRevenueRows(crmRevenueRows);
   saveRevenueRows();
   return row;
 }
@@ -1991,8 +2006,14 @@ function deleteRevenueRow(rowId) {
   const row = crmRevenueRows.find((entry) => entry.id === rowId);
   if (!row) return;
   if (!window.confirm(`Delete the revenue row for ${row.clientJob || "this job"}?`)) return;
+  const file = findFileForRevenue(row);
+  if (file) {
+    file.revenueExcluded = true;
+    addSystemNote(file, "Revenue row removed manually. It will not be recreated unless the file is marked In Progress again.");
+  }
   crmRevenueRows = crmRevenueRows.filter((entry) => entry.id !== rowId);
   activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
+  saveCrmFiles();
   saveRevenueRows();
   renderRevenue();
 }
