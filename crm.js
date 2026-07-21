@@ -1871,6 +1871,7 @@ function renderRevenue() {
           <td><textarea class="crm-revenue-input crm-revenue-notes" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="receiptNotes" placeholder="Receipt notes">${escapeHtml(row.receiptNotes || "")}</textarea></td>
           <td><input class="crm-revenue-input" type="text" value="${escapeHtml(row.laborAssigns || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="laborAssigns" placeholder="Labor"></td>
           <td class="crm-revenue-actions">
+            <button type="button" data-revenue-update="${escapeHtml(row.id)}">Update</button>
             <button type="button" data-revenue-id="${escapeHtml(row.id)}">View</button>
             <button type="button" data-revenue-delete="${escapeHtml(row.id)}">Delete</button>
           </td>
@@ -1888,6 +1889,9 @@ function renderRevenue() {
       }, 50);
     });
   });
+  document.querySelectorAll("[data-revenue-update]").forEach((button) => {
+    button.addEventListener("click", () => updateRevenueRow(button.dataset.revenueUpdate, button));
+  });
   document.querySelectorAll("[data-revenue-delete]").forEach((button) => {
     button.addEventListener("click", () => deleteRevenueRow(button.dataset.revenueDelete));
   });
@@ -1901,6 +1905,36 @@ function renderRevenue() {
     });
   });
   renderExpenseDetail();
+}
+
+function updateRevenueRow(rowId, button = null) {
+  const row = crmRevenueRows.find((entry) => entry.id === rowId);
+  if (!row) return;
+  document.querySelectorAll("[data-revenue-edit]").forEach((field) => {
+    if (field.dataset.revenueEdit !== rowId) return;
+    const key = field.dataset.revenueField;
+    if (["gross", "expenses", "labor"].includes(key)) {
+      row[key] = parseMoney(field.value);
+      field.value = row[key] ? row[key] : "";
+    } else if (key === "date") {
+      row[key] = normalizeDate(field.value);
+      field.value = row[key];
+    } else {
+      row[key] = field.value;
+    }
+  });
+  row.profit = revenueProfit(row);
+  activeRevenueId = row.id;
+  saveRevenueRows();
+  renderRevenue();
+  if (button) {
+    const refreshedButton = document.querySelector(`[data-revenue-update="${rowId}"]`);
+    if (refreshedButton) refreshedButton.textContent = "Updated";
+    window.setTimeout(() => {
+      const resetButton = document.querySelector(`[data-revenue-update="${rowId}"]`);
+      if (resetButton) resetButton.textContent = "Update";
+    }, 1000);
+  }
 }
 
 function renderExpenseDetail() {
