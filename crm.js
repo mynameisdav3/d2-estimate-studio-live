@@ -9,6 +9,7 @@ const CRM_PRICE_DATABASE_KEY = "d2PriceDatabase";
 const CRM_PRICE_DELETED_KEY = "d2PriceDeletedIds";
 const CRM_STORAGE_BACKUP_KEY = "d2CrmDemoFilesBackup";
 const CRM_REVENUE_BACKUP_KEY = "d2CrmRevenueRowsBackup";
+const CRM_REVENUE_DELETED_KEY = "d2CrmRevenueDeletedIds";
 const CRM_PRICE_BACKUP_KEY = "d2PriceDatabaseBackup";
 const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
 const GOOGLE_SCRIPT_URL_STORAGE_KEY = "d2GoogleScriptUrl";
@@ -309,7 +310,8 @@ function loadCrmFiles() {
       const backup = localStorage.getItem(CRM_STORAGE_BACKUP_KEY);
       const backupFiles = backup ? JSON.parse(backup) : [];
       if (Array.isArray(backupFiles) && backupFiles.length) return mergeDashboardFiles(restoredFiles, backupFiles);
-      return Array.isArray(files) ? files : defaultFiles();
+      if (restoredFiles.length) return restoredFiles;
+      return Array.isArray(files) && files.length ? files : defaultFiles();
     }
   } catch (error) {
     // Local demo storage may be unavailable in some browsers.
@@ -323,6 +325,7 @@ function loadRevenueRows() {
     ? window.D2_DASHBOARD_RESTORE.revenue.map((row) => ({ ...row }))
     : [];
   const spreadsheetRows = defaultRevenueRows();
+  const deletedKeys = loadDeletedRevenueKeys();
   try {
     const saved = localStorage.getItem(CRM_REVENUE_STORAGE_KEY);
     if (saved) {
@@ -331,21 +334,17 @@ function loadRevenueRows() {
         if (!rows.length) {
           const backup = localStorage.getItem(CRM_REVENUE_BACKUP_KEY);
           const backupRows = backup ? JSON.parse(backup) : [];
-          if (Array.isArray(backupRows) && backupRows.length) return dedupeRevenueRows(backupRows);
-          if (restoredRows.length) return dedupeRevenueRows(restoredRows);
+          if (Array.isArray(backupRows) && backupRows.length) return filterDeletedRevenueRows(dedupeRevenueRows(backupRows), deletedKeys);
+          if (restoredRows.length) return filterDeletedRevenueRows(dedupeRevenueRows(restoredRows), deletedKeys);
         }
-        if (restoredRows.length) return dedupeRevenueRows(mergeRevenueRows(rows, restoredRows));
-        if (Array.isArray(window.D2_REVENUE_ROWS) && rows.length < spreadsheetRows.length) {
-          return dedupeRevenueRows(spreadsheetRows);
-        }
-        return dedupeRevenueRows(rows);
+        return filterDeletedRevenueRows(restoredRows.length ? dedupeRevenueRows(mergeRevenueRows(rows, restoredRows)) : dedupeRevenueRows(rows), deletedKeys);
       }
     }
   } catch (error) {
     // Local demo storage may be unavailable in some browsers.
   }
-  if (restoredRows.length) return dedupeRevenueRows(restoredRows);
-  return dedupeRevenueRows(spreadsheetRows);
+  if (restoredRows.length) return filterDeletedRevenueRows(dedupeRevenueRows(restoredRows), deletedKeys);
+  return filterDeletedRevenueRows(dedupeRevenueRows(spreadsheetRows), deletedKeys);
 }
 
 function loadPriceRows() {
@@ -423,6 +422,24 @@ function saveCrmFiles() {
     localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify(crmFiles));
   } catch (error) {
     // Google Drive will become the real storage layer.
+  }
+}
+
+function refreshCrmFilesFromStorage() {
+  try {
+    const saved = localStorage.getItem(CRM_STORAGE_KEY);
+    const files = saved ? JSON.parse(saved) : [];
+    if (!Array.isArray(files) || !files.length) return false;
+    const currentActiveId = activeFileId;
+    crmFiles = files.map((file) => normalizeCrmFile(file));
+    if (currentActiveId && crmFiles.some((file) => file.id === currentActiveId)) {
+      activeFileId = currentActiveId;
+    } else {
+      activeFileId = crmFiles[0] ? crmFiles[0].id : null;
+    }
+    return true;
+  } catch (error) {
+    return false;
   }
 }
 
@@ -519,6 +536,7 @@ function normalizeCrmFile(file) {
   if (!file) return file;
   if (!Array.isArray(file.notes)) file.notes = [];
   if (!Array.isArray(file.timeline)) file.timeline = [];
+  if (!Array.isArray(file.expenseLines)) file.expenseLines = [];
   file.projectStage = file.projectStage || inferProjectStage(file.fileStatus);
   file.projectType = normalizeProjectType(file.projectType);
   file.estimateStatus = file.estimateStatus || inferEstimateStatus(file.fileStatus, file.statusDetail);
@@ -577,7 +595,15 @@ function isOpenCrmFile(file) {
 
 function isPendingEstimateFile(file) {
   return (file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail))
+    || (file.fileStatus === "Inspection Completed" && file.statusDetail === "Estimate Attached")
     || (file.fileStatus === "Contact Established" && file.statusDetail === "Inspection Pending");
+}
+
+function isActiveCrmFile(file) {
+  if (!isOpenCrmFile(file)) return false;
+  if (["New Lead", "Contact Established", "Contact Attempted", "In Negotiation"].includes(file.fileStatus)) return false;
+  return ["Inspection Completed", "Job Won", "In Progress", "Work Completed"].includes(file.fileStatus)
+    || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage);
 }
 
 function visibleFiles() {
@@ -588,7 +614,7 @@ function visibleFiles() {
   if (filter === "contact") return openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus) && !isPendingEstimateFile(file));
   if (filter === "estimate") return openFiles.filter(isPendingEstimateFile);
   if (filter === "negotiation") return openFiles.filter((file) => file.fileStatus === "In Negotiation");
-  if (filter === "active") return openFiles.filter((file) => file.fileStatus !== "In Negotiation" && (["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage)));
+  if (filter === "active") return openFiles.filter(isActiveCrmFile);
   if (filter === "archive") return crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus));
   return openFiles;
 }
@@ -599,7 +625,7 @@ function renderCounts() {
   $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus) && !isPendingEstimateFile(file)).length;
   $("pendingEstimateCount").textContent = openFiles.filter(isPendingEstimateFile).length;
   $("negotiationCount").textContent = openFiles.filter((file) => file.fileStatus === "In Negotiation").length;
-  $("activeJobCount").textContent = openFiles.filter((file) => file.fileStatus !== "In Negotiation" && (["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus) || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage))).length;
+  $("activeJobCount").textContent = openFiles.filter(isActiveCrmFile).length;
   $("archivedCount").textContent = crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus)).length;
 }
 
@@ -1291,6 +1317,7 @@ function createEstimateForFile(file, target = "") {
 }
 
 function showEstimateChoiceDialog(target = "") {
+  refreshCrmFilesFromStorage();
   saveActiveFile();
   const file = activeFile();
   if (!file) {
@@ -1308,6 +1335,7 @@ function showEstimateChoiceDialog(target = "") {
 }
 
 function openActiveEstimate(target = "") {
+  refreshCrmFilesFromStorage();
   saveActiveFile();
   const file = activeFile();
   if (!file) {
@@ -1326,6 +1354,7 @@ function openActiveEstimate(target = "") {
 }
 
 function openActiveInvoice() {
+  refreshCrmFilesFromStorage();
   saveActiveFile();
   const file = activeFile();
   if (!file) {
@@ -1410,6 +1439,7 @@ function renderCrm() {
   renderFileList();
   renderActiveFile();
   renderRevenue();
+  if (!$("crmExpensesView")?.hidden) renderFileExpenses();
 }
 
 function parseMoney(value) {
@@ -1717,6 +1747,19 @@ function revenueProfit(row) {
   return (Number(row.gross) || 0) - (Number(row.expenses) || 0) - (Number(row.labor) || 0);
 }
 
+function expenseLineTotal(row) {
+  if (!Array.isArray(row?.expenseLines)) return 0;
+  return row.expenseLines.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+}
+
+function syncRevenueExpenseTotal(row) {
+  const total = expenseLineTotal(row);
+  if (total > 0 || (Array.isArray(row?.expenseLines) && row.expenseLines.length)) {
+    row.expenses = total;
+  }
+  row.profit = revenueProfit(row);
+}
+
 function revenueDateValue(row) {
   const parsed = Date.parse(row.date || "");
   return Number.isNaN(parsed) ? 0 : parsed;
@@ -1730,9 +1773,39 @@ function sortedRevenueRows() {
 }
 
 function revenueRowKey(row) {
-  return String(row.fileNumber || row.attachedEstimate?.fileNumber || row.dashboardFileId || row.clientJob || row.id || "")
+  return String(row.id || row.fileNumber || row.attachedEstimate?.fileNumber || row.dashboardFileId || row.clientJob || "")
     .trim()
     .toLowerCase();
+}
+
+function loadDeletedRevenueKeys() {
+  try {
+    const saved = localStorage.getItem(CRM_REVENUE_DELETED_KEY);
+    const keys = saved ? JSON.parse(saved) : [];
+    return new Set(Array.isArray(keys) ? keys : []);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function saveDeletedRevenueKeys(keys) {
+  try {
+    localStorage.setItem(CRM_REVENUE_DELETED_KEY, JSON.stringify(Array.from(keys)));
+  } catch (error) {
+    // Local storage can be blocked in some browser privacy modes.
+  }
+}
+
+function rememberDeletedRevenueRow(row) {
+  const key = revenueRowKey(row);
+  if (!key) return;
+  const deletedKeys = loadDeletedRevenueKeys();
+  deletedKeys.add(key);
+  saveDeletedRevenueKeys(deletedKeys);
+}
+
+function filterDeletedRevenueRows(rows = [], deletedKeys = loadDeletedRevenueKeys()) {
+  return rows.filter((row) => !deletedKeys.has(revenueRowKey(row)));
 }
 
 function mergeRevenueRows(primary = [], secondary = []) {
@@ -1871,27 +1944,12 @@ function renderRevenue() {
           <td><textarea class="crm-revenue-input crm-revenue-notes" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="receiptNotes" placeholder="Receipt notes">${escapeHtml(row.receiptNotes || "")}</textarea></td>
           <td><input class="crm-revenue-input" type="text" value="${escapeHtml(row.laborAssigns || "")}" data-revenue-edit="${escapeHtml(row.id)}" data-revenue-field="laborAssigns" placeholder="Labor"></td>
           <td class="crm-revenue-actions">
-            <button type="button" data-revenue-update="${escapeHtml(row.id)}">Update</button>
-            <button type="button" data-revenue-id="${escapeHtml(row.id)}">View</button>
             <button type="button" data-revenue-delete="${escapeHtml(row.id)}">Delete</button>
           </td>
         </tr>
       `;
     })
     .join("");
-
-  document.querySelectorAll("[data-revenue-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      activeRevenueId = button.dataset.revenueId;
-      renderRevenue();
-      window.setTimeout(() => {
-        $("crmExpenseDetail")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 50);
-    });
-  });
-  document.querySelectorAll("[data-revenue-update]").forEach((button) => {
-    button.addEventListener("click", () => updateRevenueRow(button.dataset.revenueUpdate, button));
-  });
   document.querySelectorAll("[data-revenue-delete]").forEach((button) => {
     button.addEventListener("click", () => deleteRevenueRow(button.dataset.revenueDelete));
   });
@@ -1907,11 +1965,10 @@ function renderRevenue() {
   renderExpenseDetail();
 }
 
-function updateRevenueRow(rowId, button = null) {
-  const row = crmRevenueRows.find((entry) => entry.id === rowId);
-  if (!row) return;
+function updateRevenueRows() {
   document.querySelectorAll("[data-revenue-edit]").forEach((field) => {
-    if (field.dataset.revenueEdit !== rowId) return;
+    const row = crmRevenueRows.find((entry) => entry.id === field.dataset.revenueEdit);
+    if (!row) return;
     const key = field.dataset.revenueField;
     if (["gross", "expenses", "labor"].includes(key)) {
       row[key] = parseMoney(field.value);
@@ -1922,19 +1979,38 @@ function updateRevenueRow(rowId, button = null) {
     } else {
       row[key] = field.value;
     }
+    syncRevenueExpenseTotal(row);
   });
-  row.profit = revenueProfit(row);
-  activeRevenueId = row.id;
+  syncActiveExpenseDetailEdits();
   saveRevenueRows();
   renderRevenue();
-  if (button) {
-    const refreshedButton = document.querySelector(`[data-revenue-update="${rowId}"]`);
-    if (refreshedButton) refreshedButton.textContent = "Updated";
-    window.setTimeout(() => {
-      const resetButton = document.querySelector(`[data-revenue-update="${rowId}"]`);
-      if (resetButton) resetButton.textContent = "Update";
-    }, 1000);
-  }
+  const button = $("crmUpdateRevenue");
+  if (!button) return;
+  button.textContent = "Updated";
+  window.setTimeout(() => {
+    const refreshedButton = $("crmUpdateRevenue");
+    if (refreshedButton) refreshedButton.textContent = "Update Revenue";
+  }, 1000);
+}
+
+function syncActiveExpenseDetailEdits() {
+  const row = crmRevenueRows.find((entry) => entry.id === activeRevenueId);
+  if (!row) return;
+  document.querySelectorAll("[data-expense-detail-field]").forEach((field) => {
+    row[field.dataset.expenseDetailField] = field.value;
+  });
+  const nextLines = [];
+  document.querySelectorAll("[data-expense-line-id]").forEach((element) => {
+    const id = element.dataset.expenseLineId;
+    if (!id || nextLines.some((line) => line.id === id)) return;
+    const category = document.querySelector(`[data-expense-line-category="${id}"]`)?.value || "Supplies";
+    const note = document.querySelector(`[data-expense-line-note="${id}"]`)?.value || "";
+    const amount = parseMoney(document.querySelector(`[data-expense-line-amount="${id}"]`)?.value || "");
+    if (!category && !note && !amount) return;
+    nextLines.push({ id, category, note, amount });
+  });
+  row.expenseLines = nextLines;
+  syncRevenueExpenseTotal(row);
 }
 
 function renderExpenseDetail() {
@@ -1944,6 +2020,7 @@ function renderExpenseDetail() {
     return;
   }
   const file = findFileForRevenue(row);
+  const expenseLines = Array.isArray(row.expenseLines) ? row.expenseLines : [];
   $("crmExpenseDetail").innerHTML = `
     <p class="eyebrow">${escapeHtml(row.date || "No date")}</p>
     <h3>${escapeHtml(row.clientJob || "Unnamed Job")}</h3>
@@ -1961,6 +2038,28 @@ function renderExpenseDetail() {
       <span>Labor Assigns</span>
       <input type="text" value="${escapeHtml(row.laborAssigns || "")}" data-expense-detail-field="laborAssigns">
     </label>
+    <section class="crm-expense-lines">
+      <div class="crm-expense-lines-heading">
+        <span>Expense Lines</span>
+        <strong>${crmCurrency.format(expenseLineTotal(row))}</strong>
+      </div>
+      ${
+        expenseLines.length
+          ? expenseLines.map((line) => `
+              <div class="crm-expense-line" data-expense-line-id="${escapeHtml(line.id)}">
+                <select data-expense-line-category="${escapeHtml(line.id)}">
+                  <option${line.category === "Supplies" ? " selected" : ""}>Supplies</option>
+                  <option${line.category === "Equipment" ? " selected" : ""}>Equipment</option>
+                  <option${line.category === "Other" ? " selected" : ""}>Other</option>
+                </select>
+                <input type="text" value="${escapeHtml(line.note || "")}" data-expense-line-note="${escapeHtml(line.id)}" placeholder="Vendor or note">
+                <input type="text" inputmode="decimal" value="${escapeHtml(Number(line.amount) || "")}" data-expense-line-amount="${escapeHtml(line.id)}" placeholder="0.00">
+                <button type="button" data-expense-line-delete="${escapeHtml(line.id)}">Delete</button>
+              </div>
+            `).join("")
+          : `<p class="crm-empty-state">No detailed expense lines yet.</p>`
+      }
+    </section>
     ${
       row.attachedEstimate
         ? `<div class="crm-attached-estimate">
@@ -1974,7 +2073,15 @@ function renderExpenseDetail() {
     }
     <div class="crm-add-expense">
       <label>
-        <span>New Expense Note</span>
+        <span>Category</span>
+        <select id="crmExpenseCategory">
+          <option>Supplies</option>
+          <option>Equipment</option>
+          <option>Other</option>
+        </select>
+      </label>
+      <label>
+        <span>Vendor / Note</span>
         <input type="text" id="crmExpenseVendor" placeholder="Home Depot, Sherwin, Amazon">
       </label>
       <label>
@@ -2000,6 +2107,9 @@ function renderExpenseDetail() {
   if (addExpenseButton) {
     addExpenseButton.addEventListener("click", () => addExpenseLine(row.id));
   }
+  document.querySelectorAll("[data-expense-line-delete]").forEach((button) => {
+    button.addEventListener("click", () => deleteExpenseLine(row.id, button.dataset.expenseLineDelete));
+  });
   const openButton = $("crmOpenRevenueFile");
   if (openButton && (file || row.attachedEstimate)) {
     openButton.addEventListener("click", () => {
@@ -2009,6 +2119,148 @@ function renderExpenseDetail() {
       renderCrm();
     });
   }
+}
+
+function fileExpenseTotal(file) {
+  return (Array.isArray(file?.expenseLines) ? file.expenseLines : []).reduce((sum, line) => {
+    return sum + (Number(line.amount) || 0);
+  }, 0);
+}
+
+function syncFileExpensesToRevenue(file) {
+  if (!file) return;
+  const row = revenueRowForDashboardFile(file);
+  if (!row) return;
+  row.expenseLines = Array.isArray(file.expenseLines) ? file.expenseLines.map((line) => ({ ...line })) : [];
+  syncRevenueExpenseTotal(row);
+  saveRevenueRows();
+}
+
+function renderFileExpenses() {
+  const file = normalizeCrmFile(activeFile());
+  const title = $("crmExpensesFileTitle");
+  const heading = $("crmExpensesHeading");
+  const total = $("crmFileExpenseTotal");
+  const rows = $("crmFileExpenseRows");
+  const preview = $("crmReceiptPreview");
+  if (!file) {
+    title.textContent = "Select a file to track expenses.";
+    heading.textContent = "No file selected";
+    total.textContent = crmCurrency.format(0);
+    rows.innerHTML = `<tr><td colspan="7">No file selected.</td></tr>`;
+    preview.innerHTML = "";
+    return;
+  }
+  title.textContent = `${file.fileNumber || "Project"} · ${file.clientName || "Unnamed Client"}`;
+  heading.textContent = file.clientName || "Unnamed Client";
+  total.textContent = crmCurrency.format(fileExpenseTotal(file));
+  rows.innerHTML = (file.expenseLines || []).map((line) => `
+    <tr>
+      <td><input class="crm-revenue-input" type="date" value="${escapeHtml(line.date || todayIso(0))}" data-file-expense-field="date" data-file-expense-id="${escapeHtml(line.id)}"></td>
+      <td>
+        <select class="crm-revenue-input" data-file-expense-field="category" data-file-expense-id="${escapeHtml(line.id)}">
+          <option${line.category === "Supplies" ? " selected" : ""}>Supplies</option>
+          <option${line.category === "Equipment" ? " selected" : ""}>Equipment</option>
+          <option${line.category === "Labor" ? " selected" : ""}>Labor</option>
+          <option${line.category === "Other" ? " selected" : ""}>Other</option>
+        </select>
+      </td>
+      <td><input class="crm-revenue-input" type="text" value="${escapeHtml(line.vendor || "")}" data-file-expense-field="vendor" data-file-expense-id="${escapeHtml(line.id)}" placeholder="Store"></td>
+      <td><textarea class="crm-revenue-input crm-revenue-notes" data-file-expense-field="note" data-file-expense-id="${escapeHtml(line.id)}" placeholder="Items / notes">${escapeHtml(line.note || "")}</textarea></td>
+      <td><input class="crm-revenue-input crm-money-input" type="text" inputmode="decimal" value="${escapeHtml(Number(line.amount) || "")}" data-file-expense-field="amount" data-file-expense-id="${escapeHtml(line.id)}" placeholder="0.00"></td>
+      <td>${line.receiptDataUrl ? `<button type="button" data-file-receipt-preview="${escapeHtml(line.id)}">View</button>` : `<span class="crm-muted">None</span>`}</td>
+      <td><button type="button" data-file-expense-delete="${escapeHtml(line.id)}">Delete</button></td>
+    </tr>
+  `).join("") || `<tr><td colspan="7">No expenses added yet.</td></tr>`;
+
+  const receiptLine = (file.expenseLines || []).find((line) => line.receiptDataUrl);
+  preview.innerHTML = receiptLine
+    ? `<img src="${escapeHtml(receiptLine.receiptDataUrl)}" alt="Receipt preview"><p>${escapeHtml(receiptLine.vendor || receiptLine.note || "Receipt attached")}</p>`
+    : `<p class="crm-empty-state">No receipt photo attached yet.</p>`;
+
+  document.querySelectorAll("[data-file-expense-field]").forEach((field) => {
+    field.addEventListener("change", () => updateFileExpenseField(field));
+  });
+  document.querySelectorAll("[data-file-expense-delete]").forEach((button) => {
+    button.addEventListener("click", () => deleteFileExpenseLine(button.dataset.fileExpenseDelete));
+  });
+  document.querySelectorAll("[data-file-receipt-preview]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const line = file.expenseLines.find((entry) => entry.id === button.dataset.fileReceiptPreview);
+      preview.innerHTML = line?.receiptDataUrl
+        ? `<img src="${escapeHtml(line.receiptDataUrl)}" alt="Receipt preview"><p>${escapeHtml(line.vendor || line.note || "Receipt attached")}</p>`
+        : `<p class="crm-empty-state">No receipt photo attached yet.</p>`;
+    });
+  });
+}
+
+function addFileExpenseLine() {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) {
+    window.alert("Select a customer file before adding an expense.");
+    return;
+  }
+  file.expenseLines.push({
+    id: makeCrmId("expense"),
+    date: todayIso(0),
+    category: "Supplies",
+    vendor: "",
+    note: "",
+    amount: "",
+    receiptDataUrl: "",
+  });
+  addSystemNote(file, "Expense line added.");
+  syncFileExpensesToRevenue(file);
+  saveCrmFiles();
+  renderFileExpenses();
+}
+
+function updateFileExpenseField(field) {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  const line = file.expenseLines.find((entry) => entry.id === field.dataset.fileExpenseId);
+  if (!line) return;
+  const key = field.dataset.fileExpenseField;
+  line[key] = key === "amount" ? parseMoney(field.value) : field.value;
+  syncFileExpensesToRevenue(file);
+  saveCrmFiles();
+  renderFileExpenses();
+}
+
+function deleteFileExpenseLine(lineId) {
+  const file = normalizeCrmFile(activeFile());
+  if (!file) return;
+  file.expenseLines = file.expenseLines.filter((line) => line.id !== lineId);
+  addSystemNote(file, "Expense line deleted.");
+  syncFileExpensesToRevenue(file);
+  saveCrmFiles();
+  renderFileExpenses();
+}
+
+function attachReceiptToFileExpense(uploadFile) {
+  const file = normalizeCrmFile(activeFile());
+  if (!file || !uploadFile) return;
+  const openLines = file.expenseLines.filter((entry) => !entry.receiptDataUrl);
+  const targetLine = openLines[openLines.length - 1] || {
+    id: makeCrmId("expense"),
+    date: todayIso(0),
+    category: "Supplies",
+    vendor: "",
+    note: uploadFile.name || "Receipt photo",
+    amount: "",
+    receiptDataUrl: "",
+  };
+  if (!file.expenseLines.some((line) => line.id === targetLine.id)) file.expenseLines.push(targetLine);
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    targetLine.receiptDataUrl = reader.result;
+    if (!targetLine.note) targetLine.note = uploadFile.name || "Receipt photo";
+    addSystemNote(file, "Receipt photo attached to expenses.");
+    syncFileExpensesToRevenue(file);
+    saveCrmFiles();
+    renderFileExpenses();
+  });
+  reader.readAsDataURL(uploadFile);
 }
 
 function updateRevenueField(field) {
@@ -2031,16 +2283,33 @@ function updateRevenueField(field) {
 function addExpenseLine(rowId) {
   const row = crmRevenueRows.find((entry) => entry.id === rowId);
   if (!row) return;
+  syncActiveExpenseDetailEdits();
+  const category = $("crmExpenseCategory")?.value || "Supplies";
   const vendor = $("crmExpenseVendor").value.trim();
   const amount = parseMoney($("crmExpenseAmount").value);
   if (!vendor && !amount) {
     window.alert("Add an expense note or amount first.");
     return;
   }
-  const note = amount ? `${vendor || "Expense"}: ${crmCurrency.format(amount)}` : vendor;
+  row.expenseLines = Array.isArray(row.expenseLines) ? row.expenseLines : [];
+  row.expenseLines.push({
+    id: makeCrmId("expense"),
+    category,
+    note: vendor,
+    amount,
+  });
+  const note = amount ? `${category} - ${vendor || "Expense"}: ${crmCurrency.format(amount)}` : `${category} - ${vendor}`;
   row.receiptNotes = [row.receiptNotes, note].filter(Boolean).join("\n");
-  row.expenses = (Number(row.expenses) || 0) + amount;
-  row.profit = revenueProfit(row);
+  syncRevenueExpenseTotal(row);
+  saveRevenueRows();
+  renderRevenue();
+}
+
+function deleteExpenseLine(rowId, lineId) {
+  const row = crmRevenueRows.find((entry) => entry.id === rowId);
+  if (!row || !Array.isArray(row.expenseLines)) return;
+  row.expenseLines = row.expenseLines.filter((line) => line.id !== lineId);
+  syncRevenueExpenseTotal(row);
   saveRevenueRows();
   renderRevenue();
 }
@@ -2049,6 +2318,7 @@ function deleteRevenueRow(rowId) {
   const row = crmRevenueRows.find((entry) => entry.id === rowId);
   if (!row) return;
   if (!window.confirm(`Delete the revenue row for ${row.clientJob || "this job"}?`)) return;
+  rememberDeletedRevenueRow(row);
   const file = findFileForRevenue(row);
   if (file) {
     file.revenueExcluded = true;
@@ -2825,17 +3095,20 @@ async function emailInvoice() {
 function switchCrmView(view) {
   const showRevenue = view === "revenue";
   const showInvoice = view === "invoice";
+  const showExpenses = view === "expenses";
   const showPrices = view === "prices";
   document.querySelectorAll(".crm-dashboard-view").forEach((section) => {
-    section.hidden = showRevenue || showInvoice || showPrices;
+    section.hidden = showRevenue || showInvoice || showExpenses || showPrices;
   });
   $("crmRevenueView").hidden = !showRevenue;
   $("crmInvoiceView").hidden = !showInvoice;
+  $("crmExpensesView").hidden = !showExpenses;
   $("crmPriceView").hidden = !showPrices;
   document.querySelectorAll("[data-crm-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.crmView === view);
   });
   if (showInvoice) renderInvoiceView();
+  if (showExpenses) renderFileExpenses();
   if (showPrices) renderPriceDatabase();
 }
 
@@ -2905,6 +3178,11 @@ $("crmDeleteFile").addEventListener("click", deleteActiveFile);
 $("crmOpenEstimate").addEventListener("click", () => showEstimateChoiceDialog(""));
 $("crmOpenAssignment").addEventListener("click", () => openActiveEstimate("#assignment"));
 $("crmOpenInvoice").addEventListener("click", openActiveInvoice);
+$("crmOpenExpenses").addEventListener("click", () => {
+  refreshCrmFilesFromStorage();
+  saveActiveFile();
+  switchCrmView("expenses");
+});
 $("crmEstimateChoiceClose").addEventListener("click", closeEstimateChoiceDialog);
 $("crmEstimateChoiceModal").addEventListener("click", (event) => {
   if (event.target.id === "crmEstimateChoiceModal") closeEstimateChoiceDialog();
@@ -2923,9 +3201,15 @@ document.addEventListener("keydown", (event) => {
 });
 $("crmImportRevenue").addEventListener("click", importRevenueRows);
 $("crmAddRevenueRow").addEventListener("click", addRevenueRow);
+$("crmUpdateRevenue").addEventListener("click", updateRevenueRows);
 $("crmRevenueDateSort").addEventListener("change", (event) => {
   crmRevenueDateSort = event.target.value;
   renderRevenue();
+});
+$("crmAddFileExpense").addEventListener("click", addFileExpenseLine);
+$("crmReceiptUpload").addEventListener("change", (event) => {
+  attachReceiptToFileExpense(event.target.files[0]);
+  event.target.value = "";
 });
 $("crmUploadEstimateFile").addEventListener("click", () => $("crmEstimateFileUpload").click());
 $("crmEstimateFileUpload").addEventListener("change", (event) => {
@@ -2941,6 +3225,9 @@ document.querySelectorAll("[data-crm-view]").forEach((button) => {
 });
 document.querySelectorAll("[data-reset-page]").forEach((button) => {
   button.addEventListener("click", () => window.location.reload());
+});
+window.addEventListener("focus", () => {
+  if (refreshCrmFilesFromStorage()) renderCrm();
 });
 
 $("crmFileStatus").addEventListener("change", () => {

@@ -1618,6 +1618,54 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   padding: 10px;
 }
 
+.crm-attention-panel {
+  border: 1px solid rgba(13, 74, 145, 0.13);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 14px 34px rgba(32, 33, 36, 0.08);
+  padding: 16px;
+}
+
+.crm-attention-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-attention-card {
+  display: grid;
+  min-height: 82px;
+  align-content: center;
+  justify-items: start;
+  gap: 8px;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--ink);
+  padding: 14px;
+  text-align: left;
+  box-shadow: none;
+}
+
+.crm-attention-card:hover,
+.crm-attention-card.active {
+  border-color: rgba(13, 74, 145, 0.38);
+  background: #ffffff;
+}
+
+.crm-attention-card span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.crm-attention-card strong {
+  color: var(--blue);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
 .crm-revenue-hero {
   display: grid;
   grid-template-columns: minmax(240px, 1fr);
@@ -1877,6 +1925,27 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   gap: 10px;
 }
 
+.crm-alert-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.crm-alert-grid button {
+  min-height: 42px;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--blue);
+  box-shadow: none;
+  font-weight: 900;
+}
+
+.crm-alert-grid button:hover {
+  border-color: rgba(13, 74, 145, 0.34);
+  background: #ffffff;
+}
+
 .crm-money-grid div {
   border: 1px solid #d7dce5;
   border-radius: 8px;
@@ -1985,6 +2054,81 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 .crm-revenue-view[hidden],
 .crm-dashboard-view[hidden] {
   display: none !important;
+}
+
+.crm-expenses-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+}
+
+.crm-expense-table-wrap {
+  overflow-x: auto;
+}
+
+.crm-expense-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.crm-expense-table th,
+.crm-expense-table td {
+  border-bottom: 1px solid #e4e8ef;
+  padding: 10px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.crm-expense-table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.crm-expense-table th:nth-child(1),
+.crm-expense-table td:nth-child(1) {
+  width: 145px;
+}
+
+.crm-expense-table th:nth-child(2),
+.crm-expense-table td:nth-child(2) {
+  width: 150px;
+}
+
+.crm-expense-table th:nth-child(5),
+.crm-expense-table td:nth-child(5) {
+  width: 130px;
+}
+
+.crm-expense-table th:nth-child(6),
+.crm-expense-table td:nth-child(6),
+.crm-expense-table th:nth-child(7),
+.crm-expense-table td:nth-child(7) {
+  width: 92px;
+}
+
+.crm-receipt-upload {
+  cursor: pointer;
+}
+
+.crm-receipt-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.crm-receipt-preview img {
+  width: 100%;
+  max-height: 360px;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  object-fit: contain;
+  background: #f8fafc;
+}
+
+.crm-receipt-preview p,
+.crm-muted {
+  color: var(--muted);
+  font-weight: 800;
 }
 
 .crm-revenue-hero {
@@ -2628,7 +2772,10 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 
 .crm-revenue-editor input,
 .crm-revenue-editor textarea,
-.crm-add-expense input {
+.crm-add-expense input,
+.crm-add-expense select,
+.crm-expense-line input,
+.crm-expense-line select {
   width: 100%;
   border: 1px solid #d5dbe6;
   border-radius: 8px;
@@ -2649,7 +2796,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 
 .crm-add-expense {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 110px;
+  grid-template-columns: 130px minmax(0, 1fr) 110px;
   gap: 10px;
   align-items: end;
   border: 1px solid #d7dce5;
@@ -2660,6 +2807,43 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 
 .crm-add-expense button {
   grid-column: 1 / -1;
+  min-height: 38px;
+  box-shadow: none;
+}
+
+.crm-expense-lines {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #d7dce5;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.crm-expense-lines-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.crm-expense-lines-heading strong {
+  color: var(--blue);
+  font-size: 0.92rem;
+}
+
+.crm-expense-line {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 100px auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.crm-expense-line button {
   min-height: 38px;
   box-shadow: none;
 }
@@ -2810,6 +2994,10 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .crm-attention-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .crm-file-list {
     max-height: none;
   }
@@ -2838,7 +3026,14 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   }
 
   .crm-command-grid,
-  .crm-money-grid {
+  .crm-money-grid,
+  .crm-alert-grid,
+  .crm-attention-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .crm-add-expense,
+  .crm-expense-line {
     grid-template-columns: 1fr;
   }
 }
