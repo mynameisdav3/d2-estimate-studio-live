@@ -11,6 +11,7 @@ const CRM_STORAGE_BACKUP_KEY = "d2CrmDemoFilesBackup";
 const CRM_REVENUE_BACKUP_KEY = "d2CrmRevenueRowsBackup";
 const CRM_REVENUE_DELETED_KEY = "d2CrmRevenueDeletedIds";
 const CRM_PRICE_BACKUP_KEY = "d2PriceDatabaseBackup";
+const CRM_RECEIPT_DRAFT_KEY = "d2ReceiptScannerDraft";
 const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
 const GOOGLE_SCRIPT_URL_STORAGE_KEY = "d2GoogleScriptUrl";
 const NOTE_EDIT_WINDOW_MS = 12 * 60 * 60 * 1000;
@@ -104,6 +105,7 @@ let crmRevenueDateSort = "newest";
 let crmPriceRows = loadPriceRows();
 let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
+let receiptDraft = loadReceiptDraft();
 let pendingEstimateUploadFileId = "";
 let openEstimateAfterUpload = false;
 let estimateChoiceTarget = "";
@@ -2602,6 +2604,213 @@ function deletePriceLine(id) {
   renderPriceDatabase();
 }
 
+function blankReceiptLine() {
+  return {
+    id: makeCrmId("receipt"),
+    use: true,
+    product: "",
+    price: "",
+    unit: "each",
+    category: "",
+  };
+}
+
+function loadReceiptDraft() {
+  try {
+    const saved = localStorage.getItem(CRM_RECEIPT_DRAFT_KEY);
+    const draft = saved ? JSON.parse(saved) : null;
+    if (!draft || typeof draft !== "object") throw new Error("No draft");
+    return {
+      vendor: draft.vendor || "",
+      date: draft.date || todayIso(0),
+      category: draft.category || "Supplies",
+      image: draft.image || "",
+      lines: Array.isArray(draft.lines) && draft.lines.length ? draft.lines : [blankReceiptLine()],
+    };
+  } catch (error) {
+    return {
+      vendor: "",
+      date: todayIso(0),
+      category: "Supplies",
+      image: "",
+      lines: [blankReceiptLine()],
+    };
+  }
+}
+
+function saveReceiptDraft() {
+  try {
+    localStorage.setItem(CRM_RECEIPT_DRAFT_KEY, JSON.stringify(receiptDraft));
+  } catch (error) {
+    // Receipt images can be too large for local storage; the visible form still works.
+  }
+}
+
+function captureReceiptDraftFields() {
+  if ($("crmReceiptVendor")) receiptDraft.vendor = $("crmReceiptVendor").value.trim();
+  if ($("crmReceiptDate")) receiptDraft.date = $("crmReceiptDate").value || todayIso(0);
+  if ($("crmReceiptCategory")) receiptDraft.category = $("crmReceiptCategory").value || "Supplies";
+  document.querySelectorAll("[data-receipt-line]").forEach((row) => {
+    const line = receiptDraft.lines.find((entry) => entry.id === row.dataset.receiptLine);
+    if (!line) return;
+    line.use = Boolean(row.querySelector("[data-receipt-field='use']")?.checked);
+    line.product = row.querySelector("[data-receipt-field='product']")?.value.trim() || "";
+    line.price = row.querySelector("[data-receipt-field='price']")?.value || "";
+    line.unit = row.querySelector("[data-receipt-field='unit']")?.value.trim() || "each";
+    line.category = row.querySelector("[data-receipt-field='category']")?.value.trim() || receiptDraft.category || "Supplies";
+  });
+  saveReceiptDraft();
+}
+
+function renderReceiptScanner() {
+  if (!$("crmReceiptRows")) return;
+  $("crmReceiptVendor").value = receiptDraft.vendor || "";
+  $("crmReceiptDate").value = receiptDraft.date || todayIso(0);
+  $("crmReceiptCategory").value = receiptDraft.category || "Supplies";
+  $("crmPriceReceiptPreview").innerHTML = receiptDraft.image
+    ? `<img src="${receiptDraft.image}" alt="Uploaded receipt">`
+    : `<p>No receipt uploaded yet.</p>`;
+  $("crmReceiptRows").innerHTML = (receiptDraft.lines.length ? receiptDraft.lines : [blankReceiptLine()])
+    .map((line) => `
+      <tr data-receipt-line="${escapeHtml(line.id)}">
+        <td><input data-receipt-field="use" type="checkbox" ${line.use !== false ? "checked" : ""} aria-label="Use this receipt line"></td>
+        <td><input data-receipt-field="product" value="${escapeHtml(line.product)}" placeholder="Item name"></td>
+        <td><input data-receipt-field="price" type="number" min="0" step="0.01" value="${escapeHtml(line.price)}" placeholder="0.00"></td>
+        <td><input data-receipt-field="unit" value="${escapeHtml(line.unit || "each")}" placeholder="each"></td>
+        <td><input data-receipt-field="category" value="${escapeHtml(line.category || receiptDraft.category || "Supplies")}" placeholder="Supplies"></td>
+        <td><button type="button" data-receipt-delete="${escapeHtml(line.id)}">Delete</button></td>
+      </tr>
+    `).join("");
+  document.querySelectorAll("[data-receipt-field]").forEach((field) => {
+    field.addEventListener("input", captureReceiptDraftFields);
+    field.addEventListener("change", captureReceiptDraftFields);
+  });
+  document.querySelectorAll("[data-receipt-delete]").forEach((button) => {
+    button.addEventListener("click", () => deleteReceiptLine(button.dataset.receiptDelete));
+  });
+}
+
+function addReceiptLine(line = {}) {
+  captureReceiptDraftFields();
+  receiptDraft.lines.push({
+    ...blankReceiptLine(),
+    ...line,
+    id: line.id || makeCrmId("receipt"),
+  });
+  saveReceiptDraft();
+  renderReceiptScanner();
+}
+
+function deleteReceiptLine(id) {
+  captureReceiptDraftFields();
+  receiptDraft.lines = receiptDraft.lines.filter((line) => line.id !== id);
+  if (!receiptDraft.lines.length) receiptDraft.lines.push(blankReceiptLine());
+  saveReceiptDraft();
+  renderReceiptScanner();
+}
+
+function clearReceiptScanner() {
+  const confirmed = window.confirm("Clear the current receipt draft?");
+  if (!confirmed) return;
+  receiptDraft = {
+    vendor: "",
+    date: todayIso(0),
+    category: "Supplies",
+    image: "",
+    lines: [blankReceiptLine()],
+  };
+  localStorage.removeItem(CRM_RECEIPT_DRAFT_KEY);
+  if ($("crmReceiptPaste")) $("crmReceiptPaste").value = "";
+  renderReceiptScanner();
+}
+
+function uploadReceiptForPrices(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    captureReceiptDraftFields();
+    receiptDraft.image = reader.result;
+    saveReceiptDraft();
+    renderReceiptScanner();
+  };
+  reader.readAsDataURL(file);
+}
+
+function parseReceiptPaste() {
+  const text = $("crmReceiptPaste").value.trim();
+  if (!text) return;
+  captureReceiptDraftFields();
+  const parsed = text.split(/\n+/)
+    .map((rawLine) => rawLine.trim())
+    .filter(Boolean)
+    .map((rawLine) => {
+      const amountMatch = rawLine.match(/(-?\$?\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*$/);
+      const price = amountMatch ? parseMoney(amountMatch[1]) : 0;
+      const product = amountMatch ? rawLine.slice(0, amountMatch.index).replace(/[-:$\s]+$/g, "").trim() : rawLine;
+      return {
+        id: makeCrmId("receipt"),
+        use: true,
+        product,
+        price: price ? String(price) : "",
+        unit: "each",
+        category: receiptDraft.category || "Supplies",
+      };
+    });
+  if (!parsed.length) return;
+  receiptDraft.lines = parsed;
+  saveReceiptDraft();
+  renderReceiptScanner();
+}
+
+function normalizeReceiptProduct(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ");
+}
+
+function updatePriceDatabaseFromReceipt() {
+  captureReceiptDraftFields();
+  const usableLines = receiptDraft.lines
+    .filter((line) => line.use !== false && line.product && parseMoney(line.price) > 0);
+  if (!usableLines.length) {
+    window.alert("Add at least one checked receipt line with an item name and price.");
+    return;
+  }
+  const today = receiptDraft.date || todayIso(0);
+  let updatedCount = 0;
+  let addedCount = 0;
+  usableLines.forEach((line) => {
+    const productKey = normalizeReceiptProduct(line.product);
+    const existing = priceDatabaseRows().find((row) => normalizeReceiptProduct(row.product || row.name) === productKey);
+    const price = parseMoney(line.price);
+    const updated = {
+      ...(existing && !existing.readonly ? existing : {}),
+      id: existing?.readonly ? `custom-${makeCrmId("price")}` : (existing?.id || `custom-${makeCrmId("price")}`),
+      sourceId: existing?.readonly ? existing.id : existing?.sourceId,
+      product: line.product,
+      name: line.product,
+      category: line.category || receiptDraft.category || existing?.category || "Supplies",
+      unit: line.unit || existing?.unit || "each",
+      vendor: receiptDraft.vendor || existing?.vendor || existing?.source || "",
+      source: receiptDraft.vendor || existing?.vendor || existing?.source || "",
+      priceLow: price,
+      priceHigh: price,
+      defaultPrice: price,
+      lastChecked: today,
+    };
+    const index = crmPriceRows.findIndex((row) => row.id === updated.id);
+    if (index >= 0) {
+      crmPriceRows[index] = updated;
+      updatedCount += 1;
+    } else {
+      crmPriceRows.unshift(updated);
+      if (existing) updatedCount += 1;
+      else addedCount += 1;
+    }
+  });
+  savePriceRows();
+  renderPriceDatabase();
+  $("crmReceiptStatus").textContent = `${updatedCount} updated, ${addedCount} added to the Price Database.`;
+}
+
 function invoiceLineItemsFromEstimate(file) {
   const items = Array.isArray(file?.editableEstimate?.lineItems) ? file.editableEstimate.lineItems : [];
   const rows = items
@@ -3096,19 +3305,22 @@ function switchCrmView(view) {
   const showRevenue = view === "revenue";
   const showInvoice = view === "invoice";
   const showExpenses = view === "expenses";
+  const showReceipts = view === "receipts";
   const showPrices = view === "prices";
   document.querySelectorAll(".crm-dashboard-view").forEach((section) => {
-    section.hidden = showRevenue || showInvoice || showExpenses || showPrices;
+    section.hidden = showRevenue || showInvoice || showExpenses || showReceipts || showPrices;
   });
   $("crmRevenueView").hidden = !showRevenue;
   $("crmInvoiceView").hidden = !showInvoice;
   $("crmExpensesView").hidden = !showExpenses;
+  $("crmReceiptView").hidden = !showReceipts;
   $("crmPriceView").hidden = !showPrices;
   document.querySelectorAll("[data-crm-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.crmView === view);
   });
   if (showInvoice) renderInvoiceView();
   if (showExpenses) renderFileExpenses();
+  if (showReceipts) renderReceiptScanner();
   if (showPrices) renderPriceDatabase();
 }
 
@@ -3146,6 +3358,18 @@ $("crmSaveMaterialAmount").addEventListener("click", saveMaterialAmountEdit);
 $("crmAddPriceLine").addEventListener("click", addPriceLine);
 $("crmPriceSearch").addEventListener("input", renderPriceDatabase);
 $("crmPriceSort").addEventListener("change", renderPriceDatabase);
+$("crmReceiptAddLine").addEventListener("click", () => addReceiptLine());
+$("crmReceiptUpdatePrices").addEventListener("click", updatePriceDatabaseFromReceipt);
+$("crmReceiptClear").addEventListener("click", clearReceiptScanner);
+$("crmReceiptParsePaste").addEventListener("click", parseReceiptPaste);
+$("crmPriceReceiptUpload").addEventListener("change", (event) => {
+  uploadReceiptForPrices(event.target.files[0]);
+  event.target.value = "";
+});
+["crmReceiptVendor", "crmReceiptDate", "crmReceiptCategory"].forEach((id) => {
+  $(id).addEventListener("input", captureReceiptDraftFields);
+  $(id).addEventListener("change", captureReceiptDraftFields);
+});
 $("crmTogglePaidStamp").addEventListener("click", togglePaidStamp);
 $("crmSaveInvoiceStatus").addEventListener("click", saveInvoiceStatus);
 $("crmSaveInvoicePdf").addEventListener("click", () => {

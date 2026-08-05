@@ -30,6 +30,7 @@
         <button type="button" class="icon-button active" data-crm-view="dashboard">Dashboard</button>
         <button type="button" class="icon-button" data-crm-view="revenue">Revenue</button>
         <button type="button" class="icon-button" data-crm-view="expenses">Expenses</button>
+        <button type="button" class="icon-button" data-crm-view="receipts">Receipts</button>
         <button type="button" class="icon-button" data-crm-view="prices">Price Database</button>
         <a class="icon-button" href="index.html">Estimator</a>
         <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
@@ -528,6 +529,87 @@
           </section>
         </section>
 
+        <section class="crm-revenue-view" id="crmReceiptView" hidden>
+          <section class="crm-command-panel crm-revenue-hero">
+            <div class="crm-command-copy">
+              <h2>Receipt Scanner</h2>
+              <p>Upload a receipt, review the lines, then update the Price Database when everything looks right.</p>
+            </div>
+            <div class="crm-invoice-controls">
+              <label class="icon-button primary-action crm-receipt-upload">
+                Upload Receipt
+                <input id="crmPriceReceiptUpload" type="file" accept="image/*" capture="environment" hidden>
+              </label>
+              <button type="button" id="crmReceiptAddLine">Add Item Line</button>
+              <button type="button" id="crmReceiptUpdatePrices">Update Price Database</button>
+            </div>
+          </section>
+
+          <section class="crm-layout crm-receipt-layout">
+            <section class="panel crm-detail-card">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">Receipt Details</p>
+                  <h2>Review before saving</h2>
+                </div>
+                <button type="button" id="crmReceiptClear">Clear Receipt</button>
+              </div>
+              <div class="field-grid three">
+                <label>
+                  Vendor / Store
+                  <input id="crmReceiptVendor" placeholder="Home Depot, IMECA, Amazon">
+                </label>
+                <label>
+                  Receipt Date
+                  <input id="crmReceiptDate" type="date">
+                </label>
+                <label>
+                  Default Category
+                  <select id="crmReceiptCategory">
+                    <option>Supplies</option>
+                    <option>Hardware</option>
+                    <option>Plywood</option>
+                    <option>Finishing</option>
+                    <option>Equipment</option>
+                    <option>Other</option>
+                  </select>
+                </label>
+              </div>
+              <div class="crm-receipt-table-wrap">
+                <table class="crm-receipt-table">
+                  <thead>
+                    <tr>
+                      <th>Use</th>
+                      <th>Item Name</th>
+                      <th>Price</th>
+                      <th>Unit</th>
+                      <th>Category</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="crmReceiptRows"></tbody>
+                </table>
+              </div>
+              <p class="crm-helper-text" id="crmReceiptStatus">Add the receipt items you want tracked. Existing matching items will be updated instead of duplicated.</p>
+            </section>
+
+            <aside class="panel crm-detail-card">
+              <div class="panel-header">
+                <h2>Receipt Photo</h2>
+              </div>
+              <div id="crmPriceReceiptPreview" class="crm-receipt-preview">
+                <p>No receipt uploaded yet.</p>
+              </div>
+              <label>
+                Quick Paste
+                <textarea id="crmReceiptPaste" rows="8" placeholder="Paste lines like:&#10;Paint brush 13.47&#10;Sandpaper 8.98"></textarea>
+              </label>
+              <button type="button" id="crmReceiptParsePaste">Turn Paste Into Lines</button>
+              <p class="crm-helper-text">Automatic reading from the photo is not connected yet. This gives us the receipt workflow now, and OCR can be plugged in later.</p>
+            </aside>
+          </section>
+        </section>
+
         <section class="crm-revenue-view" id="crmPriceView" hidden>
           <section class="crm-command-panel crm-revenue-hero">
             <div class="crm-command-copy">
@@ -614,6 +696,6 @@
         caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
       }
     </script>
-    <script src="crm.js?v=20260804-revenue-delete-fix"></script>
+    <script src="crm.js?v=20260804-receipt-scanner"></script>
   </body>
 </html>

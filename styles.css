@@ -2060,7 +2060,16 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
 }
 
+.crm-receipt-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+}
+
 .crm-expense-table-wrap {
+  overflow-x: auto;
+}
+
+.crm-receipt-table-wrap {
+  margin-top: 16px;
   overflow-x: auto;
 }
 
@@ -2070,19 +2079,60 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   min-width: 900px;
 }
 
+.crm-receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+}
+
 .crm-expense-table th,
-.crm-expense-table td {
+.crm-expense-table td,
+.crm-receipt-table th,
+.crm-receipt-table td {
   border-bottom: 1px solid #e4e8ef;
   padding: 10px 8px;
   text-align: left;
   vertical-align: top;
 }
 
-.crm-expense-table th {
+.crm-expense-table th,
+.crm-receipt-table th {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.crm-receipt-table th:nth-child(1),
+.crm-receipt-table td:nth-child(1) {
+  width: 54px;
+  text-align: center;
+}
+
+.crm-receipt-table th:nth-child(3),
+.crm-receipt-table td:nth-child(3) {
+  width: 130px;
+}
+
+.crm-receipt-table th:nth-child(4),
+.crm-receipt-table td:nth-child(4),
+.crm-receipt-table th:nth-child(5),
+.crm-receipt-table td:nth-child(5) {
+  width: 150px;
+}
+
+.crm-receipt-table th:nth-child(6),
+.crm-receipt-table td:nth-child(6) {
+  width: 92px;
+}
+
+.crm-receipt-table input {
+  width: 100%;
+}
+
+.crm-receipt-table input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
 }
 
 .crm-expense-table th:nth-child(1),
