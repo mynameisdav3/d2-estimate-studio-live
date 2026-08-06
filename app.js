@@ -1379,6 +1379,12 @@ function setPaymentInvoiceStatus() {
   status.textContent = "Payment invoice is ready below.";
 }
 
+function setSubmitStatus(message) {
+  const status = $("submitStatus");
+  if (!status) return;
+  status.textContent = message;
+}
+
 function generatePaymentInvoice() {
   ensureEstimateNumber();
   updatePreview();
@@ -1685,11 +1691,39 @@ function printHtmlDocument(html) {
 }
 
 function getJsPdf() {
-  return window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : null;
+  const root = window.jspdf || globalThis.jspdf || self.jspdf;
+  return root && root.jsPDF ? root.jsPDF : null;
 }
 
 function getHtml2Canvas() {
-  return window.html2canvas || null;
+  return window.html2canvas || globalThis.html2canvas || self.html2canvas || null;
+}
+
+function loadPdfScript(src, globalCheck) {
+  return new Promise((resolve, reject) => {
+    if (globalCheck()) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `${src}${src.includes("?") ? "&" : "?"}reload=${Date.now()}`;
+    script.onload = () => {
+      if (globalCheck()) resolve();
+      else reject(new Error(`${src} loaded but was not available.`));
+    };
+    script.onerror = () => reject(new Error(`${src} could not be loaded.`));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensurePdfLibraries() {
+  if (!getJsPdf()) {
+    await loadPdfScript("vendor/jspdf.umd.min.js", () => Boolean(getJsPdf()));
+  }
+  if (!getHtml2Canvas()) {
+    await loadPdfScript("vendor/html2canvas.min.js", () => Boolean(getHtml2Canvas()));
+  }
+  return Boolean(getJsPdf() && getHtml2Canvas());
 }
 
 function getPdfFileName(label) {
@@ -1793,11 +1827,12 @@ async function createPdfRenderClone(sourceElement) {
 }
 
 async function generateVisualPdfFromHtml(html, fileName, sourceSelector) {
+  await ensurePdfLibraries().catch(() => {});
   const JsPdf = getJsPdf();
   const html2canvas = getHtml2Canvas();
   if (!JsPdf || !html2canvas) {
     printHtmlDocument(html);
-    return;
+    return false;
   }
 
   const { host, source } = await createPdfRenderHost(html, sourceSelector);
@@ -1857,18 +1892,20 @@ async function generateVisualPdfFromHtml(html, fileName, sourceSelector) {
     }
 
     doc.save(fileName);
+    return true;
   } finally {
     host.remove();
   }
 }
 
 async function generateVisualPdfFromElement(sourceElement, fileName) {
+  await ensurePdfLibraries().catch(() => {});
   const JsPdf = getJsPdf();
   const html2canvas = getHtml2Canvas();
   if (!JsPdf || !html2canvas) {
     const label = COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer";
     printHtmlDocument(buildEstimateHtmlCopy(label));
-    return;
+    return false;
   }
 
   const { host, source } = await createPdfRenderClone(sourceElement);
@@ -1905,6 +1942,7 @@ async function generateVisualPdfFromElement(sourceElement, fileName) {
     });
 
     doc.save(fileName);
+    return true;
   } finally {
     host.remove();
   }
@@ -2057,7 +2095,7 @@ function addPdfPhotos(doc, photos, startY, title) {
 async function generateEstimatePdf() {
   ensureEstimateNumber();
   updatePreview();
-  await generateVisualPdfFromElement($("estimateSheet"), getPdfFileName("Estimate"));
+  return generateVisualPdfFromElement($("estimateSheet"), getPdfFileName("Estimate"));
 }
 
 async function generateAssignmentPdf() {
@@ -2073,10 +2111,18 @@ async function generatePaymentPdf() {
   await generateVisualPdfFromHtml(buildPaymentInvoiceHtml(), getPdfFileName("Payment Invoice"), ".invoice-sheet");
 }
 
-function printEstimateCopy() {
+async function printEstimateCopy() {
   ensureEstimateNumber();
   updatePreview();
-  printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
+  setSubmitStatus("Creating estimate PDF...");
+  try {
+    const saved = await generateEstimatePdf();
+    setSubmitStatus(saved ? "Estimate PDF created." : "PDF generator unavailable. Browser print opened instead.");
+  } catch (error) {
+    console.warn("Estimate PDF generator failed; using browser print fallback.", error);
+    setSubmitStatus("PDF generator hit a snag. Browser print opened instead.");
+    printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
+  }
 }
 
 function serializeEstimate() {
@@ -2620,7 +2666,7 @@ async function startNewEstimate() {
   if (!saveFirst) return;
 
   saveEstimate({ silent: true });
-  printEstimateCopy();
+  await printEstimateCopy();
   const openAfterSave = window.confirm("After saving/printing the PDF, open a fresh estimate in a new window?");
   if (openAfterSave) {
     openFreshEstimateWindow();
@@ -2823,7 +2869,7 @@ $("submitEstimate").addEventListener("click", () => submitEstimateToGoogle().cat
 $("generatePaymentInvoice").addEventListener("click", () => generatePaymentInvoice());
 $("generateAssignmentSheet").addEventListener("click", () => generateAssignmentSheet());
 $("generateEstimate").addEventListener("click", () => generateEstimatePreview());
-$("printEstimate").addEventListener("click", () => printEstimateCopy());
+$("printEstimate").addEventListener("click", () => runButtonAction(printEstimateCopy));
 $("toggleInvoicePaidStamp").addEventListener("click", toggleInvoicePaidStamp);
 $("invoicePaidCheckbox").addEventListener("change", (event) => setInvoicePaidStamp(event.target.checked));
 $("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
@@ -2845,7 +2891,7 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
     if (action === "payment") generatePaymentInvoice();
     if (action === "assignment") generateAssignmentSheet();
     if (action === "generate") generateEstimatePreview();
-    if (action === "print") printEstimateCopy();
+    if (action === "print") runButtonAction(printEstimateCopy);
   });
 });
 document.querySelectorAll("[data-reset-page]").forEach((button) => {

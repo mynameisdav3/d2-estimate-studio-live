@@ -1404,6 +1404,12 @@ function searchCrmFile() {
   renderCrm();
 }
 
+function initialDashboardView() {
+  const params = new URLSearchParams(window.location.search);
+  const view = String(params.get("view") || "").trim().toLowerCase();
+  return ["dashboard", "revenue", "expenses", "receipts", "prices", "invoice"].includes(view) ? view : "dashboard";
+}
+
 function applyInitialFileRoute() {
   const params = new URLSearchParams(window.location.search);
   const target = String(params.get("file") || params.get("lead") || params.get("project") || "").trim().toLowerCase();
@@ -3470,6 +3476,6 @@ document.querySelectorAll("input, select, textarea").forEach((element) => {
 });
 
 persistRestoredDashboardIfNeeded();
-switchCrmView("dashboard");
+switchCrmView(initialDashboardView());
 applyInitialFileRoute();
 renderCrm();

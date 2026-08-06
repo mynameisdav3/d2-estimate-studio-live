@@ -1,6 +1,1259 @@
 window.D2_DASHBOARD_RESTORE = {
   "files": [
     {
+      "id": "file-brian-whelk-26-a1001-current",
+      "fileNumber": "26-A1001-BRIAN",
+      "clientName": "Brian - Whelk",
+      "clientPhone": "(263) 030-6283",
+      "clientEmail": "N/A",
+      "projectAddress": "932 Whelk Dr, Sanibel, FL 33957",
+      "leadSource": "Repeat Customer",
+      "fileStatus": "In Progress",
+      "statusDetail": "Job Started",
+      "projectType": "Refinishing",
+      "estimateStatus": "Sent",
+      "estimateAmount": 32000,
+      "materialTotal": 0,
+      "pendingAmount": 32000,
+      "totalPaid": 0,
+      "initialDepositSecured": "No",
+      "initialDeposit": 0,
+      "midpointDepositSecured": "No",
+      "midpointDeposit": 0,
+      "finalPaymentSecured": "No",
+      "finalPayment": 0,
+      "contactEmailSent": "No",
+      "contactTextSent": "No",
+      "inspectionDateSet": "No",
+      "inspectionDate": "",
+      "inspectionTime": "",
+      "startDate": "",
+      "arrivalWindow": "Open",
+      "followUpDate": "",
+      "anticipatedCompletionDate": "",
+      "invoiceSent": "No",
+      "reviewRequested": "No",
+      "notes": [
+        {
+          "id": "note-brian-restore-1785894407643",
+          "text": "Restored Brian/Whelk current file from saved editable estimate after browser cache was cleared.",
+          "createdAt": "2026-08-05T01:46:47.636Z",
+          "updatedAt": "2026-08-05T01:46:47.636Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "timeline-brian-restore-1785894407643",
+          "at": "2026-08-05T01:46:47.636Z",
+          "text": "Brian/Whelk file restored from saved editable estimate."
+        }
+      ],
+      "editableEstimate": {
+        "fileType": "D2_ESTIMATE_EDITABLE",
+        "fileVersion": 1,
+        "lineItems": [
+          {
+            "type": "item",
+            "id": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "EXTERIOR WOOD PLANK STAIN AND SEALING",
+            "qty": 1,
+            "price": 3000
+          },
+          {
+            "type": "subline",
+            "id": "8f80c5ec-1715-4d96-a39e-fecbb11b4737",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Create workspace on first floor",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "01f832f5-f7de-41e8-8d97-cfc3e7966ec2",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Mask Floors and walls",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "d28ad990-c049-476f-a032-72914dcb4719",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Create drying station",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "94f17052-8175-4739-812c-6f0b7a0c3631",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Apply \"Weathered Oak\" Stain to planks (One Side)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "ef93c30a-3c48-4c7c-b357-fc8833848d8d",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Apply first coat of polyurethane- Old Masters Ascend Exterior Clear Finish ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "5aff2754-ff19-46c9-875a-f10dbed3efdb",
+            "parentId": "ef93c30a-3c48-4c7c-b357-fc8833848d8d",
+            "type": "subline",
+            "name": "This product produces a low sheen with high UV protection without yellowing/ambering over time",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "e2b7cfe9-9ae5-490a-aaf0-bfddf1004ba9",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Scuff sand finished panels",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "bdac7b6d-9279-4868-bfca-9bdf09b8d9ed",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Apply polyurethane to backside- Old Masters Ascend Exterior Clear Finish (non-ambering) ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "a25826a8-c41a-4ab5-a94c-a148d1bacd66",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Apply second coat of polyurethane- Old Masters Ascend Exterior Clear Finish (non-ambering) ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "414aa183-8a4d-457a-bb77-174a24841142",
+            "parentId": "c8050a6d-5c9f-43e8-a105-32ca9d53d2ca",
+            "name": "Inspection finish to wet sand as needed",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "item",
+            "id": "9c423a38-c408-4d1c-a3e7-a2cf65d7f6ca",
+            "name": "PAINT LIVING ROOM \"NICKLE GAP\" CEILING PLANKS AND COLUMNS",
+            "qty": 1,
+            "price": 3000
+          },
+          {
+            "type": "subline",
+            "id": "f0706adf-7a41-411b-ac93-172d4fdeccb3",
+            "parentId": "9c423a38-c408-4d1c-a3e7-a2cf65d7f6ca",
+            "name": "Fill all nail holes and imperfections",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "0a228d34-03e0-4d58-b5d2-4e9a9586d831",
+            "parentId": "9c423a38-c408-4d1c-a3e7-a2cf65d7f6ca",
+            "name": "Sand filler and repair areas to prep for painting",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "2861026c-7380-4d44-bb2f-91805f8cc83b",
+            "parentId": "9c423a38-c408-4d1c-a3e7-a2cf65d7f6ca",
+            "name": "Apply 2 coats of paint (Sherwin Williams-Flat Sheen)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "item",
+            "id": "d24eb96b-92f1-47bc-aaba-6bb963cf94df",
+            "name": "PAINT MASTER BEDROOM \"NICKLE GAP\" PLANKS",
+            "qty": 1,
+            "price": 1500
+          },
+          {
+            "type": "subline",
+            "id": "240370ad-844a-4151-919a-022fdbf3211c",
+            "parentId": "d24eb96b-92f1-47bc-aaba-6bb963cf94df",
+            "name": "Fill all nail holes and imperfections",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "6eac7dd2-3400-4595-ad14-0639fbe79c3b",
+            "parentId": "d24eb96b-92f1-47bc-aaba-6bb963cf94df",
+            "name": "Sand filler and repair areas to prep for painting",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "cf6034f1-3ab8-4214-93cd-1a6648eef688",
+            "parentId": "d24eb96b-92f1-47bc-aaba-6bb963cf94df",
+            "name": "Apply 2 coats of paint (Sherwin Williams-Flat Sheen)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "item",
+            "id": "ab218415-6002-4757-9bed-3194ed9b7fff",
+            "name": "PAINT DOORS AND TRIM THROUGHOUT HOME",
+            "qty": 1,
+            "price": 6000
+          },
+          {
+            "type": "subline",
+            "id": "343322a6-4209-4db0-b192-6ed49594124e",
+            "parentId": "ab218415-6002-4757-9bed-3194ed9b7fff",
+            "name": "Fill all nail holes and imperfections",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "a206ff23-332e-49fa-a6de-40f35f7d0302",
+            "parentId": "ab218415-6002-4757-9bed-3194ed9b7fff",
+            "name": "Remove doors to fully paint in 1st floor painting zone",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "129df267-4c96-4f31-b779-8b4f10c5964c",
+            "parentId": "ab218415-6002-4757-9bed-3194ed9b7fff",
+            "name": "Reinstall after paint dries",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "fc1e402d-fd66-4722-a400-acb6681320e1",
+            "parentId": "ab218415-6002-4757-9bed-3194ed9b7fff",
+            "name": "Apply 2 coats of desired color and sheen paint (Renner Wood Coatings)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "1b66a5c4-c6fa-4b77-ac7c-8caa987af7cb",
+            "parentId": "ab218415-6002-4757-9bed-3194ed9b7fff",
+            "name": "Price includes wall trim in guest bedroom",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "34bd12db-45cb-4534-97d0-1aa5671305e0",
+            "parentId": "ab218415-6002-4757-9bed-3194ed9b7fff",
+            "name": "This process will take place once the majority of the work has been completed within the home to mitigate any damage by sub-contractors",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "item",
+            "id": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "STAIRCASE STAINING AND SEALING",
+            "qty": 1,
+            "price": 5000
+          },
+          {
+            "type": "subline",
+            "id": "22d3b817-b576-4989-87d9-6e20a7695a89",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Enclose work zone and surrounding areas as needed",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "795d591d-0999-4b6e-86f4-dcf495df6c87",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Apply plastic drops along all walls",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "f2c8ff8d-7aee-4841-b6d5-13723f35d682",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Apply construction floor covering to work zone",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "05012c9e-2a20-4111-a768-c3adb0145b1b",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Fill all nail holes on risers and hand rails",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "b8b4fd60-f99a-4c73-8dba-3319fdef957a",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Sand filled nailed holes",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "6ed04fbc-90c8-4bd3-819d-dd8f9ef92612",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Apply color matching stain to step planks and hand rails (Matching home flooring)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "76591024-3ce4-44e6-82b5-31966b2d0a05",
+            "parentId": "6ed04fbc-90c8-4bd3-819d-dd8f9ef92612",
+            "type": "subline",
+            "name": "A custom color match color-wash will be created and applied to match the prevailing floor plank color. ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "20931858-0cfb-4a79-aa36-9ab366a1e4c7",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Apply first layer of polyurethane - Bona Traffic HD-clear finish (Sheen currently unconfirmed)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "1c7257eb-e7fc-4b30-8359-2744d5ec0cd7",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Scuff Sand for adhesion",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "de3b9ccc-a152-40ba-b8cf-6c2000230d56",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Apply second layer of polyurethane- Bona Traffic HD-clear finish (Sheen currently unconfirmed)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "1dd6e128-b26b-482c-9903-c772b9ea4b65",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Apply third and final layer of polyurethane- Bona Traffic HD-clear finish (Sheen currently unconfirmed)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "36a695ad-e39f-40dd-a282-f081d72dc75f",
+            "parentId": "30f7a6ba-c5fc-428b-bb87-22b333da3906",
+            "name": "Wet sand final finish",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "item",
+            "id": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "MASTER CLOSET",
+            "qty": 1,
+            "price": 8500
+          },
+          {
+            "type": "subline",
+            "id": "389040d1-c76f-4d50-8d2f-97ec2c0e5c96",
+            "parentId": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "Create structured layout agreed with owner (Will review final layout with owner thru video)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "55ba91f1-a121-49ff-b799-c3af31de119b",
+            "parentId": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "Structure will be created utilizing 3/4 inch birchwood - Sanded/Paint ready- (Back panels will enclose the backside of the structures)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "3140201c-2233-4642-b89f-e483140c1f9e",
+            "parentId": "55ba91f1-a121-49ff-b799-c3af31de119b",
+            "type": "subline",
+            "name": "Face frames will be add to all edges (Poplar)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "2bbbb7fd-98c9-417a-9fd3-3a4d31d48426",
+            "parentId": "3140201c-2233-4642-b89f-e483140c1f9e",
+            "type": "subline",
+            "name": "This allows for an overall, more refined appearance, which hides the raw edges of the birchwood and creates a gapless/seamless transition between sections. The face frames will be 1 1/2 inches wide.",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "f7d329f9-e834-4c71-bb51-93f6daa4fef3",
+            "parentId": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "Apply primer-Zinsser B-I-N Shellac-Based",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "0b930b65-f31e-4f2d-b9e1-0fd00c6a5c66",
+            "parentId": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "Sand Primer",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "487bafa2-212d-4891-93ff-775c11286cfd",
+            "parentId": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "Apply 2 coats of Renner Wood Coatings (Cabinet Grade Paint/Finish) - White",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "13d34b43-9cef-4afa-8b57-e901edb7e20c",
+            "parentId": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "Sand between coats and wet sand final finish as needed",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "74c91cde-3e95-42f4-a5ae-b8184a501304",
+            "parentId": "bbb627c7-9c47-4715-9f9f-ab6a36ed0011",
+            "name": "* Price includes all hardware per agreed upon design and layout *",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "item",
+            "id": "c99942b8-ebb3-4e9a-8682-c76fb17222d2",
+            "name": "GUEST CLOSET - 1 - LAYOUT CONFIRMED (Sun dress section with 2 clothing rod sections above each other, adjustable shelf above sun dress section)",
+            "qty": 1,
+            "price": 2500
+          },
+          {
+            "type": "subline",
+            "id": "754f5647-90e2-48ba-9237-34488a3a3481",
+            "parentId": "c99942b8-ebb3-4e9a-8682-c76fb17222d2",
+            "name": "Structure will be created utilizing 3/4 inch birchwood (Back panels will enclose the backside of the structures)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "4c6f2718-4994-4afd-9198-c2e69a9192c4",
+            "parentId": "c99942b8-ebb3-4e9a-8682-c76fb17222d2",
+            "name": "Face frames will be add to all edges (Poplar)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "0185721d-a805-4c25-8635-b81e06d3ad66",
+            "parentId": "c99942b8-ebb3-4e9a-8682-c76fb17222d2",
+            "name": "Apply primer -Zinsser B-I-N Shellac-Based",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "52f7c068-4b0b-4960-bc48-1a9ff7924bc7",
+            "parentId": "c99942b8-ebb3-4e9a-8682-c76fb17222d2",
+            "name": "Sand Primer",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "bbbc03b4-a4e3-49fd-8131-83b289d7e3e6",
+            "parentId": "c99942b8-ebb3-4e9a-8682-c76fb17222d2",
+            "name": "Apply 2 coats of Renner Wood Coatings (Cabinet Grade Paint/Finish) - White",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "subline",
+            "id": "efb4d003-3828-4da1-9e08-a962f74e2581",
+            "parentId": "c99942b8-ebb3-4e9a-8682-c76fb17222d2",
+            "name": "Sand between coats and wet sand final finish as needed",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "type": "item",
+            "id": "aafa7e3d-2f6b-4abe-a68a-c69983aa6781",
+            "name": "GUEST CLOSET - 2 - LAYOUT CONFIRMED (Sun dress section with 2 clothing rod sections above each other, adjustable shelf above sun dress section)",
+            "qty": 1,
+            "price": 2500
+          },
+          {
+            "type": "subline",
+            "id": "92938b88-78c0-4f25-9ce3-dd5962959362",
+            "parentId": "aafa7e3d-2f6b-4abe-a68a-c69983aa6781",
+            "name": "Same procedures as Guest Room - 1",
+            "qty": 0,
+            "price": 0
+          }
+        ],
+        "materialItems": [
+          {
+            "id": "9fd092fd-31f6-4023-ac47-54a47c7118b3",
+            "name": "",
+            "qty": "",
+            "price": "",
+            "unit": ""
+          }
+        ],
+        "photos": [],
+        "assignmentPhotos": [],
+        "totals": {
+          "subtotal": 32000,
+          "discount": 0,
+          "tax": 0,
+          "total": 32000,
+          "deposit": 0,
+          "finishMultiplier": 1,
+          "hasFlatTotal": false,
+          "discountType": "dollar",
+          "discountValue": 0,
+          "depositRate": 0,
+          "lineSubtotal": 32000,
+          "showDiscount": false,
+          "showTax": false,
+          "showDeposit": false,
+          "showSubtotal": false
+        },
+        "backend": {
+          "estimatedMaterialCost": 0,
+          "fallbackMaterialCost": 8000,
+          "estimatedGrossProfit": 32000,
+          "materialPercent": 25
+        },
+        "dashboardFileId": "",
+        "submittedAt": "2026-07-24T01:40:05.200Z",
+        "companyName": "D2 Carpentry & Design",
+        "estimateTitle": "Estimate",
+        "companyPhone": "239-469-8555",
+        "companyEmail": "D2CarpentryandDesign@gmail.com",
+        "companyAddress": "2710 Del Prado Blvd S #2-184 Cape Coral, FL 33904",
+        "estimateNumber": "26-A1001",
+        "showEstimateNumber": false,
+        "estimateDate": "2026-07-14",
+        "leadSource": "Repeat Customer",
+        "fileStatus": "Inspection Completed",
+        "estimateStatus": "Sent",
+        "warrantyStatus": "Not Sent",
+        "inspectionDate": "",
+        "inspectionTime": "",
+        "nextActionDate": "",
+        "nextAction": "",
+        "clientName": "Whelk - Brian's Copy",
+        "clientPhone": "(263) 030-6283",
+        "clientEmail": "N/A",
+        "projectAddress": "932 Whelk Dr, Sanibel, FL 33957",
+        "projectType": "Refinishing",
+        "finishLevel": "",
+        "widthFeet": "",
+        "heightFeet": "",
+        "linearFeet": "",
+        "linearRate": "",
+        "squareLength": "",
+        "squareWidth": "",
+        "squareRate": "",
+        "flatTotal": "",
+        "discount": "",
+        "discountType": "dollar",
+        "taxRate": "",
+        "depositRate": "",
+        "invoiceInitialDeposit": "",
+        "invoiceSecondDeposit": "",
+        "invoiceFinalPayment": "",
+        "notes": "Thank you for the opportunity. ",
+        "additionalNotes": "",
+        "addFooterValueNote": false,
+        "assignmentLanguage": "en",
+        "assignmentStartDate": "",
+        "assignmentArrivalTime": "Open",
+        "assignmentScope": "",
+        "useSpanishScope": false,
+        "assignmentScopeSpanish": "",
+        "assignmentNotes": "",
+        "invoicePaid": false
+      }
+    },
+    {
+      "id": "file-norma-childs-26-a1001-closed-paid",
+      "fileNumber": "26-A1001-NORMA",
+      "clientName": "Norma Childs",
+      "clientPhone": "(239) 691-5447",
+      "clientEmail": "nrmchilds0308@outlook.com",
+      "projectAddress": "7125 Penner Ln, Fort Myers, FL 33907",
+      "leadSource": "Angi",
+      "fileStatus": "Closed / Paid",
+      "statusDetail": "Invoice Sent",
+      "projectType": "Refinishing",
+      "estimateStatus": "Approved",
+      "estimateAmount": 10839,
+      "materialTotal": 10739.41,
+      "pendingAmount": 0,
+      "totalPaid": 10839,
+      "initialDepositSecured": "Yes",
+      "initialDeposit": 10839,
+      "midpointDepositSecured": "No",
+      "midpointDeposit": 0,
+      "finalPaymentSecured": "Yes",
+      "finalPayment": 10839,
+      "contactEmailSent": "No",
+      "contactTextSent": "No",
+      "inspectionDateSet": "No",
+      "inspectionDate": "",
+      "inspectionTime": "",
+      "startDate": "",
+      "arrivalWindow": "Open",
+      "followUpDate": "",
+      "anticipatedCompletionDate": "",
+      "invoiceSent": "Yes",
+      "reviewRequested": "Yes",
+      "notes": [
+        {
+          "id": "note-1785894989231-11bb6dc5448d08",
+          "text": "Restored Norma Childs from saved editable estimate and marked closed/paid.",
+          "createdAt": "2026-08-05T01:56:29.221Z",
+          "updatedAt": "2026-08-05T01:56:29.221Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "timeline-1785894989231-528cb4498a1db",
+          "at": "2026-08-05T01:56:29.231Z",
+          "text": "Norma Childs file restored as closed/paid."
+        }
+      ],
+      "editableEstimate": {
+        "fileType": "D2_ESTIMATE_EDITABLE",
+        "fileVersion": 1,
+        "lineItems": [
+          {
+            "id": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "item",
+            "name": "Reface Kitchen Cabinets ",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "024f98ca-a0ef-4c4b-af35-2786aa303ea4",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Remove current doors and drawer faces",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "bec4a50d-4353-4a15-9b4c-0de57b15ed63",
+            "parentId": "024f98ca-a0ef-4c4b-af35-2786aa303ea4",
+            "type": "subline",
+            "name": "Mask and set aside appliances ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "59f6a233-6d07-40d9-89a4-6bca6bbd16f4",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Remove hardware ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "eb847ed6-79db-4b28-98e4-c617cc4d6b79",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Enclose kitchen and set up fume evacuation fans",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "8c629463-b538-4af5-8107-458614d9aafb",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Mask floors and walls",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "4b6479d3-bf28-4a89-b35f-622ff626b4b8",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Mask interior of boxes",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "fe29c292-de7d-4283-b968-4d4b28598554",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Apply cleaning agent to boxes",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "29a03dfe-d8e7-4841-a6bb-ed35d98c269e",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Sand box frames to scuff current surface",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "413da3d4-2340-4c1c-ae2c-028b98e9e749",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Fill wood grain as needed",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "1bd23655-751c-4e62-b37e-6eec8a5ab6f5",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Fill current hinge holes on box face frames",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "0516bb53-5c16-434f-a8b6-5ef756cf67dc",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Apply bonding primer ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "f664c6d0-9c17-43a0-9b3e-0bb4554bc44e",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Sand primer to level paint",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "0e6acccf-2116-4c0e-8a25-f37444a82488",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Apply Paint (2 coats)",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "b1fb58b0-cdbd-4e17-95bc-513aeda815b7",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Sand between coats",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "fa0422b5-a89c-4821-b32b-7132765e2472",
+            "parentId": "9cc101f9-fa43-4dd9-b860-3c3d08403bcd",
+            "type": "subline",
+            "name": "Final Wet-sand to achieve smooth finish",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "f33b80c7-6673-43ac-af3e-e6f5659be525",
+            "type": "item",
+            "name": "Create Shaker-style Doors and Drawers ",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "531bae7b-6239-4270-ad6b-951d6bda97c3",
+            "parentId": "f33b80c7-6673-43ac-af3e-e6f5659be525",
+            "type": "subline",
+            "name": "Doors and drawers will be constructed off-site",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "19821225-f618-429a-81d5-48dfb12d4276",
+            "parentId": "f33b80c7-6673-43ac-af3e-e6f5659be525",
+            "type": "subline",
+            "name": "Doors will be primed and painted off-site",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "de4eb59c-36dd-4d49-8919-482073c4e9c4",
+            "parentId": "f33b80c7-6673-43ac-af3e-e6f5659be525",
+            "type": "subline",
+            "name": "Install pull handles to doors and drawers ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "bdabfb76-3f33-49f5-867e-22e9f8e1c89e",
+            "type": "item",
+            "name": "Install new faces",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "3ca90835-b8c5-4e33-8843-52a8304f89d3",
+            "parentId": "bdabfb76-3f33-49f5-867e-22e9f8e1c89e",
+            "type": "subline",
+            "name": "New soft-close hinges will be installed",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "bdd74447-37fd-4060-ae05-8d4cae494f20",
+            "parentId": "bdabfb76-3f33-49f5-867e-22e9f8e1c89e",
+            "type": "subline",
+            "name": "Install new door bumpers",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "5adff13f-dc7a-4f2a-be7d-cc2620e054e2",
+            "type": "item",
+            "name": "Replace dishwasher with matching double door cabinet box",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "dcedeb7a-dd13-44d4-84c7-f19cd7b31c8e",
+            "type": "item",
+            "name": "Replace Lazy Susan rack",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "4f232551-7128-4493-809d-74130b630491",
+            "type": "item",
+            "name": "Install Pull-out trash bin ",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "item",
+            "name": "Misc. Repairs",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "580f02c0-5dda-4683-8097-7c8034f0bc82",
+            "parentId": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "subline",
+            "name": "Remove ceiling grid",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "32ec1028-69bb-42b7-9d1e-b03b19076a4c",
+            "parentId": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "subline",
+            "name": "Patch drywall holes",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "c5cda993-0a24-4dd8-8464-757b4f3747e6",
+            "parentId": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "subline",
+            "name": "Remove lights",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "4c133741-f9e4-48c4-b0ea-6cc326f298ca",
+            "parentId": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "subline",
+            "name": "Attempt to hide current wiring for new light ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "aa453917-38aa-44a0-b284-56506b2ab6cc",
+            "parentId": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "subline",
+            "name": "Install new light fixture (LED 2x4ft) Will confirm look and function with owners ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "15a721d5-bee4-4ace-bf74-029c4a87b3f3",
+            "parentId": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "subline",
+            "name": "Paint entire ceiling flat white ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "08f3904c-5efa-4712-8ce2-40c85ef64e25",
+            "parentId": "5b46c108-69ec-4ae5-bed0-941ecf996d14",
+            "type": "subline",
+            "name": "Repair floor under sink",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "a7dab587-0010-4425-8a0e-90d8506499b3",
+            "parentId": "08f3904c-5efa-4712-8ce2-40c85ef64e25",
+            "type": "subline",
+            "name": "Current floor will be cut out and replaced with plywood",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "10543b79-4b05-4fe5-9b2f-aa05889ea564",
+            "parentId": "a7dab587-0010-4425-8a0e-90d8506499b3",
+            "type": "subline",
+            "name": "Plywood will be painted unless owner would like to wrap with a wallpaper material. ",
+            "qty": 0,
+            "price": 0
+          },
+          {
+            "id": "6f7f0cd7-8fd9-466b-945a-290f20721969",
+            "type": "item",
+            "name": "Repair wood panel wall and paint owner desired color ",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "e1a5ebe8-8988-4bc9-821a-590995357e82",
+            "type": "item",
+            "name": "Replacement of countertops and backsplash will be taken care of by 3rd party",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "a51c1cb6-fe69-4864-a84c-80950a87208b",
+            "type": "item",
+            "name": "Clean up and disposal of waste off-site",
+            "qty": "",
+            "price": ""
+          },
+          {
+            "id": "ceb13074-777c-4e4c-904b-ef5eee315e48",
+            "type": "item",
+            "name": "Complete full walk-thru with owners to ensure completion and satisfaction ",
+            "qty": "",
+            "price": ""
+          }
+        ],
+        "materialItems": [
+          {
+            "id": "a8848cfd-624f-49c6-853c-0e8697876122",
+            "name": "Poplar Strips",
+            "qty": "60",
+            "price": 15,
+            "unit": ""
+          },
+          {
+            "id": "05aad8fc-8a73-4f2c-8c4b-d9b15dfcfd8e",
+            "name": "Birch Prefinished Plywood 4x8",
+            "qty": "15",
+            "price": 44.21,
+            "unit": "sheet"
+          },
+          {
+            "id": "ab0e9adb-b2a3-4fed-b9df-2cabdb8687e7",
+            "name": "Titebond III Ultimate Wood Glue gallon",
+            "qty": 1,
+            "price": 25,
+            "unit": "bottle"
+          },
+          {
+            "id": "d446a53c-b2ba-4211-bbd8-30057d95270b",
+            "name": "DEWALT 1 in. 18-Gauge Brad Nails (2500-Pack)",
+            "qty": 1,
+            "price": 17.78,
+            "unit": "pack"
+          },
+          {
+            "id": "06ef9ab8-1011-42b9-ac05-746c38472281",
+            "name": "Wood Filler - DAP Premium",
+            "qty": "2",
+            "price": 20,
+            "unit": "1"
+          },
+          {
+            "id": "d5e6b575-9690-46c8-bd08-d6d6293d1e39",
+            "name": "3M Pro Grade Precision 120-Grit Sanding Sponge (2-Pack)",
+            "qty": "2",
+            "price": 15,
+            "unit": "pack"
+          },
+          {
+            "id": "fcb6185b-ee5b-43f6-ab9d-488c52a28232",
+            "name": "DAP Dynaflex 230",
+            "qty": "5",
+            "price": 7,
+            "unit": "each"
+          },
+          {
+            "id": "c113106e-09f8-4b01-8a8d-e39d505a721a",
+            "name": "Primer BIN - Waterbased",
+            "qty": "2",
+            "price": 100,
+            "unit": "1"
+          },
+          {
+            "id": "1fc631da-f0c2-495d-8432-51eb9acc829d",
+            "name": "Paint - Gallery Series",
+            "qty": "2",
+            "price": 135,
+            "unit": "1"
+          },
+          {
+            "id": "8f425bd9-8cbb-4d0d-93d3-f61328359e24",
+            "name": "masking paper",
+            "qty": "2",
+            "price": 20,
+            "unit": ""
+          },
+          {
+            "id": "5717c31d-76d1-481d-87a2-0d928493edb9",
+            "name": "Tape",
+            "qty": "1",
+            "price": 30,
+            "unit": ""
+          },
+          {
+            "id": "5ae51946-3364-4451-a753-3e71aae5cf4c",
+            "name": "Plastic ",
+            "qty": "1",
+            "price": 40,
+            "unit": ""
+          },
+          {
+            "id": "bd6ea411-8e34-49ab-8e98-0754510dabc7",
+            "name": "Ram Board Heavy Duty Floor Protection",
+            "qty": 1,
+            "price": 37.48,
+            "unit": "roll"
+          },
+          {
+            "id": "d0231d68-a9e5-4da0-9db0-fb0eb0f0493e",
+            "name": "filter",
+            "qty": "2",
+            "price": 3,
+            "unit": ""
+          },
+          {
+            "id": "9b0640ed-7289-4378-a65d-c6ee576a9d7c",
+            "name": "Pull Handles - 192mm BLK",
+            "qty": "32",
+            "price": 5,
+            "unit": "1"
+          },
+          {
+            "id": "38af20ea-88fb-4e96-9bd6-4600efd2d945",
+            "name": "Soft close hinges  ",
+            "qty": "56",
+            "price": 5,
+            "unit": ""
+          },
+          {
+            "id": "aef9f23f-14f6-4a2d-9c07-1e40c03bcd85",
+            "name": "Lazy Susan",
+            "qty": "1",
+            "price": 500,
+            "unit": ""
+          },
+          {
+            "id": "c0be1a18-173e-4519-a18d-7f9780e04997",
+            "name": "New Box with pull outs",
+            "qty": "1",
+            "price": 600,
+            "unit": ""
+          },
+          {
+            "id": "5bdd307b-4fa4-4f0b-ab61-c6388a3930c6",
+            "name": "Trash",
+            "qty": "1",
+            "price": 400,
+            "unit": ""
+          },
+          {
+            "id": "4984d17c-2166-434f-a55a-65178c719d0d",
+            "name": "",
+            "qty": "",
+            "price": "",
+            "unit": ""
+          },
+          {
+            "id": "cd4538b8-90a5-4fe6-b545-d0865e1d4a9b",
+            "name": "Profit",
+            "qty": "1",
+            "price": 2100,
+            "unit": ""
+          },
+          {
+            "id": "e536b70d-9d0c-42b7-b50a-9d6244ca87c6",
+            "name": "Labor ",
+            "qty": "1",
+            "price": 4000,
+            "unit": ""
+          },
+          {
+            "id": "006fffa1-f4fd-4749-915a-24abcade5cf1",
+            "name": "",
+            "qty": "1",
+            "price": 0,
+            "unit": ""
+          },
+          {
+            "id": "e678788f-ea17-41c4-b991-d700bbb2eaf2",
+            "name": "Repairs",
+            "qty": "",
+            "price": "",
+            "unit": ""
+          },
+          {
+            "id": "3e016d39-67d8-4a21-91af-5b9ffbaa68c9",
+            "name": "Drywall",
+            "qty": "1",
+            "price": 15,
+            "unit": ""
+          },
+          {
+            "id": "2179ec59-98ee-4729-b544-bfc7309715e4",
+            "name": "Light",
+            "qty": "1",
+            "price": 200,
+            "unit": ""
+          },
+          {
+            "id": "babddbe2-8a12-4f8c-8c5c-cc1f5b4d71af",
+            "name": "Paint - Super Paint",
+            "qty": "2",
+            "price": 45,
+            "unit": "1"
+          },
+          {
+            "id": "86e5645b-ba27-4685-8364-08166a4f106f",
+            "name": "Wood Filler - DAP Premium",
+            "qty": 1,
+            "price": 20,
+            "unit": "1"
+          },
+          {
+            "id": "2cf77e66-a8a3-4d5f-bf02-f5e935bc369c",
+            "name": "3M Pro Grade Precision 120-Grit Sanding Sponge (2-Pack)",
+            "qty": 1,
+            "price": 15,
+            "unit": "pack"
+          },
+          {
+            "id": "e2a21765-5cf4-471b-bb9a-c84ebdcd00f5",
+            "name": "Paint Roller (1/2 Nap)",
+            "qty": 1,
+            "price": 10,
+            "unit": "1"
+          },
+          {
+            "id": "d244a06d-5c5d-4289-bde3-8034c020a2e4",
+            "name": "Wooster 2-1/2 in. Pro Angle Sash Brush",
+            "qty": 1,
+            "price": 15,
+            "unit": "each"
+          }
+        ],
+        "photos": [],
+        "assignmentPhotos": [],
+        "totals": {
+          "subtotal": 10839,
+          "discount": 0,
+          "tax": 0,
+          "total": 10839,
+          "deposit": 3793.6499999999996,
+          "finishMultiplier": 1,
+          "hasFlatTotal": true,
+          "discountType": "dollar",
+          "discountValue": 0,
+          "depositRate": 35,
+          "lineSubtotal": 0,
+          "showDiscount": false,
+          "showTax": false,
+          "showDeposit": true,
+          "showSubtotal": false
+        },
+        "backend": {
+          "estimatedMaterialCost": 10739.41,
+          "fallbackMaterialCost": 2709.75,
+          "estimatedGrossProfit": 99.59000000000015,
+          "materialPercent": 25
+        },
+        "dashboardFileId": "",
+        "submittedAt": "2026-07-15T01:16:53.832Z",
+        "companyName": "D2 Carpentry & Design",
+        "estimateTitle": "Estimate",
+        "companyPhone": "239-469-8555",
+        "companyEmail": "D2CarpentryandDesign@gmail.com",
+        "companyAddress": "2710 Del Prado Blvd S #2-184 Cape Coral, FL 33904",
+        "estimateNumber": "26-A1001",
+        "showEstimateNumber": true,
+        "estimateDate": "2026-07-14",
+        "leadSource": "Angi",
+        "fileStatus": "In Negotiation",
+        "estimateStatus": "Completed",
+        "warrantyStatus": "Not Sent",
+        "inspectionDate": "2026-07-13",
+        "inspectionTime": "18:00",
+        "nextActionDate": "",
+        "nextAction": "Follow up on estimate review and granite ",
+        "clientName": "Norma Childs",
+        "clientPhone": "(239) 691-5447",
+        "clientEmail": "nrmchilds0308@outlook.com",
+        "projectAddress": "7125 Penner Ln, Fort Myers, FL 33907",
+        "projectType": "Refinishing",
+        "finishLevel": "",
+        "widthFeet": "",
+        "heightFeet": "",
+        "linearFeet": "",
+        "linearRate": "500",
+        "squareLength": "",
+        "squareWidth": "",
+        "squareRate": "75",
+        "flatTotal": "10839",
+        "discount": "",
+        "discountType": "dollar",
+        "taxRate": "",
+        "depositRate": "35",
+        "invoiceInitialDeposit": "",
+        "invoiceSecondDeposit": "",
+        "invoiceFinalPayment": "",
+        "notes": "Norma, here is the estimate for the kitchen project. This estimate is for the construction of all new doors and drawers made from 100% wood. The outer rails will be a solid wood with the inner panel being a birchwood plywood. We will also be completing repairs to the ceiling as requested. This estimate includes all costs of materials and supplies for the work listed above. We will confirm the handles you would like to use prior to the start date. As we discussed, we will be able to replace the dishwasher with a matching cabinet box, which will be constructed off-site with 100% wood. We can determine if the pull-out trash bin will go in the new area or if we can install in another location if desired. Once we establish a start date we can review the details of the estimate to ensure we are all on the same page. We can also confirm what color you would like to use. It was really nice meeting you and your husband. I look forward to working with you. Please reach out with any questions. ",
+        "additionalNotes": "",
+        "addFooterValueNote": true,
+        "assignmentLanguage": "en",
+        "assignmentStartDate": "",
+        "assignmentArrivalTime": "Open",
+        "assignmentScope": "",
+        "useSpanishScope": false,
+        "assignmentScopeSpanish": "",
+        "assignmentNotes": "",
+        "invoicePaid": false
+      }
+    },
+    {
       "id": "file-26-a1006-ann-costa",
       "fileNumber": "26-A1006",
       "clientName": "Ann Costa",
@@ -1328,6 +2581,40 @@ window.D2_DASHBOARD_RESTORE = {
   ],
   "revenue": [
     {
+      "id": "rev-brian-whelk-26-a1001-current",
+      "date": "2026-07-14",
+      "clientJob": "Brian - Whelk - 26-A1001-BRIAN",
+      "gross": 32000,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 32000,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": "file-brian-whelk-26-a1001-current",
+      "attachedEstimate": {
+        "fileNumber": "26-A1001-BRIAN",
+        "dashboardFileId": "file-brian-whelk-26-a1001-current",
+        "clientName": "Brian - Whelk"
+      }
+    },
+    {
+      "id": "rev-norma-childs-26-a1001-closed-paid",
+      "date": "2026-07-14",
+      "clientJob": "Norma Childs - 26-A1001-NORMA",
+      "gross": 10839,
+      "expenses": 10739.41,
+      "labor": 0,
+      "profit": 99.59000000000015,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": "file-norma-childs-26-a1001-closed-paid",
+      "attachedEstimate": {
+        "fileNumber": "26-A1001-NORMA",
+        "dashboardFileId": "file-norma-childs-26-a1001-closed-paid",
+        "clientName": "Norma Childs"
+      }
+    },
+    {
       "id": "rev-restored-26-a1001-bernardo-gonzalez",
       "date": "2026-07-03",
       "clientJob": "Bernardo Gonzalez - 26-A1001",
@@ -1823,30 +3110,6 @@ window.D2_DASHBOARD_RESTORE = {
       }
     },
     {
-      "id": "rev-restored-david-hennessy-d2-260621-001-0",
-      "date": "2026-06-09",
-      "clientJob": "David Hennessy - D2-260621-001",
-      "gross": 0,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 0,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": "file-1782014718693-2d41537889c43"
-    },
-    {
-      "id": "rev-restored-rob-larsen-a-260607-002-1",
-      "date": "2026-06-08",
-      "clientJob": "Rob Larsen - A-260607-002",
-      "gross": 350,
-      "expenses": 0,
-      "labor": 0,
-      "profit": 350,
-      "receiptNotes": "",
-      "laborAssigns": "",
-      "dashboardFileId": "file-1781894344778"
-    },
-    {
       "id": "rev-restored-fredman-church-2",
       "date": "2026-01-16",
       "clientJob": "Fredman - Church",
@@ -2023,6 +3286,174 @@ window.D2_DASHBOARD_RESTORE = {
       "labor": 0,
       "profit": -12.34,
       "receiptNotes": "SW: 12.34 (Paint Sample)",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-3",
+      "date": "2026-01-23",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-4",
+      "date": "2026-01-30",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-5",
+      "date": "2026-02-06",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-6",
+      "date": "2026-02-13",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-7",
+      "date": "2026-02-20",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-8",
+      "date": "2026-02-27",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-9",
+      "date": "2026-03-06",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-10",
+      "date": "2026-01-09",
+      "clientJob": "Fredman - Church",
+      "gross": 1250,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1250,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-mike-misc-12",
+      "date": "2026-03-03",
+      "clientJob": "Mike-Misc",
+      "gross": 520,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 520,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-mike-misc-13",
+      "date": "2026-03-03",
+      "clientJob": "Mike-Misc",
+      "gross": 500,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 500,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-mike-misc-14",
+      "date": "2026-03-03",
+      "clientJob": "Mike-Misc",
+      "gross": 350,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 350,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-mike-misc-15",
+      "date": "2026-03-15",
+      "clientJob": "Mike-Misc",
+      "gross": 1200,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 1200,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-fredman-church-17",
+      "date": "2026-03-22",
+      "clientJob": "Fredman - Church",
+      "gross": 750,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 750,
+      "receiptNotes": "",
+      "laborAssigns": "",
+      "dashboardFileId": ""
+    },
+    {
+      "id": "rev-restored-jake-fascia-board-26",
+      "date": "2026-05-08",
+      "clientJob": "Jake - Fascia Board",
+      "gross": 350,
+      "expenses": 0,
+      "labor": 0,
+      "profit": 350,
+      "receiptNotes": "",
       "laborAssigns": "",
       "dashboardFileId": ""
     }
@@ -2319,5 +3750,5 @@ window.D2_DASHBOARD_RESTORE = {
       "sourceId": "custom-price-1782837923649-842c55b10b05c"
     }
   ],
-  "restoredAt": "2026-07-13T14:20:42.883Z"
+  "restoredAt": "2026-08-05T01:57:08.855Z"
 };
