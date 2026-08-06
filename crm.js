@@ -12,6 +12,7 @@ const CRM_REVENUE_BACKUP_KEY = "d2CrmRevenueRowsBackup";
 const CRM_REVENUE_DELETED_KEY = "d2CrmRevenueDeletedIds";
 const CRM_PRICE_BACKUP_KEY = "d2PriceDatabaseBackup";
 const CRM_RECEIPT_DRAFT_KEY = "d2ReceiptScannerDraft";
+const CRM_RESTORE_VERSION_KEY = "d2CrmRestoreVersion";
 const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
 const GOOGLE_SCRIPT_URL_STORAGE_KEY = "d2GoogleScriptUrl";
 const NOTE_EDIT_WINDOW_MS = 12 * 60 * 60 * 1000;
@@ -97,6 +98,7 @@ const trackedStatusFields = {
 
 const $ = (id) => document.getElementById(id);
 
+let crmRestoreAppliedThisLoad = false;
 let crmFiles = loadCrmFiles();
 let activeFileId = crmFiles[0] ? crmFiles[0].id : null;
 let crmRevenueRows = loadRevenueRows();
@@ -160,6 +162,30 @@ function restoredDashboardFiles() {
   return Array.isArray(window.D2_DASHBOARD_RESTORE?.files)
     ? window.D2_DASHBOARD_RESTORE.files.map((file) => ({ ...file }))
     : [];
+}
+
+function dashboardRestoreVersion() {
+  return String(window.D2_DASHBOARD_RESTORE?.restoredAt || "");
+}
+
+function shouldApplyDashboardRestore() {
+  const version = dashboardRestoreVersion();
+  if (!version) return false;
+  try {
+    return localStorage.getItem(CRM_RESTORE_VERSION_KEY) !== version;
+  } catch (error) {
+    return true;
+  }
+}
+
+function markDashboardRestoreApplied() {
+  const version = dashboardRestoreVersion();
+  if (!version) return;
+  try {
+    localStorage.setItem(CRM_RESTORE_VERSION_KEY, version);
+  } catch (error) {
+    // Local storage can be blocked in some browser privacy modes.
+  }
 }
 
 function mergeDashboardFiles(primary = [], secondary = []) {
@@ -305,21 +331,40 @@ function defaultRevenueRows() {
 
 function loadCrmFiles() {
   const restoredFiles = restoredDashboardFiles();
+  const applyRestore = shouldApplyDashboardRestore();
   try {
     const saved = localStorage.getItem(CRM_STORAGE_KEY);
     if (saved) {
       const files = JSON.parse(saved);
-      if (Array.isArray(files) && files.length) return mergeDashboardFiles(restoredFiles, files);
+      if (Array.isArray(files) && files.length) {
+        if (applyRestore && restoredFiles.length) {
+          crmRestoreAppliedThisLoad = true;
+          return mergeDashboardFiles(restoredFiles, files);
+        }
+        return files.map((file) => ({ ...file }));
+      }
       const backup = localStorage.getItem(CRM_STORAGE_BACKUP_KEY);
       const backupFiles = backup ? JSON.parse(backup) : [];
-      if (Array.isArray(backupFiles) && backupFiles.length) return mergeDashboardFiles(restoredFiles, backupFiles);
-      if (restoredFiles.length) return restoredFiles;
+      if (Array.isArray(backupFiles) && backupFiles.length) {
+        if (applyRestore && restoredFiles.length) {
+          crmRestoreAppliedThisLoad = true;
+          return mergeDashboardFiles(restoredFiles, backupFiles);
+        }
+        return backupFiles.map((file) => ({ ...file }));
+      }
+      if (restoredFiles.length) {
+        crmRestoreAppliedThisLoad = true;
+        return restoredFiles;
+      }
       return Array.isArray(files) && files.length ? files : defaultFiles();
     }
   } catch (error) {
     // Local demo storage may be unavailable in some browsers.
   }
-  if (restoredFiles.length) return restoredFiles;
+  if (restoredFiles.length) {
+    crmRestoreAppliedThisLoad = true;
+    return restoredFiles;
+  }
   return defaultFiles();
 }
 
@@ -478,9 +523,12 @@ function saveDeletedPriceIds() {
 }
 
 function persistRestoredDashboardIfNeeded() {
+  if (!crmRestoreAppliedThisLoad) return;
   if (Array.isArray(crmFiles) && crmFiles.length) saveCrmFiles();
   if (Array.isArray(crmRevenueRows) && crmRevenueRows.length) saveRevenueRows();
   if (Array.isArray(crmPriceRows) && crmPriceRows.length) savePriceRows();
+  markDashboardRestoreApplied();
+  crmRestoreAppliedThisLoad = false;
 }
 
 function buildDashboardSyncPayload() {
