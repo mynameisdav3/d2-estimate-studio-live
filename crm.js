@@ -308,7 +308,7 @@ function loadCrmFiles() {
     const saved = localStorage.getItem(CRM_STORAGE_KEY);
     if (saved) {
       const files = JSON.parse(saved);
-      if (Array.isArray(files) && files.length) return mergeDashboardFiles(files, restoredFiles);
+      if (Array.isArray(files) && files.length) return mergeDashboardFiles(restoredFiles, files);
       const backup = localStorage.getItem(CRM_STORAGE_BACKUP_KEY);
       const backupFiles = backup ? JSON.parse(backup) : [];
       if (Array.isArray(backupFiles) && backupFiles.length) return mergeDashboardFiles(restoredFiles, backupFiles);
