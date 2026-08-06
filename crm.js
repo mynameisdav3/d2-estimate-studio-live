@@ -102,6 +102,7 @@ let activeFileId = crmFiles[0] ? crmFiles[0].id : null;
 let crmRevenueRows = loadRevenueRows();
 let activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
 let crmRevenueDateSort = "newest";
+let crmRevenueYearFilter = String(new Date().getFullYear());
 let crmPriceRows = loadPriceRows();
 let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
@@ -1739,7 +1740,7 @@ function createDashboardFileFromRevenueRow(row) {
 }
 
 function revenueTotals() {
-  return crmRevenueRows.reduce(
+  return filteredRevenueRows().reduce(
     (totals, row) => {
       totals.gross += Number(row.gross) || 0;
       totals.expenses += Number(row.expenses) || 0;
@@ -1773,8 +1774,27 @@ function revenueDateValue(row) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function revenueYear(row) {
+  const rawDate = String(row.date || "").trim();
+  const match = rawDate.match(/\b(20\d{2})\b/);
+  if (match) return match[1];
+  const parsed = Date.parse(rawDate);
+  return Number.isNaN(parsed) ? "" : String(new Date(parsed).getFullYear());
+}
+
+function revenueYearOptions() {
+  const years = new Set(crmRevenueRows.map((row) => revenueYear(row)).filter(Boolean));
+  years.add(String(new Date().getFullYear()));
+  return [...years].sort((a, b) => Number(b) - Number(a));
+}
+
+function filteredRevenueRows() {
+  if (!crmRevenueYearFilter || crmRevenueYearFilter === "all") return [...crmRevenueRows];
+  return crmRevenueRows.filter((row) => revenueYear(row) === crmRevenueYearFilter);
+}
+
 function sortedRevenueRows() {
-  return [...crmRevenueRows].sort((a, b) => {
+  return filteredRevenueRows().sort((a, b) => {
     const difference = revenueDateValue(a) - revenueDateValue(b);
     return crmRevenueDateSort === "oldest" ? difference : -difference;
   });
@@ -1934,8 +1954,20 @@ function renderRevenue() {
 
   const sortControl = $("crmRevenueDateSort");
   if (sortControl) sortControl.value = crmRevenueDateSort;
+  const yearControl = $("crmRevenueYearFilter");
+  if (yearControl) {
+    const years = revenueYearOptions();
+    yearControl.innerHTML = `<option value="all">All Years</option>${years
+      .map((year) => `<option value="${escapeHtml(year)}">${escapeHtml(year)}</option>`)
+      .join("")}`;
+    if (crmRevenueYearFilter !== "all" && !years.includes(crmRevenueYearFilter)) {
+      crmRevenueYearFilter = years[0] || "all";
+    }
+    yearControl.value = crmRevenueYearFilter;
+  }
 
-  $("crmRevenueRows").innerHTML = sortedRevenueRows()
+  const visibleRevenueRows = sortedRevenueRows();
+  $("crmRevenueRows").innerHTML = visibleRevenueRows.length ? visibleRevenueRows
     .map((row) => {
       const file = findFileForRevenue(row);
       return `
@@ -1957,7 +1989,7 @@ function renderRevenue() {
         </tr>
       `;
     })
-    .join("");
+    .join("") : `<tr><td colspan="9" class="crm-empty-row">No revenue rows for this year.</td></tr>`;
   document.querySelectorAll("[data-revenue-delete]").forEach((button) => {
     button.addEventListener("click", () => deleteRevenueRow(button.dataset.revenueDelete));
   });
@@ -3434,6 +3466,10 @@ $("crmAddRevenueRow").addEventListener("click", addRevenueRow);
 $("crmUpdateRevenue").addEventListener("click", updateRevenueRows);
 $("crmRevenueDateSort").addEventListener("change", (event) => {
   crmRevenueDateSort = event.target.value;
+  renderRevenue();
+});
+$("crmRevenueYearFilter").addEventListener("change", (event) => {
+  crmRevenueYearFilter = event.target.value;
   renderRevenue();
 });
 $("crmAddFileExpense").addEventListener("click", addFileExpenseLine);

@@ -2943,6 +2943,13 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   outline: none;
 }
 
+.crm-empty-row {
+  color: #6f7785;
+  font-weight: 800;
+  padding: 22px;
+  text-align: center;
+}
+
 .crm-attached-estimate {
   display: grid;
   gap: 4px;
