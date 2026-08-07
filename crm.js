@@ -1290,7 +1290,14 @@ function sendEstimateToEstimator(estimateData, target = "") {
     window.alert("The estimate could not be loaded into this browser. Try refreshing and opening it again.");
     return false;
   }
-  window.open(`index.html${target}`, "_blank", "noopener");
+  const estimatorUrl = new URL("index.html", window.location.href);
+  if (target) estimatorUrl.hash = target.replace(/^#/, "");
+  estimatorUrl.searchParams.set("fromDashboard", "1");
+  estimatorUrl.searchParams.set("open", Date.now().toString());
+  const opened = window.open(estimatorUrl.toString(), "_blank", "noopener");
+  if (!opened) {
+    window.location.href = estimatorUrl.toString();
+  }
   return true;
 }
 

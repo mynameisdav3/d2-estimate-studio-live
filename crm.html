@@ -32,7 +32,7 @@
         <button type="button" class="icon-button" data-crm-view="expenses">Expenses</button>
         <button type="button" class="icon-button" data-crm-view="receipts">Receipts</button>
         <button type="button" class="icon-button" data-crm-view="prices">Price Database</button>
-        <a class="icon-button" href="index.html">Estimator</a>
+        <a class="icon-button" href="index.html?new=1">Estimator</a>
         <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
       </nav>
 
@@ -688,8 +688,8 @@
       </section>
     </div>
     <script src="materials-database.js?v=20260804-price-update-2"></script>
-    <script src="dashboard-restore-data.js?v=20260805-save-persistence-fix"></script>
-    <script src="revenue-data.js?v=20260805-save-persistence-fix"></script>
+    <script src="dashboard-restore-data.js?v=20260806-fresh-estimator-date-pdf"></script>
+    <script src="revenue-data.js?v=20260806-fresh-estimator-date-pdf"></script>
     <script src="vendor/jspdf.umd.min.js"></script>
     <script src="vendor/html2canvas.min.js"></script>
     <script>
@@ -702,6 +702,6 @@
         caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
       }
     </script>
-    <script src="crm.js?v=20260805-save-persistence-fix"></script>
+    <script src="crm.js?v=20260806-fresh-estimator-date-pdf"></script>
   </body>
 </html>

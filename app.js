@@ -268,6 +268,13 @@ function addDays(date, days) {
   return copy.toISOString().slice(0, 10);
 }
 
+function todayInputValue() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
 function getEstimateNumberParts() {
   const date = new Date();
   const year = String(date.getFullYear()).slice(2);
@@ -2095,7 +2102,11 @@ function addPdfPhotos(doc, photos, startY, title) {
 async function generateEstimatePdf() {
   ensureEstimateNumber();
   updatePreview();
-  return generateVisualPdfFromElement($("estimateSheet"), getPdfFileName("Estimate"));
+  const sheet = $("estimateSheet");
+  if (!sheet) {
+    throw new Error("The estimate preview is not ready yet. Refresh the estimate and try PDF again.");
+  }
+  return generateVisualPdfFromElement(sheet, getPdfFileName("Estimate"));
 }
 
 async function generateAssignmentPdf() {
@@ -2527,9 +2538,15 @@ async function openEditableEstimatePicker() {
 function runButtonAction(action) {
   try {
     const result = action();
-    if (result && typeof result.catch === "function") result.catch(() => {});
+    if (result && typeof result.catch === "function") {
+      result.catch((error) => {
+        console.error(error);
+        setSubmitStatus("That button hit a snag. Refresh the estimate and try again.");
+      });
+    }
   } catch (error) {
     console.error(error);
+    setSubmitStatus("That button hit a snag. Refresh the estimate and try again.");
   }
 }
 
@@ -2695,6 +2712,14 @@ function loadEstimate() {
   return applyEstimateData(data);
 }
 
+function clearSavedEstimateDraft() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    // A fresh visible estimate still works even when browser storage is unavailable.
+  }
+}
+
 function applyCompanyDefaults() {
   if (!$("companyName").value.trim()) $("companyName").value = COMPANY_DEFAULTS.name;
   if (!$("companyPhone").value.trim()) $("companyPhone").value = COMPANY_DEFAULTS.phone;
@@ -2726,7 +2751,7 @@ function resetEstimate() {
   $("showEstimateNumber").checked = true;
   state.autoEstimateNumber = true;
   state.estimateNumberCommitted = false;
-  $("estimateDate").value = today.toISOString().slice(0, 10);
+  $("estimateDate").value = todayInputValue();
   $("companyName").value = COMPANY_DEFAULTS.name;
   $("estimateTitle").value = "Estimate";
   $("companyPhone").value = COMPANY_DEFAULTS.phone;
@@ -2899,10 +2924,21 @@ document.querySelectorAll("[data-reset-page]").forEach((button) => {
 });
 setCopyMode("customer");
 
-if (new URLSearchParams(window.location.search).has("new")) {
+const startupParams = new URLSearchParams(window.location.search);
+const shouldLoadSavedEstimate = startupParams.has("fromDashboard") || startupParams.has("resume") || startupParams.has("invoice");
+
+if (startupParams.has("new")) {
+  clearSavedEstimateDraft();
+  resetEstimate();
+} else if (!shouldLoadSavedEstimate) {
+  clearSavedEstimateDraft();
   resetEstimate();
 } else if (!loadEstimate()) {
   resetEstimate();
+} else {
+  $("estimateDate").value = todayInputValue();
+  saveEstimate();
+  updatePreview();
 }
 
 if (new URLSearchParams(window.location.search).has("invoice")) {
