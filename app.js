@@ -2925,12 +2925,8 @@ document.querySelectorAll("[data-reset-page]").forEach((button) => {
 setCopyMode("customer");
 
 const startupParams = new URLSearchParams(window.location.search);
-const shouldLoadSavedEstimate = startupParams.has("fromDashboard") || startupParams.has("resume") || startupParams.has("invoice");
 
 if (startupParams.has("new")) {
-  clearSavedEstimateDraft();
-  resetEstimate();
-} else if (!shouldLoadSavedEstimate) {
   clearSavedEstimateDraft();
   resetEstimate();
 } else if (!loadEstimate()) {
