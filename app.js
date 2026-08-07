@@ -2125,15 +2125,8 @@ async function generatePaymentPdf() {
 async function printEstimateCopy() {
   ensureEstimateNumber();
   updatePreview();
-  setSubmitStatus("Creating estimate PDF...");
-  try {
-    const saved = await generateEstimatePdf();
-    setSubmitStatus(saved ? "Estimate PDF created." : "PDF generator unavailable. Browser print opened instead.");
-  } catch (error) {
-    console.warn("Estimate PDF generator failed; using browser print fallback.", error);
-    setSubmitStatus("PDF generator hit a snag. Browser print opened instead.");
-    printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
-  }
+  setSubmitStatus("Browser print preview opened. Choose Save as PDF to rename and save.");
+  printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
 }
 
 function serializeEstimate() {
