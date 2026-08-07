@@ -2126,7 +2126,7 @@ async function printEstimateCopy() {
   ensureEstimateNumber();
   updatePreview();
   setSubmitStatus("Browser print preview opened. Choose Save as PDF to rename and save.");
-  printHtmlDocument(buildEstimateHtmlCopy(COPY_MODE_LABELS[document.body.dataset.copyMode || "customer"] || "Customer"));
+  window.print();
 }
 
 function serializeEstimate() {
@@ -2926,7 +2926,7 @@ if (startupParams.has("new")) {
   resetEstimate();
 } else {
   $("estimateDate").value = todayInputValue();
-  saveEstimate();
+  saveEstimate({ silent: true });
   updatePreview();
 }
 
