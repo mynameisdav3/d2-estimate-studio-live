@@ -9,44 +9,66 @@
     <meta name="apple-mobile-web-app-title" content="Estimates">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=20260806-browser-print-preview-fix">
+    <link rel="stylesheet" href="styles.css?v=20260806-header-toolbar-polish">
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">D2 Carpentry and Design</p>
-          <h1>Estimate Studio</h1>
-        </div>
-        <div class="top-actions">
-          <div class="copy-mode-toggle" aria-label="Copy type">
-            <button type="button" class="copy-mode-button active" data-copy-mode="customer">Customer</button>
-            <button type="button" class="copy-mode-button" data-copy-mode="internal">Office</button>
-            <button type="button" class="copy-mode-button" data-copy-mode="team">Team</button>
-            <button type="button" class="copy-mode-button" data-copy-mode="supply">Supplies</button>
+        <div class="app-brand">
+          <img src="assets/d2-logo.png" alt="D2 Carpentry & Design logo">
+          <div>
+            <p>D2 Carpentry & Design</p>
+            <h1>Estimate Studio</h1>
           </div>
-          <button type="button" class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
-          <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
-          <button type="button" class="icon-button" id="saveEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
-          <button type="button" class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
+        </div>
+        <a class="icon-button dashboard-top-link" href="crm.html" target="_blank" rel="noopener" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
+      </header>
+      <section class="toolbar-strip" aria-label="Estimate actions">
+        <div class="top-actions">
           <button type="button" class="icon-button" id="submitEstimate" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
-          <button type="button" class="icon-button" id="generatePaymentInvoice" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
-          <button type="button" class="icon-button" id="generateAssignmentSheet" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
-          <button type="button" class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
-          <button type="button" class="icon-button" id="printEstimate" title="Print estimate" aria-label="Print estimate">PDF</button>
-          <button class="icon-button reset-page-button" type="button" data-reset-page title="Reload page" aria-label="Reload page">↻</button>
+          <button type="button" class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
+          <button type="button" class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
+          <button type="button" class="icon-button" id="saveEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
+          <label class="view-select-wrap">
+            <select id="documentViewSelect" aria-label="Choose document view">
+              <option value="">Version</option>
+              <option value="customer">Customer</option>
+              <option value="internal">Office</option>
+              <option value="team">Team</option>
+              <option value="supply">Supplies</option>
+              <option value="payment">Payment</option>
+              <option value="assignment">Assignment</option>
+            </select>
+          </label>
+          <button type="button" class="icon-button" data-action-button="invoice" title="Generate invoice" aria-label="Generate invoice">Invoice</button>
+          <div class="share-menu">
+            <button type="button" class="icon-button" id="shareEstimate" aria-expanded="false" aria-controls="shareEstimateMenu">Share</button>
+            <div class="share-options" id="shareEstimateMenu" hidden>
+              <button type="button" data-share-action="pdf">PDF</button>
+              <button type="button" data-share-action="email">Email</button>
+            </div>
+          </div>
           <button type="button" class="icon-button invoice-only" id="toggleInvoicePaidStamp" title="Toggle paid stamp" aria-label="Toggle paid stamp" hidden>Paid Stamp</button>
           <input id="editableEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
         </div>
-      </header>
+      </section>
 
       <section class="workspace">
         <form class="editor" id="estimateForm">
-          <section class="panel">
+          <section class="panel estimate-details-panel collapsible-panel collapsed">
             <div class="panel-header">
               <h2>Estimate Details</h2>
+              <label class="panel-date-field">
+                Date
+                <input id="estimateDate" type="date">
+              </label>
+              <label class="panel-estimate-number-field">
+                Estimate #
+                <input id="visibleEstimateNumber" type="text" placeholder="Generated on save" readonly>
+              </label>
+              <button type="button" class="collapse-toggle" data-collapse-target="estimateDetailsBody" aria-expanded="false">Details</button>
             </div>
-            <div class="field-grid">
+            <div class="field-grid collapsible-body" id="estimateDetailsBody" hidden>
               <label>
                 Company
                 <input id="companyName" value="D2 Carpentry & Design" autocomplete="organization">
@@ -77,17 +99,20 @@
                 </span>
                 <input id="estimateNumber" placeholder="26-A1001">
               </label>
-              <label>
-                Date
-                <input id="estimateDate" type="date">
-              </label>
             </div>
           </section>
 
           <section class="panel crm-panel dashboard-file-panel">
             <div class="panel-header">
               <h2>Dashboard File</h2>
-              <button type="button" id="createCrmFile">Create File</button>
+            </div>
+            <div class="hidden-technical-fields" hidden>
+              <input id="fileStatus" value="New Lead">
+              <input id="estimateStatus" value="Pending">
+              <input id="warrantyStatus" value="Not Sent">
+              <input id="inspectionTime" type="time">
+              <input id="nextActionDate" type="date">
+              <input id="nextAction">
             </div>
             <div class="field-grid three">
               <label>
@@ -104,56 +129,8 @@
                 </select>
               </label>
               <label>
-                File Status
-                <select id="fileStatus">
-                  <option>New Lead</option>
-                  <option>Contact Established</option>
-                  <option>Contact Attempted</option>
-                  <option>Inspection Completed</option>
-                  <option>In Negotiation</option>
-                  <option>Job Won</option>
-                  <option>In Progress</option>
-                  <option>Work Completed</option>
-                  <option>Closed / Paid</option>
-                  <option>Job Lost / Closed</option>
-                </select>
-              </label>
-              <label>
-                Estimate Status
-                <select id="estimateStatus">
-                  <option>Pending</option>
-                  <option>In Progress</option>
-                  <option>Completed</option>
-                  <option>Sent</option>
-                  <option>Reviewed</option>
-                  <option>Revision Needed</option>
-                  <option>Approved</option>
-                  <option>Declined</option>
-                </select>
-              </label>
-              <label>
-                Warranty Details
-                <select id="warrantyStatus">
-                  <option>Not Sent</option>
-                  <option>Ready to Send</option>
-                  <option>Sent</option>
-                </select>
-              </label>
-              <label>
                 Inspection Date
                 <input id="inspectionDate" type="date">
-              </label>
-              <label>
-                Inspection Time
-                <input id="inspectionTime" type="time">
-              </label>
-              <label>
-                Next Action Date
-                <input id="nextActionDate" type="date">
-              </label>
-              <label class="wide">
-                Next Action
-                <input id="nextAction" placeholder="Call customer, send estimate, order materials, follow up tomorrow">
               </label>
             </div>
           </section>
@@ -259,10 +236,12 @@
             <div class="photo-editor-list" id="photoEditorList"></div>
           </section>
 
-          <section class="panel assignment-panel">
+          <section class="panel assignment-panel collapsible-panel collapsed">
             <div class="panel-header">
               <h2>Assignment</h2>
+              <button type="button" class="collapse-toggle" data-collapse-target="assignmentBody" aria-expanded="false">Show</button>
             </div>
+            <div class="collapsible-body" id="assignmentBody" hidden>
             <div class="field-grid">
               <label>
                 Assignment Language
@@ -325,13 +304,15 @@
               <span>or click to choose images</span>
             </div>
             <div class="photo-editor-list" id="assignmentPhotoEditorList"></div>
+            </div>
           </section>
 
-          <section class="panel calculations-panel">
+          <section class="panel calculations-panel collapsible-panel collapsed">
             <div class="panel-header">
               <h2>Calculations</h2>
+              <button type="button" class="collapse-toggle" data-collapse-target="calculationsBody" aria-expanded="false">Show</button>
             </div>
-            <div class="calculation-grid">
+            <div class="calculation-grid collapsible-body" id="calculationsBody" hidden>
               <div class="calculation-card">
                 <div class="calculation-title">
                   <strong>Linear Feet</strong>
@@ -423,7 +404,10 @@
                 Tax
                 <div class="unit-input">
                   <input id="taxRate" type="number" min="0" step="0.01">
-                  <span>%</span>
+                  <select id="taxType" aria-label="Tax type">
+                    <option value="percent">%</option>
+                    <option value="dollar">$</option>
+                  </select>
                 </div>
               </label>
               <label class="estimate-deposit-field">
@@ -606,28 +590,35 @@
 
       <footer class="bottom-actions">
         <div class="top-actions">
-          <div class="copy-mode-toggle" aria-label="Copy type">
-            <button type="button" class="copy-mode-button active" data-copy-mode="customer">Customer</button>
-            <button type="button" class="copy-mode-button" data-copy-mode="internal">Office</button>
-            <button type="button" class="copy-mode-button" data-copy-mode="team">Team</button>
-            <button type="button" class="copy-mode-button" data-copy-mode="supply">Supplies</button>
-          </div>
-          <button type="button" class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
-          <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
-          <button type="button" class="icon-button" data-action-button="save" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
-          <button type="button" class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
           <button type="button" class="icon-button" data-action-button="submit" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
-          <button type="button" class="icon-button" data-action-button="payment" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
-          <button type="button" class="icon-button" data-action-button="assignment" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
-          <button type="button" class="icon-button primary-action" data-action-button="generate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
-          <button type="button" class="icon-button" data-action-button="print" title="Print estimate" aria-label="Print estimate">PDF</button>
-          <button class="icon-button reset-page-button" type="button" data-reset-page title="Reload page" aria-label="Reload page">↻</button>
+          <button type="button" class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
+          <button type="button" class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
+          <button type="button" class="icon-button" data-action-button="save" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
+          <label class="view-select-wrap">
+            <select data-document-view-select aria-label="Choose document view">
+              <option value="">Version</option>
+              <option value="customer">Customer</option>
+              <option value="internal">Office</option>
+              <option value="team">Team</option>
+              <option value="supply">Supplies</option>
+              <option value="payment">Payment</option>
+              <option value="assignment">Assignment</option>
+            </select>
+          </label>
+          <button type="button" class="icon-button" data-action-button="invoice" title="Generate invoice" aria-label="Generate invoice">Invoice</button>
+          <div class="share-menu">
+            <button type="button" class="icon-button" data-share-toggle aria-expanded="false">Share</button>
+            <div class="share-options" hidden>
+              <button type="button" data-share-action="pdf">PDF</button>
+              <button type="button" data-share-action="email">Email</button>
+            </div>
+          </div>
         </div>
       </footer>
     </main>
     <script src="vendor/jspdf.umd.min.js"></script>
     <script src="vendor/html2canvas.min.js"></script>
     <script src="materials-database.js?v=20260804-price-update-2"></script>
-    <script src="app.js?v=20260806-no-auto-print-fix"></script>
+    <script src="app.js?v=20260806-header-toolbar-polish"></script>
   </body>
 </html>

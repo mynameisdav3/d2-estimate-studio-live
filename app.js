@@ -97,6 +97,7 @@ const fields = [
   "discount",
   "discountType",
   "taxRate",
+  "taxType",
   "depositRate",
   "invoiceInitialDeposit",
   "invoiceSecondDeposit",
@@ -324,8 +325,7 @@ function commitEstimateNumber(value) {
 }
 
 function refreshAutoEstimateNumber() {
-  if (!state.autoEstimateNumber || state.estimateNumberCommitted) return;
-  $("estimateNumber").value = makeEstimateNumber(false);
+  if (!state.autoEstimateNumber || state.estimateNumberCommitted || !$("estimateNumber").value.trim()) return;
   updatePreview();
 }
 
@@ -474,6 +474,18 @@ function insertMaterialItemAfter(id) {
   updatePreview();
 }
 
+function ensureMaterialRowAfter(item) {
+  const currentIndex = state.materialItems.findIndex((entry) => entry.id === item.id);
+  if (currentIndex === -1) return;
+  const nextItem = state.materialItems[currentIndex + 1];
+  const nextIsBlank = nextItem &&
+    !String(nextItem.name || "").trim() &&
+    !(Number.parseFloat(nextItem.qty) > 0) &&
+    !(Number.parseFloat(nextItem.price) > 0);
+  if (nextIsBlank) return;
+  insertMaterialItemAfter(item.id);
+}
+
 function removeMaterialItem(id) {
   state.materialItems = state.materialItems.filter((item) => item.id !== id);
   if (state.materialItems.length === 0) {
@@ -549,6 +561,45 @@ function isLineItemDescendant(entry, ancestorId) {
   return false;
 }
 
+function lineItemBlockRange(index) {
+  const item = state.lineItems[index];
+  if (!item) return null;
+  let end = index + 1;
+  while (end < state.lineItems.length && isLineItemDescendant(state.lineItems[end], item.id)) {
+    end += 1;
+  }
+  return { start: index, end };
+}
+
+function moveLineItem(id, direction) {
+  const index = state.lineItems.findIndex((item) => item.id === id);
+  if (index === -1) return;
+  const block = lineItemBlockRange(index);
+  if (!block) return;
+  if (direction === "up") {
+    let previousStart = index - 1;
+    while (previousStart >= 0 && isLineItemDescendant(state.lineItems[index], state.lineItems[previousStart].id)) {
+      previousStart -= 1;
+    }
+    if (previousStart < 0) return;
+    const previousBlock = lineItemBlockRange(previousStart);
+    if (!previousBlock) return;
+    const moving = state.lineItems.splice(block.start, block.end - block.start);
+    state.lineItems.splice(previousBlock.start, 0, ...moving);
+  }
+  if (direction === "down") {
+    const nextStart = block.end;
+    if (nextStart >= state.lineItems.length) return;
+    const nextBlock = lineItemBlockRange(nextStart);
+    if (!nextBlock) return;
+    const moving = state.lineItems.splice(block.start, block.end - block.start);
+    const insertAt = nextBlock.end - moving.length;
+    state.lineItems.splice(insertAt, 0, ...moving);
+  }
+  renderLineItems();
+  updatePreview();
+}
+
 function renderMaterialItems() {
   const container = $("materialItems");
   container.innerHTML = "";
@@ -590,6 +641,11 @@ function renderMaterialItems() {
         target.value = cleanedQty;
       } else {
         materialItem[field] = Number.parseFloat(target.value) || 0;
+        if (materialItem[field] > 0 && !(wholeNumberValue(materialItem.qty) > 0)) {
+          materialItem.qty = 1;
+          const qtyInput = row.querySelector('[data-field="qty"]');
+          if (qtyInput) qtyInput.value = "1";
+        }
       }
       if (field === "name") {
         if (String(target.value || "").trim()) {
@@ -625,16 +681,14 @@ function renderMaterialItems() {
       event.preventDefault();
       closeMaterialSuggestions(row);
       const materialItem = state.materialItems.find((entry) => entry.id === item.id);
-      if (maybeAddBlankMaterialRow(materialItem)) {
-        requestAnimationFrame(() => {
-          const currentIndex = state.materialItems.findIndex((entry) => entry.id === materialItem.id);
-          const nextItem = state.materialItems[currentIndex + 1];
-          const nextRow = nextItem ? document.querySelector(`[data-id="${nextItem.id}"]`) : null;
-          const textarea = nextRow ? nextRow.querySelector('[data-field="name"]') : null;
-          if (textarea) textarea.focus();
-        });
-        return;
-      }
+      ensureMaterialRowAfter(materialItem);
+      requestAnimationFrame(() => {
+        const currentIndex = state.materialItems.findIndex((entry) => entry.id === materialItem.id);
+        const nextItem = state.materialItems[currentIndex + 1];
+        const nextRow = nextItem ? document.querySelector(`[data-id="${nextItem.id}"]`) : null;
+        const textarea = nextRow ? nextRow.querySelector('[data-field="name"]') : null;
+        if (textarea) textarea.focus();
+      });
       updatePreview();
     });
 
@@ -650,6 +704,7 @@ function renderMaterialItems() {
         const materialItem = state.materialItems.find((entry) => entry.id === item.id);
         applyMaterialSuggestion(row, materialItem, materialButton.dataset.materialId);
         closeMaterialSuggestions(row);
+        ensureMaterialRowAfter(materialItem);
         return;
       }
       if (event.target.dataset.action === "add") insertMaterialItemAfter(item.id);
@@ -845,6 +900,10 @@ function renderLineItems() {
     row.style.setProperty("--subline-indent", `${Math.max(depth - 1, 0) * 22}px`);
     row.innerHTML = item.type === "subline"
       ? `
+        <div class="line-move-controls">
+          <button type="button" data-action="up" title="Move up" aria-label="Move subline up">↑</button>
+          <button type="button" data-action="down" title="Move down" aria-label="Move subline down">↓</button>
+        </div>
         <label>
           Subline
           <textarea data-field="name" rows="1">${escapeHtml(item.name)}</textarea>
@@ -855,6 +914,10 @@ function renderLineItems() {
         </div>
       `
       : `
+        <div class="line-move-controls">
+          <button type="button" data-action="up" title="Move up" aria-label="Move item up">↑</button>
+          <button type="button" data-action="down" title="Move down" aria-label="Move item down">↓</button>
+        </div>
         <label>
           Description
           <textarea data-field="name" rows="1">${escapeHtml(item.name)}</textarea>
@@ -923,6 +986,8 @@ function renderLineItems() {
 
     row.addEventListener("click", (event) => {
       const action = event.target.dataset.action;
+      if (action === "up") moveLineItem(item.id, "up");
+      if (action === "down") moveLineItem(item.id, "down");
       if (action === "remove") removeLineItem(item.id);
       if (action === "subline") addSubLine(item.id);
     });
@@ -959,7 +1024,10 @@ function calculateTotals() {
   const rawDiscount = discountType === "percent" ? subtotal * (discountValue / 100) : discountValue;
   const discount = discountInput ? Math.min(rawDiscount, subtotal) : 0;
   const taxable = Math.max(subtotal - discount, 0);
-  const tax = taxInput ? taxable * (numberValue("taxRate") / 100) : 0;
+  const taxValue = numberValue("taxRate");
+  const taxType = $("taxType") ? $("taxType").value : "percent";
+  const rawTax = taxType === "dollar" ? taxValue : taxable * (taxValue / 100);
+  const tax = taxInput ? Math.max(rawTax, 0) : 0;
   const total = taxable + tax;
   const depositRate = numberValue("depositRate");
   const deposit = depositInput ? total * (depositRate / 100) : 0;
@@ -974,6 +1042,8 @@ function calculateTotals() {
     hasFlatTotal,
     discountType,
     discountValue,
+    taxType,
+    taxValue,
     depositRate,
     lineSubtotal,
     showDiscount: discount > 0,
@@ -1020,10 +1090,6 @@ function updatePreview() {
       </table>
     `
     : "";
-  if ($("showEstimateNumber").checked && (!$("estimateNumber").value.trim() || !state.autoEstimateNumber && !$("estimateNumber").value.trim())) {
-    $("estimateNumber").value = makeEstimateNumber(false);
-    state.autoEstimateNumber = true;
-  }
   const estimateNumber = $("estimateNumber").value.trim();
   $("estimateSheet").classList.toggle("flat-total-mode", totals.hasFlatTotal);
   $("previewCompany").textContent = $("companyName").value || COMPANY_DEFAULTS.name;
@@ -1034,6 +1100,7 @@ function updatePreview() {
   $("invoicePaidStamp").hidden = !invoiceMode || !state.invoicePaid;
   $("toggleInvoicePaidStamp").textContent = state.invoicePaid ? "Remove Paid Stamp" : "Paid Stamp";
   $("invoicePaidCheckbox").checked = state.invoicePaid;
+  if ($("visibleEstimateNumber")) $("visibleEstimateNumber").value = estimateNumber;
   $("previewEstimateNumber").textContent = estimateNumber;
   $("previewEstimateNumber").hidden = !$("showEstimateNumber").checked || !estimateNumber;
   const companyPhone = $("companyPhone").value || COMPANY_DEFAULTS.phone;
@@ -1122,7 +1189,43 @@ function setCopyMode(mode) {
   document.body.dataset.copyMode = copyMode;
   $("internalSummary").hidden = !showsInternal;
   document.querySelectorAll(".copy-mode-button").forEach((button) => {
-    button.classList.toggle("active", button.dataset.copyMode === copyMode);
+    button.classList.toggle("active", button.dataset.copyMode === copyMode && !button.dataset.documentView);
+  });
+  document.querySelectorAll("[data-document-view]").forEach((button) => button.classList.remove("active"));
+  updatePreview();
+}
+
+function showEstimateDocument(mode) {
+  setCopyMode(mode);
+  $("paymentInvoicePreview").hidden = true;
+  $("assignmentSheetPreview").hidden = true;
+  $("estimatePreview").hidden = false;
+  $("estimatePreview").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function showPaymentDocument() {
+  document.querySelectorAll(".copy-mode-button").forEach((button) => button.classList.remove("active"));
+  document.querySelectorAll("[data-document-view='payment']").forEach((button) => button.classList.add("active"));
+  generatePaymentInvoice();
+}
+
+function showAssignmentDocument() {
+  document.querySelectorAll(".copy-mode-button").forEach((button) => button.classList.remove("active"));
+  document.querySelectorAll("[data-document-view='assignment']").forEach((button) => button.classList.add("active"));
+  generateAssignmentSheet();
+}
+
+function setDocumentView(value) {
+  if (!value) return;
+  if (value === "payment") {
+    showPaymentDocument();
+  } else if (value === "assignment") {
+    showAssignmentDocument();
+  } else {
+    showEstimateDocument(value);
+  }
+  document.querySelectorAll("#documentViewSelect, [data-document-view-select]").forEach((select) => {
+    select.value = "";
   });
 }
 
@@ -1393,7 +1496,6 @@ function setSubmitStatus(message) {
 }
 
 function generatePaymentInvoice() {
-  ensureEstimateNumber();
   updatePreview();
   const html = buildPaymentInvoiceHtml();
   showPaymentInvoicePreview(html);
@@ -1651,7 +1753,6 @@ function showAssignmentSheetPreview(html) {
 }
 
 function generateAssignmentSheet() {
-  ensureEstimateNumber();
   updatePreview();
   showAssignmentSheetPreview(buildAssignmentSheetHtml());
   $("submitStatus").textContent = "Assignment sheet is ready below.";
@@ -2130,6 +2231,82 @@ async function printEstimateCopy(options = {}) {
   window.print();
 }
 
+function buildEstimateEmailBody() {
+  ensureEstimateNumber();
+  updatePreview();
+  const totals = calculateTotals();
+  const firstName = ($("clientName").value || "there").trim().split(/\s+/)[0] || "there";
+  const lines = [
+    `Hi ${firstName},`,
+    "",
+    "Thank you for giving D2 Carpentry & Design the opportunity to review your project.",
+    "",
+    `Estimate #: ${$("estimateNumber").value || ""}`,
+    `Date: ${$("estimateDate").value ? formatDate($("estimateDate").value) : ""}`,
+    `Total: ${currency.format(totals.total)}`,
+    "",
+    "Estimate details:",
+  ];
+  state.lineItems.forEach((item) => {
+    const name = String(item.name || "").trim();
+    if (!name) return;
+    const qty = Number.parseFloat(item.qty);
+    const price = Number.parseFloat(item.price);
+    if (item.type === "subline") {
+      lines.push(`  - ${name}`);
+      return;
+    }
+    const amount = Number.isFinite(qty) && Number.isFinite(price) && qty > 0 && price > 0
+      ? ` - ${currency.format(qty * price * totals.finishMultiplier)}`
+      : "";
+    lines.push(`- ${name}${amount}`);
+  });
+  const notes = $("notes").value.trim();
+  const additionalNotes = $("additionalNotes").value.trim();
+  if (notes) lines.push("", "Notes:", notes);
+  if (additionalNotes) lines.push("", additionalNotes);
+  lines.push("", "Please let me know if you have any questions.", "", "David", "D2 Carpentry & Design");
+  return lines.join("\n");
+}
+
+function emailEstimateCopy() {
+  const clientEmail = $("clientEmail").value.trim();
+  const estimateNumber = $("estimateNumber").value.trim();
+  const subject = `Estimate - D2 Carpentry & Design${estimateNumber ? ` ${estimateNumber}` : ""}`;
+  const body = buildEstimateEmailBody();
+  const href = `mailto:${encodeURIComponent(clientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  window.location.href = href;
+  setSubmitStatus("Email draft opened in your mail app. Attach the saved PDF if needed.");
+}
+
+function closeShareMenus() {
+  document.querySelectorAll(".share-options").forEach((menu) => {
+    menu.hidden = true;
+    const toggle = menu.parentElement?.querySelector("[data-share-toggle], #shareEstimate");
+    if (toggle) toggle.setAttribute("aria-expanded", "false");
+  });
+}
+
+function toggleShareMenu(button) {
+  const menu = button.parentElement?.querySelector(".share-options");
+  if (!menu) return;
+  const willOpen = menu.hidden;
+  closeShareMenus();
+  menu.hidden = !willOpen;
+  button.setAttribute("aria-expanded", String(willOpen));
+}
+
+function toggleCollapsiblePanel(button) {
+  const target = $(button.dataset.collapseTarget);
+  if (!target) return;
+  const willOpen = target.hidden;
+  target.hidden = !willOpen;
+  button.setAttribute("aria-expanded", String(willOpen));
+  button.textContent = willOpen ? "Hide" : button.dataset.collapseTarget === "estimateDetailsBody" ? "Details" : "Show";
+  const panel = button.closest(".collapsible-panel");
+  if (panel) panel.classList.toggle("collapsed", !willOpen);
+}
+
 function serializeEstimate() {
   const totals = calculateTotals();
   const data = {
@@ -2419,6 +2596,7 @@ function applyEstimateData(data) {
   fields.forEach((field) => {
     if (data[field] !== undefined) $(field).value = data[field];
   });
+  if (!$("taxType").value) $("taxType").value = "percent";
   $("projectType").value = normalizeProjectType($("projectType").value);
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
   $("useSpanishScope").checked = data.useSpanishScope === true;
@@ -2428,12 +2606,7 @@ function applyEstimateData(data) {
   $("invoicePaidCheckbox").checked = state.invoicePaid;
   applyCompanyDefaults();
   $("companyAddress").value = normalizeCompanyAddress($("companyAddress").value);
-  if ($("showEstimateNumber").checked && !$("estimateNumber").value.trim()) {
-    $("estimateNumber").value = makeEstimateNumber(false);
-    state.autoEstimateNumber = true;
-  } else {
-    state.autoEstimateNumber = false;
-  }
+  state.autoEstimateNumber = !$("estimateNumber").value.trim();
   state.lineItems = Array.isArray(data.lineItems)
     ? data.lineItems.map((item) => ({ type: "item", ...item, name: cleanLineItemName(item.name) }))
     : [];
@@ -2545,7 +2718,6 @@ function runButtonAction(action) {
 }
 
 function saveEstimate(options = {}) {
-  ensureEstimateNumber();
   const estimate = serializeEstimate();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(estimate));
@@ -2563,7 +2735,6 @@ function saveEstimate(options = {}) {
 }
 
 function generateEstimatePreview() {
-  ensureEstimateNumber();
   updatePreview();
   $("estimatePreview").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -2634,7 +2805,6 @@ function hasWorkInProgress() {
 function saveDraftBeforeLeaving() {
   if (!hasWorkInProgress()) return;
   try {
-    ensureEstimateNumber();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeEstimate()));
   } catch (error) {
     // Closing/navigating browsers may block storage; the warning still protects the user.
@@ -2763,7 +2933,7 @@ function resetEstimate() {
   $("clientEmail").value = "";
   $("projectAddress").value = "";
   $("projectType").value = "Other";
-  $("estimateNumber").value = makeEstimateNumber(false);
+  $("estimateNumber").value = "";
   $("finishLevel").value = "";
   $("widthFeet").value = "";
   $("heightFeet").value = "";
@@ -2776,6 +2946,7 @@ function resetEstimate() {
   $("discount").value = "";
   $("discountType").value = "dollar";
   $("taxRate").value = "";
+  $("taxType").value = "percent";
   $("depositRate").value = "";
   $("invoiceInitialDeposit").value = "";
   $("invoiceSecondDeposit").value = "";
@@ -2819,7 +2990,7 @@ fields.forEach((field) => {
 
 $("useLinearTotal").addEventListener("click", () => useCalculatedTotal("linear"));
 $("useSquareTotal").addEventListener("click", () => useCalculatedTotal("square"));
-$("createCrmFile").addEventListener("click", () => createCrmFile());
+if ($("createCrmFile")) $("createCrmFile").addEventListener("click", () => createCrmFile());
 $("estimateNumber").addEventListener("input", () => {
   state.autoEstimateNumber = false;
   state.estimateNumberCommitted = false;
@@ -2884,10 +3055,9 @@ $("editableEstimateUpload").addEventListener("change", (event) => {
   event.target.value = "";
 });
 $("submitEstimate").addEventListener("click", () => submitEstimateToGoogle().catch(() => {}));
-$("generatePaymentInvoice").addEventListener("click", () => generatePaymentInvoice());
-$("generateAssignmentSheet").addEventListener("click", () => generateAssignmentSheet());
-$("generateEstimate").addEventListener("click", () => generateEstimatePreview());
-$("printEstimate").addEventListener("click", () => runButtonAction(() => printEstimateCopy({ userRequested: true })));
+if ($("printEstimate")) {
+  $("printEstimate").addEventListener("click", () => runButtonAction(() => printEstimateCopy({ userRequested: true })));
+}
 $("toggleInvoicePaidStamp").addEventListener("click", toggleInvoicePaidStamp);
 $("invoicePaidCheckbox").addEventListener("change", (event) => setInvoicePaidStamp(event.target.checked));
 $("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
@@ -2897,7 +3067,35 @@ $("printAssignmentSheet").addEventListener("click", () => printAssignmentSheet()
 window.addEventListener("beforeunload", warnBeforeLeaving);
 window.addEventListener("pagehide", saveDraftBeforeLeaving);
 document.querySelectorAll("[data-copy-mode]").forEach((button) => {
-  button.addEventListener("click", () => setCopyMode(button.dataset.copyMode));
+  button.addEventListener("click", () => showEstimateDocument(button.dataset.copyMode));
+});
+document.querySelectorAll("[data-document-view]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (button.dataset.documentView === "payment") showPaymentDocument();
+    if (button.dataset.documentView === "assignment") showAssignmentDocument();
+  });
+});
+document.querySelectorAll("#documentViewSelect, [data-document-view-select]").forEach((select) => {
+  select.addEventListener("change", () => setDocumentView(select.value));
+});
+document.querySelectorAll("#shareEstimate, [data-share-toggle]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleShareMenu(button);
+  });
+});
+document.querySelectorAll("[data-share-action]").forEach((button) => {
+  button.addEventListener("click", () => {
+    closeShareMenus();
+    if (button.dataset.shareAction === "pdf") runButtonAction(() => printEstimateCopy({ userRequested: true }));
+    if (button.dataset.shareAction === "email") runButtonAction(emailEstimateCopy);
+  });
+});
+document.querySelectorAll("[data-collapse-target]").forEach((button) => {
+  button.addEventListener("click", () => toggleCollapsiblePanel(button));
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".share-menu")) closeShareMenus();
 });
 document.querySelectorAll("[data-action-button]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -2906,14 +3104,9 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
     if (action === "save") runButtonAction(downloadEditableEstimate);
     if (action === "open-file") runButtonAction(openEditableEstimatePicker);
     if (action === "submit") runButtonAction(submitEstimateToGoogle);
-    if (action === "payment") generatePaymentInvoice();
-    if (action === "assignment") generateAssignmentSheet();
-    if (action === "generate") generateEstimatePreview();
+    if (action === "invoice") runButtonAction(showPaymentDocument);
     if (action === "print") runButtonAction(() => printEstimateCopy({ userRequested: true }));
   });
-});
-document.querySelectorAll("[data-reset-page]").forEach((button) => {
-  button.addEventListener("click", () => window.location.reload());
 });
 setCopyMode("customer");
 
