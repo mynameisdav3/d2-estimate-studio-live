@@ -2122,7 +2122,8 @@ async function generatePaymentPdf() {
   await generateVisualPdfFromHtml(buildPaymentInvoiceHtml(), getPdfFileName("Payment Invoice"), ".invoice-sheet");
 }
 
-async function printEstimateCopy() {
+async function printEstimateCopy(options = {}) {
+  if (!options.userRequested) return;
   ensureEstimateNumber();
   updatePreview();
   setSubmitStatus("Browser print preview opened. Choose Save as PDF to rename and save.");
@@ -2554,11 +2555,10 @@ function saveEstimate(options = {}) {
   syncEstimateToLinkedDashboard(estimate);
 
   if (!options.silent) {
-    $("saveEstimate").textContent = "PDF";
+    $("saveEstimate").textContent = "Saved";
     setTimeout(() => {
       $("saveEstimate").textContent = "Save";
     }, 1000);
-    printEstimateCopy();
   }
 }
 
@@ -2676,7 +2676,7 @@ async function startNewEstimate() {
   if (!saveFirst) return;
 
   saveEstimate({ silent: true });
-  await printEstimateCopy();
+  await printEstimateCopy({ userRequested: true });
   const openAfterSave = window.confirm("After saving/printing the PDF, open a fresh estimate in a new window?");
   if (openAfterSave) {
     openFreshEstimateWindow();
@@ -2887,7 +2887,7 @@ $("submitEstimate").addEventListener("click", () => submitEstimateToGoogle().cat
 $("generatePaymentInvoice").addEventListener("click", () => generatePaymentInvoice());
 $("generateAssignmentSheet").addEventListener("click", () => generateAssignmentSheet());
 $("generateEstimate").addEventListener("click", () => generateEstimatePreview());
-$("printEstimate").addEventListener("click", () => runButtonAction(printEstimateCopy));
+$("printEstimate").addEventListener("click", () => runButtonAction(() => printEstimateCopy({ userRequested: true })));
 $("toggleInvoicePaidStamp").addEventListener("click", toggleInvoicePaidStamp);
 $("invoicePaidCheckbox").addEventListener("change", (event) => setInvoicePaidStamp(event.target.checked));
 $("printPaymentInvoice").addEventListener("click", () => printPaymentInvoice());
@@ -2909,7 +2909,7 @@ document.querySelectorAll("[data-action-button]").forEach((button) => {
     if (action === "payment") generatePaymentInvoice();
     if (action === "assignment") generateAssignmentSheet();
     if (action === "generate") generateEstimatePreview();
-    if (action === "print") runButtonAction(printEstimateCopy);
+    if (action === "print") runButtonAction(() => printEstimateCopy({ userRequested: true }));
   });
 });
 document.querySelectorAll("[data-reset-page]").forEach((button) => {

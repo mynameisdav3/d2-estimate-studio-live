@@ -25,17 +25,17 @@
             <button type="button" class="copy-mode-button" data-copy-mode="team">Team</button>
             <button type="button" class="copy-mode-button" data-copy-mode="supply">Supplies</button>
           </div>
-          <button class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
+          <button type="button" class="icon-button" id="newEstimate" title="New estimate" aria-label="New estimate">+ New</button>
           <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
-          <button class="icon-button" id="saveEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
-          <button class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
-          <button class="icon-button" id="submitEstimate" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
-          <button class="icon-button" id="generatePaymentInvoice" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
-          <button class="icon-button" id="generateAssignmentSheet" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
-          <button class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
-          <button class="icon-button" id="printEstimate" title="Print estimate" aria-label="Print estimate">PDF</button>
+          <button type="button" class="icon-button" id="saveEstimate" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
+          <button type="button" class="icon-button" id="openEditableEstimate" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
+          <button type="button" class="icon-button" id="submitEstimate" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
+          <button type="button" class="icon-button" id="generatePaymentInvoice" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
+          <button type="button" class="icon-button" id="generateAssignmentSheet" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
+          <button type="button" class="icon-button primary-action" id="generateEstimate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
+          <button type="button" class="icon-button" id="printEstimate" title="Print estimate" aria-label="Print estimate">PDF</button>
           <button class="icon-button reset-page-button" type="button" data-reset-page title="Reload page" aria-label="Reload page">↻</button>
-          <button class="icon-button invoice-only" id="toggleInvoicePaidStamp" title="Toggle paid stamp" aria-label="Toggle paid stamp" hidden>Paid Stamp</button>
+          <button type="button" class="icon-button invoice-only" id="toggleInvoicePaidStamp" title="Toggle paid stamp" aria-label="Toggle paid stamp" hidden>Paid Stamp</button>
           <input id="editableEstimateUpload" type="file" accept=".d2estimate,.json,.txt,application/json,text/plain" hidden>
         </div>
       </header>
@@ -612,15 +612,15 @@
             <button type="button" class="copy-mode-button" data-copy-mode="team">Team</button>
             <button type="button" class="copy-mode-button" data-copy-mode="supply">Supplies</button>
           </div>
-          <button class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
+          <button type="button" class="icon-button" data-action-button="new" title="New estimate" aria-label="New estimate">+ New</button>
           <a class="icon-button" href="crm.html" title="Open Dashboard" aria-label="Open Dashboard">Dashboard</a>
-          <button class="icon-button" data-action-button="save" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
-          <button class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
-          <button class="icon-button" data-action-button="submit" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
-          <button class="icon-button" data-action-button="payment" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
-          <button class="icon-button" data-action-button="assignment" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
-          <button class="icon-button primary-action" data-action-button="generate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
-          <button class="icon-button" data-action-button="print" title="Print estimate" aria-label="Print estimate">PDF</button>
+          <button type="button" class="icon-button" data-action-button="save" title="Save editable estimate file" aria-label="Save editable estimate file">Save</button>
+          <button type="button" class="icon-button" data-action-button="open-file" title="Open editable estimate file" aria-label="Open editable estimate file">Open File</button>
+          <button type="button" class="icon-button" data-action-button="submit" title="Create Dashboard lead from this estimate" aria-label="Create Dashboard lead from this estimate">Create Lead</button>
+          <button type="button" class="icon-button" data-action-button="payment" title="Generate payment invoice" aria-label="Generate payment invoice">Payment</button>
+          <button type="button" class="icon-button" data-action-button="assignment" title="Generate assignment sheet" aria-label="Generate assignment sheet">Assignment</button>
+          <button type="button" class="icon-button primary-action" data-action-button="generate" title="Generate estimate preview" aria-label="Generate estimate preview">Generate</button>
+          <button type="button" class="icon-button" data-action-button="print" title="Print estimate" aria-label="Print estimate">PDF</button>
           <button class="icon-button reset-page-button" type="button" data-reset-page title="Reload page" aria-label="Reload page">↻</button>
         </div>
       </footer>
@@ -628,6 +628,6 @@
     <script src="vendor/jspdf.umd.min.js"></script>
     <script src="vendor/html2canvas.min.js"></script>
     <script src="materials-database.js?v=20260804-price-update-2"></script>
-    <script src="app.js?v=20260806-browser-print-preview-fix"></script>
+    <script src="app.js?v=20260806-no-auto-print-fix"></script>
   </body>
 </html>
