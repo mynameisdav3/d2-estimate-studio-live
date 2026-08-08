@@ -3,7 +3,8 @@ const currency = new Intl.NumberFormat("en-US", {
   currency: "USD",
 });
 
-const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
+const DEFAULT_GOOGLE_SCRIPT_URL = "";
+const OLD_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
 const GOOGLE_SCRIPT_URL_STORAGE_KEY = "d2GoogleScriptUrl";
 const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/4gMdRagjk60Rdlw0xV7AI01";
 const ZELLE_ID = "D2carpentry";
@@ -38,12 +39,15 @@ function normalizeProjectType(value) {
 }
 
 function getGoogleScriptUrl() {
-  return localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || DEFAULT_GOOGLE_SCRIPT_URL;
+  const savedUrl = localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || "";
+  if (savedUrl && savedUrl !== OLD_GOOGLE_SCRIPT_URL) return savedUrl;
+  if (savedUrl === OLD_GOOGLE_SCRIPT_URL) localStorage.removeItem(GOOGLE_SCRIPT_URL_STORAGE_KEY);
+  return DEFAULT_GOOGLE_SCRIPT_URL;
 }
 
 function requestGoogleScriptUrl() {
   const existing = getGoogleScriptUrl();
-  const value = window.prompt("Paste your D2 Google Drive save link here. You only need to do this once on this device.", existing);
+  const value = window.prompt("Paste the NEW D2carpentryanddesign@gmail.com Google Apps Script Web App URL here. You only need to do this once on this device.", existing);
   if (!value) return "";
   const cleanValue = value.trim();
   localStorage.setItem(GOOGLE_SCRIPT_URL_STORAGE_KEY, cleanValue);

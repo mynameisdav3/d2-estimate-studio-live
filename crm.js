@@ -7,13 +7,15 @@ const CRM_STORAGE_KEY = "d2CrmDemoFiles";
 const CRM_REVENUE_STORAGE_KEY = "d2CrmRevenueRows";
 const CRM_PRICE_DATABASE_KEY = "d2PriceDatabase";
 const CRM_PRICE_DELETED_KEY = "d2PriceDeletedIds";
+const CRM_EXTERNAL_CALENDAR_KEY = "d2ExternalCalendarEvents";
 const CRM_STORAGE_BACKUP_KEY = "d2CrmDemoFilesBackup";
 const CRM_REVENUE_BACKUP_KEY = "d2CrmRevenueRowsBackup";
 const CRM_REVENUE_DELETED_KEY = "d2CrmRevenueDeletedIds";
 const CRM_PRICE_BACKUP_KEY = "d2PriceDatabaseBackup";
 const CRM_RECEIPT_DRAFT_KEY = "d2ReceiptScannerDraft";
 const CRM_RESTORE_VERSION_KEY = "d2CrmRestoreVersion";
-const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
+const DEFAULT_GOOGLE_SCRIPT_URL = "";
+const OLD_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxFBQzWViCApvF-c95kAyT0oSNImMgzhf30gP10H2WJT_S5XkejFctq5bT7IjCALMi5Qg/exec";
 const GOOGLE_SCRIPT_URL_STORAGE_KEY = "d2GoogleScriptUrl";
 const NOTE_EDIT_WINDOW_MS = 12 * 60 * 60 * 1000;
 
@@ -108,6 +110,7 @@ let crmRevenueYearFilter = String(new Date().getFullYear());
 let crmCalendarFilter = "upcoming";
 let crmCalendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let crmSelectedCalendarDate = todayIso(0);
+let crmExternalCalendarEvents = loadExternalCalendarEvents();
 let crmPriceRows = loadPriceRows();
 let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
@@ -117,12 +120,15 @@ let openEstimateAfterUpload = false;
 let estimateChoiceTarget = "";
 
 function getGoogleScriptUrl() {
-  return localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || DEFAULT_GOOGLE_SCRIPT_URL;
+  const savedUrl = localStorage.getItem(GOOGLE_SCRIPT_URL_STORAGE_KEY) || "";
+  if (savedUrl && savedUrl !== OLD_GOOGLE_SCRIPT_URL) return savedUrl;
+  if (savedUrl === OLD_GOOGLE_SCRIPT_URL) localStorage.removeItem(GOOGLE_SCRIPT_URL_STORAGE_KEY);
+  return DEFAULT_GOOGLE_SCRIPT_URL;
 }
 
 function requestGoogleScriptUrl() {
   const existing = getGoogleScriptUrl();
-  const value = window.prompt("Paste your D2 Google Drive save link here. You only need to do this once on this device.", existing);
+  const value = window.prompt("Paste the NEW D2carpentryanddesign@gmail.com Google Apps Script Web App URL here. You only need to do this once on this device.", existing);
   if (!value) return "";
   const cleanValue = value.trim();
   localStorage.setItem(GOOGLE_SCRIPT_URL_STORAGE_KEY, cleanValue);
@@ -525,6 +531,24 @@ function saveDeletedPriceIds() {
   }
 }
 
+function loadExternalCalendarEvents() {
+  try {
+    const saved = localStorage.getItem(CRM_EXTERNAL_CALENDAR_KEY);
+    const events = saved ? JSON.parse(saved) : [];
+    return Array.isArray(events) ? events.map(normalizeExternalCalendarEvent).filter(Boolean) : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveExternalCalendarEvents() {
+  try {
+    localStorage.setItem(CRM_EXTERNAL_CALENDAR_KEY, JSON.stringify(crmExternalCalendarEvents));
+  } catch (error) {
+    // Local storage can be blocked in some browser privacy modes.
+  }
+}
+
 function persistRestoredDashboardIfNeeded() {
   if (!crmRestoreAppliedThisLoad) return;
   if (Array.isArray(crmFiles) && crmFiles.length) saveCrmFiles();
@@ -566,6 +590,46 @@ function postCalendarEventToGoogle(event) {
   return postPayloadToGoogle({
     action: "calendarEvent",
     calendarEvent: event,
+  });
+}
+
+function fetchGoogleCalendarEvents(startDate, endDate) {
+  const googleScriptUrl = getGoogleScriptUrl() || requestGoogleScriptUrl();
+  if (!googleScriptUrl) return Promise.resolve([]);
+  return new Promise((resolve, reject) => {
+    const callbackName = `d2CalendarImport${Date.now()}${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement("script");
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Google Calendar import timed out."));
+    }, 20000);
+
+    function cleanup() {
+      window.clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = (response) => {
+      cleanup();
+      if (!response || response.ok === false) {
+        reject(new Error(response?.error || "Google Calendar import failed."));
+        return;
+      }
+      resolve(Array.isArray(response.events) ? response.events : []);
+    };
+
+    const url = new URL(googleScriptUrl);
+    url.searchParams.set("action", "calendarEvents");
+    url.searchParams.set("start", startDate);
+    url.searchParams.set("end", endDate);
+    url.searchParams.set("callback", callbackName);
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Google Calendar import could not load."));
+    };
+    script.src = url.toString();
+    document.body.appendChild(script);
   });
 }
 
@@ -3440,6 +3504,30 @@ function formatCalendarDate(dateValue, timeValue = "") {
   });
 }
 
+function normalizeExternalCalendarEvent(event = {}) {
+  const startDate = String(event.date || "").slice(0, 10);
+  if (!startDate) return null;
+  return {
+    eventKey: event.eventKey || `google-${event.eventId || event.id || startDate}-${event.title || "event"}`,
+    source: "google",
+    type: "google",
+    typeLabel: "Google",
+    title: event.title || "Google Calendar Event",
+    fileId: "",
+    fileNumber: "Google Calendar",
+    clientName: event.clientName || event.title || "Calendar Event",
+    phone: event.phone || "",
+    email: event.email || "",
+    address: event.address || "",
+    date: startDate,
+    time: event.time || "09:00",
+    startIso: event.startIso || `${startDate}T${event.time || "09:00"}:00`,
+    endIso: event.endIso || "",
+    notes: event.notes || event.description || "",
+    eventId: event.eventId || "",
+  };
+}
+
 function calendarEventFromFile(file, type) {
   const config = CRM_CALENDAR_TYPES[type];
   if (!file || !config) return null;
@@ -3485,7 +3573,21 @@ function allCrmCalendarEvents() {
       if (event) events.push(event);
     });
   });
-  return events.sort((a, b) => new Date(a.startIso) - new Date(b.startIso));
+  crmExternalCalendarEvents.forEach((event) => {
+    const normalized = normalizeExternalCalendarEvent(event);
+    if (normalized) events.push(normalized);
+  });
+  return dedupeCalendarEvents(events).sort((a, b) => new Date(a.startIso) - new Date(b.startIso));
+}
+
+function dedupeCalendarEvents(events = []) {
+  const seen = new Set();
+  return events.filter((event) => {
+    const key = String(event.eventKey || `${event.title}-${event.date}-${event.time}`).toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function visibleCrmCalendarEvents() {
@@ -3557,8 +3659,8 @@ function renderCalendarEventList(targetId, events, emptyText = "No calendar even
         <p>${escapeHtml(event.phone || "No phone")}${event.email ? ` · ${escapeHtml(event.email)}` : ""}</p>
       </div>
       <div class="crm-calendar-event-actions">
-        <button type="button" data-calendar-open="${escapeHtml(event.fileId)}">Open File</button>
-        <button type="button" data-calendar-sync="${escapeHtml(event.eventKey)}">Sync</button>
+        ${event.fileId ? `<button type="button" data-calendar-open="${escapeHtml(event.fileId)}">Open File</button>` : ""}
+        ${event.source === "google" ? "" : `<button type="button" data-calendar-sync="${escapeHtml(event.eventKey)}">Sync</button>`}
       </div>
     </article>
   `).join("") : `<p class="crm-empty-state">${escapeHtml(emptyText)}</p>`;
@@ -3695,6 +3797,23 @@ async function syncUpcomingCalendarEvents() {
   window.alert(`${events.length} calendar event${events.length === 1 ? "" : "s"} sent to Google Calendar.`);
 }
 
+async function importGoogleCalendarEvents() {
+  const button = $("crmImportGoogleCalendar");
+  const originalText = button ? button.textContent : "";
+  const start = new Date(crmCalendarCursor.getFullYear(), crmCalendarCursor.getMonth() - 1, 1);
+  const end = new Date(crmCalendarCursor.getFullYear() + 1, crmCalendarCursor.getMonth() + 1, 0);
+  if (button) button.textContent = "Importing...";
+  try {
+    const events = await fetchGoogleCalendarEvents(dateKeyFromDate(start), dateKeyFromDate(end));
+    crmExternalCalendarEvents = dedupeCalendarEvents(events.map(normalizeExternalCalendarEvent).filter(Boolean));
+    saveExternalCalendarEvents();
+    renderCalendar();
+    window.alert(`${crmExternalCalendarEvents.length} Google Calendar event${crmExternalCalendarEvents.length === 1 ? "" : "s"} imported into the CRM calendar.`);
+  } finally {
+    if (button) button.textContent = originalText || "Import Google Calendar";
+  }
+}
+
 function switchCrmView(view) {
   const showRevenue = view === "revenue";
   const showCalendar = view === "calendar";
@@ -3808,6 +3927,9 @@ $("crmCalendarToday").addEventListener("click", () => {
 $("crmSaveCalendarEvent").addEventListener("click", saveCalendarEventToCrm);
 $("crmSaveAndSyncCalendarEvent").addEventListener("click", () => {
   saveAndSyncCalendarEvent().catch(() => window.alert("Calendar sync could not be sent. Check your Google connection and try again."));
+});
+$("crmImportGoogleCalendar").addEventListener("click", () => {
+  importGoogleCalendarEvents().catch(() => window.alert("Google Calendar could not be imported. Confirm the Google Apps Script is updated and authorized."));
 });
 $("crmSyncAllCalendar").addEventListener("click", () => {
   syncUpcomingCalendarEvents().catch(() => window.alert("Calendar sync could not be sent. Check your Google connection and try again."));

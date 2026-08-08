@@ -1,6 +1,7 @@
 const DRIVE_PARENT_FOLDER_ID = "1SjVGZKYbdWzWqbbZ7zJ3mx1jNLtBi_4r";
 const CRM_SHEET_NAME = "D2 Dashboard Database";
-const D2_CALENDAR_NAME = "D2 Schedule";
+const D2_CALENDAR_NAME = "D2 Carpentry";
+const D2_CALENDAR_ALTERNATE_NAMES = ["D2 Schedule", "D2 Carpentry & Design"];
 
 const SHEETS = {
   files: "Files",
@@ -30,10 +31,25 @@ function doPost(e) {
   }
 }
 
-function doGet() {
-  return ContentService
-    .createTextOutput("D2 Dashboard Google Drive connection is live.")
-    .setMimeType(ContentService.MimeType.TEXT);
+function doGet(e) {
+  try {
+    const action = String(e && e.parameter && e.parameter.action || "");
+    if (action === "calendarEvents") {
+      const events = listCalendarEvents_(e.parameter || {});
+      const response = { ok: true, action: "calendarEvents", events };
+      const callback = String(e.parameter.callback || "").trim();
+      if (callback) return javascriptResponse_(callback, response);
+      return jsonResponse_(response);
+    }
+    return ContentService
+      .createTextOutput("D2 Dashboard Google Drive connection is live.")
+      .setMimeType(ContentService.MimeType.TEXT);
+  } catch (error) {
+    const response = { ok: false, error: String(error && error.message ? error.message : error) };
+    const callback = String(e && e.parameter && e.parameter.callback || "").trim();
+    if (callback) return javascriptResponse_(callback, response);
+    return jsonResponse_(response);
+  }
 }
 
 function saveDashboardSync_(payload, parentFolder, spreadsheet) {
@@ -124,6 +140,59 @@ function getOrCreateCalendar_() {
   const calendars = CalendarApp.getCalendarsByName(D2_CALENDAR_NAME);
   if (calendars.length) return calendars[0];
   return CalendarApp.createCalendar(D2_CALENDAR_NAME);
+}
+
+function listCalendarEvents_(params) {
+  const calendars = getD2Calendars_();
+  const now = new Date();
+  const fallbackStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const fallbackEnd = new Date(now.getFullYear() + 1, now.getMonth() + 1, 0);
+  const start = params.start ? new Date(`${params.start}T00:00:00`) : fallbackStart;
+  const end = params.end ? new Date(`${params.end}T23:59:59`) : fallbackEnd;
+  const timezone = Session.getScriptTimeZone();
+  return calendars.reduce((rows, calendar) => {
+    calendar.getEvents(start, end).forEach((event) => {
+      const eventStart = event.getStartTime();
+      const eventEnd = event.getEndTime();
+      const description = event.getDescription() || "";
+      const keyMatch = description.match(/D2_EVENT_KEY:([^\s]+)/);
+      rows.push({
+        eventId: event.getId(),
+        eventKey: keyMatch ? keyMatch[1] : `google-${event.getId()}`,
+        title: event.getTitle(),
+        date: Utilities.formatDate(eventStart, timezone, "yyyy-MM-dd"),
+        time: Utilities.formatDate(eventStart, timezone, "HH:mm"),
+        startIso: eventStart.toISOString(),
+        endIso: eventEnd.toISOString(),
+        address: event.getLocation() || "",
+        calendarName: calendar.getName(),
+        description,
+        notes: description,
+      });
+    });
+    return rows;
+  }, []);
+}
+
+function getD2Calendars_() {
+  const names = [D2_CALENDAR_NAME].concat(D2_CALENDAR_ALTERNATE_NAMES);
+  const calendars = [];
+  const seen = {};
+  names.forEach((name) => {
+    CalendarApp.getCalendarsByName(name).forEach((calendar) => {
+      if (seen[calendar.getId()]) return;
+      seen[calendar.getId()] = true;
+      calendars.push(calendar);
+    });
+  });
+  return calendars.length ? calendars : [getOrCreateCalendar_()];
+}
+
+function javascriptResponse_(callback, payload) {
+  const safeCallback = callback.replace(/[^A-Za-z0-9_$.[\\]]/g, "");
+  return ContentService
+    .createTextOutput(`${safeCallback}(${JSON.stringify(payload)});`)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
 function saveEstimateSubmission_(payload, parentFolder, spreadsheet) {

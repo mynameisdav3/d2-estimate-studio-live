@@ -6,7 +6,7 @@
     <title>D2 Dashboard</title>
     <meta name="theme-color" content="#0d4a91">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=20260808-crm-live-calendar">
+    <link rel="stylesheet" href="styles.css?v=20260808-d2-google-account">
   </head>
   <body class="crm-body">
     <main class="crm-shell">
@@ -392,6 +392,7 @@
               <p>Live schedule built from Dashboard files. Sync events to the business Google Calendar so they appear on your phone and Mac.</p>
             </div>
             <div class="crm-calendar-actions">
+              <button type="button" id="crmImportGoogleCalendar">Import Google Calendar</button>
               <button type="button" id="crmSyncAllCalendar">Sync Upcoming</button>
               <button type="button" id="crmOpenGoogleCalendar">Open Google Calendar</button>
             </div>
@@ -417,6 +418,7 @@
                       <option value="followUp">Follow-Ups</option>
                       <option value="start">Job Starts</option>
                       <option value="completion">Completions</option>
+                      <option value="google">Imported Google Events</option>
                     </select>
                   </label>
                 </div>
@@ -797,6 +799,6 @@
         caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
       }
     </script>
-    <script src="crm.js?v=20260808-lead-buckets"></script>
+    <script src="crm.js?v=20260808-d2-google-account"></script>
   </body>
 </html>

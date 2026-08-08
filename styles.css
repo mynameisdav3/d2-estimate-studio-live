@@ -2601,6 +2601,10 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   background: #7c2d12;
 }
 
+.crm-calendar-chip.google {
+  background: #5f6368;
+}
+
 .crm-calendar-more {
   background: #6b7280;
 }

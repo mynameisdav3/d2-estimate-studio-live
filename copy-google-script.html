@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Copy D2 Google Apps Script</title>
+    <style>
+      body {
+        margin: 0;
+        background: #f5f7fb;
+        color: #1f2937;
+        font-family: Arial, sans-serif;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 32px 18px;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        color: #0d4a91;
+        font-size: 28px;
+      }
+
+      p {
+        color: #4b5563;
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      button,
+      a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        margin: 8px 8px 18px 0;
+        border: 0;
+        border-radius: 10px;
+        background: #0d4a91;
+        color: #ffffff;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 800;
+        padding: 0 18px;
+        text-decoration: none;
+      }
+
+      a.secondary {
+        background: #ffffff;
+        border: 1px solid #cfd8e3;
+        color: #0d4a91;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 68vh;
+        box-sizing: border-box;
+        border: 1px solid #cfd8e3;
+        border-radius: 12px;
+        color: #111827;
+        font-family: Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.45;
+        padding: 16px;
+        white-space: pre;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>D2 Google Apps Script Update</h1>
+      <p>Click copy, then paste into Google Apps Script over the old code. After pasting, save it and deploy a new version.</p>
+      <button type="button" id="copyButton">Copy Script</button>
+      <a class="secondary" href="https://script.google.com/home/projects" target="_blank" rel="noopener">Open Google Apps Script</a>
+      <textarea id="scriptText" spellcheck="false"></textarea>
+    </main>
+    <script>
+      fetch("google-apps-script-backend.js")
+        .then((response) => response.text())
+        .then((text) => {
+          document.getElementById("scriptText").value = text;
+        });
+
+      document.getElementById("copyButton").addEventListener("click", async () => {
+        const textarea = document.getElementById("scriptText");
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        try {
+          await navigator.clipboard.writeText(textarea.value);
+        } catch (error) {
+          document.execCommand("copy");
+        }
+        document.getElementById("copyButton").textContent = "Copied";
+      });
+    </script>
+  </body>
+</html>
