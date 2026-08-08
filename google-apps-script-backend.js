@@ -1,5 +1,6 @@
 const DRIVE_PARENT_FOLDER_ID = "1SjVGZKYbdWzWqbbZ7zJ3mx1jNLtBi_4r";
 const CRM_SHEET_NAME = "D2 Dashboard Database";
+const D2_CALENDAR_NAME = "D2 Schedule";
 
 const SHEETS = {
   files: "Files",
@@ -17,6 +18,10 @@ function doPost(e) {
 
     if (action === "dashboardSync") {
       return jsonResponse_(saveDashboardSync_(payload, parentFolder, spreadsheet));
+    }
+
+    if (action === "calendarEvent") {
+      return jsonResponse_(upsertCalendarEvent_(payload.calendarEvent || {}));
     }
 
     return jsonResponse_(saveEstimateSubmission_(payload, parentFolder, spreadsheet));
@@ -70,6 +75,55 @@ function saveDashboardSync_(payload, parentFolder, spreadsheet) {
     databaseUrl: spreadsheet.getUrl(),
     driveUrl: parentFolder.getUrl(),
   };
+}
+
+function upsertCalendarEvent_(event) {
+  const calendar = getOrCreateCalendar_();
+  const key = String(event.eventKey || "").trim();
+  if (!key) throw new Error("Missing calendar event key.");
+  const start = event.startIso ? new Date(event.startIso) : new Date(`${event.date}T${event.time || "09:00"}`);
+  if (Number.isNaN(start.getTime())) throw new Error("Missing calendar event date.");
+  const end = event.endIso ? new Date(event.endIso) : new Date(start.getTime() + 60 * 60 * 1000);
+  const marker = `D2_EVENT_KEY:${key}`;
+  const description = [
+    event.notes || "",
+    "",
+    marker,
+  ].join("\n").trim();
+  const searchStart = new Date(start.getFullYear() - 1, 0, 1);
+  const searchEnd = new Date(start.getFullYear() + 2, 11, 31);
+  const existing = calendar.getEvents(searchStart, searchEnd, { search: marker })[0];
+  if (existing) {
+    existing.setTitle(event.title || "D2 Calendar Event");
+    existing.setTime(start, end);
+    existing.setDescription(description);
+    if (event.address) existing.setLocation(event.address);
+    return {
+      ok: true,
+      action: "calendarEvent",
+      mode: "updated",
+      eventKey: key,
+      eventId: existing.getId(),
+    };
+  }
+  const created = calendar.createEvent(event.title || "D2 Calendar Event", start, end, {
+    description,
+    location: event.address || "",
+  });
+  created.addPopupReminder(60);
+  return {
+    ok: true,
+    action: "calendarEvent",
+    mode: "created",
+    eventKey: key,
+    eventId: created.getId(),
+  };
+}
+
+function getOrCreateCalendar_() {
+  const calendars = CalendarApp.getCalendarsByName(D2_CALENDAR_NAME);
+  if (calendars.length) return calendars[0];
+  return CalendarApp.createCalendar(D2_CALENDAR_NAME);
 }
 
 function saveEstimateSubmission_(payload, parentFolder, spreadsheet) {

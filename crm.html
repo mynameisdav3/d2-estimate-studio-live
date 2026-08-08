@@ -6,7 +6,7 @@
     <title>D2 Dashboard</title>
     <meta name="theme-color" content="#0d4a91">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=20260726-estimate-expenses">
+    <link rel="stylesheet" href="styles.css?v=20260808-crm-live-calendar">
   </head>
   <body class="crm-body">
     <main class="crm-shell">
@@ -28,6 +28,7 @@
       <nav class="crm-actions crm-nav-actions" aria-label="Dashboard actions">
         <button type="button" class="icon-button primary-action" id="crmNewFile">+ New File</button>
         <button type="button" class="icon-button active" data-crm-view="dashboard">Dashboard</button>
+        <button type="button" class="icon-button" data-crm-view="calendar">Calendar</button>
         <button type="button" class="icon-button" data-crm-view="revenue">Revenue</button>
         <button type="button" class="icon-button" data-crm-view="expenses">Expenses</button>
         <button type="button" class="icon-button" data-crm-view="receipts">Receipts</button>
@@ -384,6 +385,100 @@
           </section>
         </section>
 
+        <section class="crm-revenue-view" id="crmCalendarView" hidden>
+          <section class="crm-command-panel crm-revenue-hero">
+            <div class="crm-command-copy">
+              <h2>Calendar</h2>
+              <p>Live schedule built from Dashboard files. Sync events to the business Google Calendar so they appear on your phone and Mac.</p>
+            </div>
+            <div class="crm-calendar-actions">
+              <button type="button" id="crmSyncAllCalendar">Sync Upcoming</button>
+              <button type="button" id="crmOpenGoogleCalendar">Open Google Calendar</button>
+            </div>
+          </section>
+
+          <section class="crm-layout crm-calendar-layout">
+            <section class="panel crm-detail-card crm-calendar-card">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow">D2 Schedule</p>
+                  <h2 id="crmCalendarMonthTitle">CRM Calendar</h2>
+                </div>
+                <div class="crm-panel-actions">
+                  <button type="button" id="crmCalendarPrev">Previous</button>
+                  <button type="button" id="crmCalendarToday">Today</button>
+                  <button type="button" id="crmCalendarNext">Next</button>
+                  <label class="crm-inline-control">
+                    <span>View</span>
+                    <select id="crmCalendarFilter">
+                      <option value="upcoming">Upcoming</option>
+                      <option value="week">This Week</option>
+                      <option value="inspection">Inspections</option>
+                      <option value="followUp">Follow-Ups</option>
+                      <option value="start">Job Starts</option>
+                      <option value="completion">Completions</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="crm-calendar-grid" id="crmCalendarGrid"></div>
+            </section>
+
+            <aside class="crm-revenue-side">
+              <section class="panel crm-detail-card">
+                <div class="panel-header">
+                  <h2>Agenda</h2>
+                </div>
+                <div class="crm-calendar-list" id="crmCalendarAgenda"></div>
+              </section>
+
+              <section class="panel crm-detail-card">
+                <div class="panel-header">
+                  <h2>Selected Day</h2>
+                </div>
+                <div class="crm-calendar-list" id="crmCalendarList"></div>
+              </section>
+
+              <section class="panel crm-detail-card">
+                <div class="panel-header">
+                  <h2>Add Calendar Event</h2>
+                </div>
+                <div class="field-grid">
+                  <label>
+                    File
+                    <select id="crmCalendarFile"></select>
+                  </label>
+                  <label>
+                    Event Type
+                    <select id="crmCalendarType">
+                      <option value="inspection">Inspection</option>
+                      <option value="followUp">Follow-Up</option>
+                      <option value="start">Job Start</option>
+                      <option value="completion">Completion</option>
+                    </select>
+                  </label>
+                  <label>
+                    Date
+                    <input id="crmCalendarDate" type="date">
+                  </label>
+                  <label>
+                    Time
+                    <input id="crmCalendarTime" type="time">
+                  </label>
+                  <label class="wide">
+                    Notes
+                    <textarea id="crmCalendarNotes" rows="4" placeholder="Optional calendar note"></textarea>
+                  </label>
+                </div>
+                <div class="crm-calendar-actions">
+                  <button type="button" id="crmSaveCalendarEvent">Save to CRM</button>
+                  <button type="button" id="crmSaveAndSyncCalendarEvent">Save + Sync</button>
+                </div>
+              </section>
+            </aside>
+          </section>
+        </section>
+
         <section class="crm-revenue-view" id="crmRevenueView" hidden>
           <section class="crm-command-panel crm-revenue-hero">
             <div class="crm-command-copy">
@@ -702,6 +797,6 @@
         caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
       }
     </script>
-    <script src="crm.js?v=20260806-fresh-estimator-date-pdf"></script>
+    <script src="crm.js?v=20260808-crm-live-calendar"></script>
   </body>
 </html>

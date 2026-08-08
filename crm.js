@@ -105,6 +105,9 @@ let crmRevenueRows = loadRevenueRows();
 let activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
 let crmRevenueDateSort = "newest";
 let crmRevenueYearFilter = String(new Date().getFullYear());
+let crmCalendarFilter = "upcoming";
+let crmCalendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+let crmSelectedCalendarDate = todayIso(0);
 let crmPriceRows = loadPriceRows();
 let crmDeletedPriceIds = loadDeletedPriceIds();
 let editingPriceId = "";
@@ -557,6 +560,13 @@ function postPayloadToGoogle(payload) {
     body,
   }).catch(() => {});
   return Promise.resolve(true);
+}
+
+function postCalendarEventToGoogle(event) {
+  return postPayloadToGoogle({
+    action: "calendarEvent",
+    calendarEvent: event,
+  });
 }
 
 async function saveDashboardToGoogle() {
@@ -3394,16 +3404,298 @@ async function emailInvoice() {
   window.location.href = `mailto:${encodeURIComponent(invoice.email || file.clientEmail || "")}?subject=${subject}&body=${body}`;
 }
 
+const CRM_CALENDAR_TYPES = {
+  inspection: { label: "Inspection", dateField: "inspectionDate", timeField: "inspectionTime", title: "Inspection" },
+  followUp: { label: "Follow-Up", dateField: "followUpDate", timeField: "", title: "Follow-Up" },
+  start: { label: "Job Start", dateField: "startDate", timeField: "", title: "Job Start" },
+  completion: { label: "Completion", dateField: "anticipatedCompletionDate", timeField: "", title: "Anticipated Completion" },
+};
+
+function calendarDateTime(dateValue, timeValue = "") {
+  if (!dateValue) return null;
+  const date = new Date(`${dateValue}T${timeValue || "09:00"}`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatCalendarDate(dateValue, timeValue = "") {
+  const date = calendarDateTime(dateValue, timeValue);
+  if (!date) return "";
+  return date.toLocaleString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function calendarEventFromFile(file, type) {
+  const config = CRM_CALENDAR_TYPES[type];
+  if (!file || !config) return null;
+  const dateValue = file[config.dateField] || "";
+  const timeValue = config.timeField ? file[config.timeField] || "" : "";
+  const start = calendarDateTime(dateValue, timeValue);
+  if (!start) return null;
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const eventKey = `${file.id || file.fileNumber}-${type}`;
+  return {
+    eventKey,
+    type,
+    typeLabel: config.label,
+    title: `${config.title} - ${file.clientName || "Customer"}`,
+    fileId: file.id || "",
+    fileNumber: file.fileNumber || "",
+    clientName: file.clientName || "",
+    phone: file.clientPhone || "",
+    email: file.clientEmail || "",
+    address: file.projectAddress || "",
+    date: dateValue,
+    time: timeValue || "09:00",
+    startIso: start.toISOString(),
+    endIso: end.toISOString(),
+    notes: [
+      `D2 file: ${file.fileNumber || ""}`,
+      `Customer: ${file.clientName || ""}`,
+      file.clientPhone ? `Phone: ${file.clientPhone}` : "",
+      file.clientEmail ? `Email: ${file.clientEmail}` : "",
+      file.projectAddress ? `Address: ${file.projectAddress}` : "",
+      "",
+      `CRM event key: ${eventKey}`,
+    ].filter(Boolean).join("\n"),
+  };
+}
+
+function allCrmCalendarEvents() {
+  const events = [];
+  crmFiles.forEach((rawFile) => {
+    const file = normalizeCrmFile(rawFile);
+    Object.keys(CRM_CALENDAR_TYPES).forEach((type) => {
+      const event = calendarEventFromFile(file, type);
+      if (event) events.push(event);
+    });
+  });
+  return events.sort((a, b) => new Date(a.startIso) - new Date(b.startIso));
+}
+
+function visibleCrmCalendarEvents() {
+  const now = new Date();
+  const weekEnd = new Date(now);
+  weekEnd.setDate(now.getDate() + 7);
+  return allCrmCalendarEvents().filter((event) => {
+    const date = new Date(event.startIso);
+    if (crmCalendarFilter === "week") return date >= now && date <= weekEnd;
+    if (crmCalendarFilter !== "upcoming") return event.type === crmCalendarFilter;
+    return date >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  });
+}
+
+function eventDateKey(event) {
+  return String(event.date || "").slice(0, 10);
+}
+
+function dateKeyFromDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function calendarEventsForDate(dateKey) {
+  return allCrmCalendarEvents().filter((event) => eventDateKey(event) === dateKey);
+}
+
+function monthCalendarEvents() {
+  const year = crmCalendarCursor.getFullYear();
+  const month = crmCalendarCursor.getMonth();
+  return allCrmCalendarEvents().filter((event) => {
+    const date = calendarDateTime(event.date, event.time);
+    return date && date.getFullYear() === year && date.getMonth() === month;
+  });
+}
+
+function renderCalendarFileOptions() {
+  const select = $("crmCalendarFile");
+  if (!select) return;
+  select.innerHTML = crmFiles.map((file) => `
+    <option value="${escapeHtml(file.id)}"${file.id === activeFileId ? " selected" : ""}>
+      ${escapeHtml(`${file.fileNumber || "File"} - ${file.clientName || "Unnamed Client"}`)}
+    </option>
+  `).join("");
+}
+
+function selectedCalendarFile() {
+  return crmFiles.find((file) => file.id === $("crmCalendarFile")?.value) || activeFile();
+}
+
+function renderCalendar() {
+  renderCalendarFileOptions();
+  if ($("crmCalendarFilter")) $("crmCalendarFilter").value = crmCalendarFilter;
+  renderCalendarGrid();
+  renderCalendarAgenda();
+}
+
+function renderCalendarEventList(targetId, events, emptyText = "No calendar events found for this view.") {
+  const target = $(targetId);
+  if (!target) return;
+  target.innerHTML = events.length ? events.map((event) => `
+    <article class="crm-calendar-event">
+      <div class="crm-calendar-date">
+        <strong>${escapeHtml(formatCalendarDate(event.date, event.time))}</strong>
+        <span>${escapeHtml(event.typeLabel)}</span>
+      </div>
+      <div class="crm-calendar-info">
+        <h3>${escapeHtml(event.title)}</h3>
+        <p>${escapeHtml(event.fileNumber)} · ${escapeHtml(event.address || "No address added")}</p>
+        <p>${escapeHtml(event.phone || "No phone")}${event.email ? ` · ${escapeHtml(event.email)}` : ""}</p>
+      </div>
+      <div class="crm-calendar-event-actions">
+        <button type="button" data-calendar-open="${escapeHtml(event.fileId)}">Open File</button>
+        <button type="button" data-calendar-sync="${escapeHtml(event.eventKey)}">Sync</button>
+      </div>
+    </article>
+  `).join("") : `<p class="crm-empty-state">${escapeHtml(emptyText)}</p>`;
+
+  target.querySelectorAll("[data-calendar-open]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeFileId = button.dataset.calendarOpen;
+      switchCrmView("dashboard");
+      renderCrm();
+    });
+  });
+  target.querySelectorAll("[data-calendar-sync]").forEach((button) => {
+    button.addEventListener("click", () => syncCalendarEventByKey(button.dataset.calendarSync));
+  });
+}
+
+function renderCalendarGrid() {
+  const grid = $("crmCalendarGrid");
+  if (!grid) return;
+  const monthTitle = $("crmCalendarMonthTitle");
+  if (monthTitle) {
+    monthTitle.textContent = crmCalendarCursor.toLocaleString("en-US", { month: "long", year: "numeric" });
+  }
+  const year = crmCalendarCursor.getFullYear();
+  const month = crmCalendarCursor.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const start = new Date(firstDay);
+  start.setDate(firstDay.getDate() - firstDay.getDay());
+  const todayKey = todayIso(0);
+  const monthEvents = monthCalendarEvents();
+  const eventCounts = {};
+  monthEvents.forEach((event) => {
+    const key = eventDateKey(event);
+    eventCounts[key] = (eventCounts[key] || 0) + 1;
+  });
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const cells = [];
+  dayNames.forEach((day) => cells.push(`<div class="crm-calendar-weekday">${day}</div>`));
+  for (let index = 0; index < 42; index += 1) {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    const key = dateKeyFromDate(date);
+    const events = calendarEventsForDate(key);
+    const isCurrentMonth = date.getMonth() === month;
+    const isToday = key === todayKey;
+    const isSelected = key === crmSelectedCalendarDate;
+    cells.push(`
+      <button type="button" class="crm-calendar-day${isCurrentMonth ? "" : " muted"}${isToday ? " today" : ""}${isSelected ? " selected" : ""}" data-calendar-day="${escapeHtml(key)}">
+        <span class="crm-calendar-day-number">${date.getDate()}</span>
+        <span class="crm-calendar-day-events">
+          ${events.slice(0, 3).map((event) => `<em class="crm-calendar-chip ${escapeHtml(event.type)}">${escapeHtml(event.typeLabel)} · ${escapeHtml(event.clientName || "Customer")}</em>`).join("")}
+          ${events.length > 3 ? `<em class="crm-calendar-more">+${events.length - 3} more</em>` : ""}
+        </span>
+      </button>
+    `);
+  }
+  grid.innerHTML = cells.join("");
+  grid.querySelectorAll("[data-calendar-day]").forEach((button) => {
+    button.addEventListener("click", () => {
+      crmSelectedCalendarDate = button.dataset.calendarDay;
+      $("crmCalendarDate").value = crmSelectedCalendarDate;
+      renderCalendarGrid();
+      renderCalendarSelectedDay();
+    });
+  });
+}
+
+function renderCalendarSelectedDay() {
+  const events = calendarEventsForDate(crmSelectedCalendarDate);
+  renderCalendarEventList("crmCalendarList", events, "No events on this selected day.");
+}
+
+function renderCalendarAgenda() {
+  const events = visibleCrmCalendarEvents();
+  renderCalendarEventList("crmCalendarAgenda", events, "No agenda events found.");
+  renderCalendarSelectedDay();
+}
+
+function captureCalendarFormToFile() {
+  const file = selectedCalendarFile();
+  if (!file) return null;
+  const type = $("crmCalendarType").value;
+  const config = CRM_CALENDAR_TYPES[type];
+  if (!config) return null;
+  const dateValue = $("crmCalendarDate").value;
+  if (!dateValue) {
+    window.alert("Choose a calendar date first.");
+    return null;
+  }
+  file[config.dateField] = dateValue;
+  if (config.timeField) file[config.timeField] = $("crmCalendarTime").value;
+  const note = $("crmCalendarNotes").value.trim();
+  if (note) addSystemNote(file, `${config.label} calendar note: ${note}`);
+  saveCrmFiles();
+  return calendarEventFromFile(file, type);
+}
+
+function saveCalendarEventToCrm() {
+  saveActiveFile();
+  const event = captureCalendarFormToFile();
+  if (!event) return;
+  renderCalendar();
+  window.alert("Calendar event saved to the CRM.");
+}
+
+async function saveAndSyncCalendarEvent() {
+  saveActiveFile();
+  const event = captureCalendarFormToFile();
+  if (!event) return;
+  await postCalendarEventToGoogle(event);
+  const file = crmFiles.find((entry) => entry.id === event.fileId);
+  if (file) addSystemNote(file, `${event.typeLabel} synced to Google Calendar.`);
+  saveCrmFiles();
+  renderCalendar();
+  window.alert("Calendar event sent to Google Calendar. It should appear on your phone/Mac after Google syncs.");
+}
+
+async function syncCalendarEventByKey(eventKey) {
+  const event = allCrmCalendarEvents().find((entry) => entry.eventKey === eventKey);
+  if (!event) return;
+  await postCalendarEventToGoogle(event);
+  const file = crmFiles.find((entry) => entry.id === event.fileId);
+  if (file) addSystemNote(file, `${event.typeLabel} synced to Google Calendar.`);
+  saveCrmFiles();
+  renderCalendar();
+}
+
+async function syncUpcomingCalendarEvents() {
+  saveActiveFile();
+  const events = visibleCrmCalendarEvents();
+  for (const event of events) {
+    await postCalendarEventToGoogle(event);
+  }
+  window.alert(`${events.length} calendar event${events.length === 1 ? "" : "s"} sent to Google Calendar.`);
+}
+
 function switchCrmView(view) {
   const showRevenue = view === "revenue";
+  const showCalendar = view === "calendar";
   const showInvoice = view === "invoice";
   const showExpenses = view === "expenses";
   const showReceipts = view === "receipts";
   const showPrices = view === "prices";
   document.querySelectorAll(".crm-dashboard-view").forEach((section) => {
-    section.hidden = showRevenue || showInvoice || showExpenses || showReceipts || showPrices;
+    section.hidden = showRevenue || showCalendar || showInvoice || showExpenses || showReceipts || showPrices;
   });
   $("crmRevenueView").hidden = !showRevenue;
+  $("crmCalendarView").hidden = !showCalendar;
   $("crmInvoiceView").hidden = !showInvoice;
   $("crmExpensesView").hidden = !showExpenses;
   $("crmReceiptView").hidden = !showReceipts;
@@ -3412,6 +3704,7 @@ function switchCrmView(view) {
     button.classList.toggle("active", button.dataset.crmView === view);
   });
   if (showInvoice) renderInvoiceView();
+  if (showCalendar) renderCalendar();
   if (showExpenses) renderFileExpenses();
   if (showReceipts) renderReceiptScanner();
   if (showPrices) renderPriceDatabase();
@@ -3481,6 +3774,35 @@ $("crmNewNote").addEventListener("keydown", (event) => {
 });
 $("crmSaveDemo").addEventListener("click", () => {
   saveDashboardToGoogle();
+});
+$("crmCalendarFilter").addEventListener("change", (event) => {
+  crmCalendarFilter = event.target.value;
+  renderCalendar();
+});
+$("crmCalendarPrev").addEventListener("click", () => {
+  crmCalendarCursor = new Date(crmCalendarCursor.getFullYear(), crmCalendarCursor.getMonth() - 1, 1);
+  renderCalendar();
+});
+$("crmCalendarNext").addEventListener("click", () => {
+  crmCalendarCursor = new Date(crmCalendarCursor.getFullYear(), crmCalendarCursor.getMonth() + 1, 1);
+  renderCalendar();
+});
+$("crmCalendarToday").addEventListener("click", () => {
+  const today = new Date();
+  crmCalendarCursor = new Date(today.getFullYear(), today.getMonth(), 1);
+  crmSelectedCalendarDate = todayIso(0);
+  if ($("crmCalendarDate")) $("crmCalendarDate").value = crmSelectedCalendarDate;
+  renderCalendar();
+});
+$("crmSaveCalendarEvent").addEventListener("click", saveCalendarEventToCrm);
+$("crmSaveAndSyncCalendarEvent").addEventListener("click", () => {
+  saveAndSyncCalendarEvent().catch(() => window.alert("Calendar sync could not be sent. Check your Google connection and try again."));
+});
+$("crmSyncAllCalendar").addEventListener("click", () => {
+  syncUpcomingCalendarEvents().catch(() => window.alert("Calendar sync could not be sent. Check your Google connection and try again."));
+});
+$("crmOpenGoogleCalendar").addEventListener("click", () => {
+  window.open("https://calendar.google.com/calendar/u/0/r", "_blank", "noopener");
 });
 $("crmArchiveFile").addEventListener("click", () => {
   const file = activeFile();
