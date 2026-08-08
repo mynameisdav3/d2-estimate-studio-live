@@ -876,12 +876,19 @@ textarea:focus {
   margin: 3px 0;
 }
 
+.client-block p,
+.client-block a {
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
 .notes p {
   white-space: pre-wrap;
 }
 
 .client-block a {
-  color: inherit;
   text-decoration: none;
 }
 
