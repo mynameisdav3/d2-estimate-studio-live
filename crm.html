@@ -6,7 +6,7 @@
     <title>D2 Dashboard</title>
     <meta name="theme-color" content="#0d4a91">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=20260808-d2-google-account">
+    <link rel="stylesheet" href="styles.css?v=20260808-cloud-drive-link">
   </head>
   <body class="crm-body">
     <main class="crm-shell">
@@ -35,6 +35,7 @@
         <button type="button" class="icon-button" data-crm-view="prices">Price Database</button>
         <a class="icon-button" href="index.html?new=1">Estimator</a>
         <button type="button" class="icon-button" id="crmSaveDemo">Save Dashboard</button>
+        <button type="button" class="icon-button" id="crmLoadCloud">Load Cloud</button>
       </nav>
 
       <section class="crm-dashboard">
@@ -799,6 +800,6 @@
         caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
       }
     </script>
-    <script src="crm.js?v=20260808-d2-google-account"></script>
+    <script src="crm.js?v=20260808-cloud-drive-link"></script>
   </body>
 </html>

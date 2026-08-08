@@ -1,4 +1,4 @@
-const DRIVE_PARENT_FOLDER_ID = "1SjVGZKYbdWzWqbbZ7zJ3mx1jNLtBi_4r";
+const DRIVE_PARENT_FOLDER_ID = "1XhGOeZFdBnYnoMxc5UIJCTd0-IUZCtkJ";
 const CRM_SHEET_NAME = "D2 Dashboard Database";
 const D2_CALENDAR_NAME = "D2 Carpentry";
 const D2_CALENDAR_ALTERNATE_NAMES = ["D2 Schedule", "D2 Carpentry & Design"];
@@ -34,6 +34,14 @@ function doPost(e) {
 function doGet(e) {
   try {
     const action = String(e && e.parameter && e.parameter.action || "");
+    if (action === "dashboardData") {
+      const parentFolder = DriveApp.getFolderById(DRIVE_PARENT_FOLDER_ID);
+      const dashboard = loadLatestDashboardSync_(parentFolder);
+      const response = { ok: true, action: "dashboardData", dashboard };
+      const callback = String(e.parameter.callback || "").trim();
+      if (callback) return javascriptResponse_(callback, response);
+      return jsonResponse_(response);
+    }
     if (action === "calendarEvents") {
       const events = listCalendarEvents_(e.parameter || {});
       const response = { ok: true, action: "calendarEvents", events };
@@ -91,6 +99,13 @@ function saveDashboardSync_(payload, parentFolder, spreadsheet) {
     databaseUrl: spreadsheet.getUrl(),
     driveUrl: parentFolder.getUrl(),
   };
+}
+
+function loadLatestDashboardSync_(parentFolder) {
+  const files = parentFolder.getFilesByName("D2 Dashboard Sync - latest.json");
+  if (!files.hasNext()) return null;
+  const text = files.next().getBlob().getDataAsString();
+  return text ? JSON.parse(text) : null;
 }
 
 function upsertCalendarEvent_(event) {

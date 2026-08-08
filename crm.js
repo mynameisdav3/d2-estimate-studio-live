@@ -633,6 +633,44 @@ function fetchGoogleCalendarEvents(startDate, endDate) {
   });
 }
 
+function fetchDashboardFromGoogle() {
+  const googleScriptUrl = getGoogleScriptUrl() || requestGoogleScriptUrl();
+  if (!googleScriptUrl) return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const callbackName = `d2DashboardImport${Date.now()}${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement("script");
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Dashboard cloud load timed out."));
+    }, 20000);
+
+    function cleanup() {
+      window.clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = (response) => {
+      cleanup();
+      if (!response || response.ok === false) {
+        reject(new Error(response?.error || "Dashboard cloud load failed."));
+        return;
+      }
+      resolve(response.dashboard || null);
+    };
+
+    const url = new URL(googleScriptUrl);
+    url.searchParams.set("action", "dashboardData");
+    url.searchParams.set("callback", callbackName);
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Dashboard cloud load could not connect."));
+    };
+    script.src = url.toString();
+    document.body.appendChild(script);
+  });
+}
+
 async function saveDashboardToGoogle() {
   saveActiveFile();
   saveCrmFiles();
@@ -651,6 +689,38 @@ async function saveDashboardToGoogle() {
     }, 1400);
   }
   renderCrm();
+}
+
+async function loadDashboardFromGoogle() {
+  const confirmed = window.confirm("Load the latest Dashboard from D2 Google Drive? This will replace the dashboard data currently shown in this browser.");
+  if (!confirmed) return;
+  const button = $("crmLoadCloud");
+  if (button) button.textContent = "Loading...";
+  try {
+    const dashboard = await fetchDashboardFromGoogle();
+    if (!dashboard) {
+      window.alert("No cloud Dashboard backup was found yet. Save Dashboard first after the new D2 script is deployed.");
+      return;
+    }
+    const files = Array.isArray(dashboard.dashboardFiles) ? dashboard.dashboardFiles : [];
+    const revenueRows = Array.isArray(dashboard.revenueRows) ? dashboard.revenueRows : [];
+    const priceRows = Array.isArray(dashboard.priceRows) ? dashboard.priceRows : [];
+    const deletedPriceIds = Array.isArray(dashboard.deletedPriceIds) ? dashboard.deletedPriceIds : [];
+    crmFiles = files.map((file) => normalizeCrmFile({ ...file }));
+    crmRevenueRows = dedupeRevenueRows(revenueRows.map((row) => ({ ...row })));
+    crmPriceRows = priceRows.map((row) => normalizedPriceRow(row));
+    crmDeletedPriceIds = deletedPriceIds;
+    activeFileId = crmFiles[0] ? crmFiles[0].id : null;
+    activeRevenueId = crmRevenueRows[0] ? crmRevenueRows[0].id : null;
+    saveCrmFiles();
+    saveRevenueRows();
+    savePriceRows();
+    saveDeletedPriceIds();
+    renderCrm();
+    window.alert("Dashboard loaded from D2 Google Drive.");
+  } finally {
+    if (button) button.textContent = "Load Cloud";
+  }
 }
 
 function activeFile() {
@@ -3904,6 +3974,9 @@ $("crmNewNote").addEventListener("keydown", (event) => {
 });
 $("crmSaveDemo").addEventListener("click", () => {
   saveDashboardToGoogle();
+});
+$("crmLoadCloud").addEventListener("click", () => {
+  loadDashboardFromGoogle().catch(() => window.alert("Dashboard could not be loaded from D2 Google Drive. Confirm the new Google Apps Script is deployed."));
 });
 $("crmCalendarFilter").addEventListener("change", (event) => {
   crmCalendarFilter = event.target.value;
