@@ -1,7 +1,22 @@
-const DRIVE_PARENT_FOLDER_ID = "1XhGOeZFdBnYnoMxc5UIJCTd0-IUZCtkJ";
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>D2 Google Script - Copy</title>
+<style>
+body{margin:0;background:#f5f7fb;color:#1f2937;font-family:Arial,sans-serif}main{max-width:980px;margin:0 auto;padding:32px 18px}h1{margin:0 0 10px;color:#0d4a91;font-size:28px}p{color:#4b5563;font-size:16px;line-height:1.5}.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}button,a{display:inline-flex;align-items:center;justify-content:center;min-height:46px;border:0;border-radius:10px;background:#0d4a91;color:#fff;cursor:pointer;font-size:16px;font-weight:800;padding:0 18px;text-decoration:none}a.secondary{background:#fff;border:1px solid #cfd8e3;color:#0d4a91}textarea{width:100%;min-height:68vh;box-sizing:border-box;border:1px solid #cfd8e3;border-radius:12px;color:#111827;font-family:Menlo,Consolas,monospace;font-size:13px;line-height:1.45;padding:16px;white-space:pre}.status{font-weight:800;color:#0d4a91}
+</style>
+</head>
+<body>
+<main>
+<h1>D2 Google Apps Script Update</h1>
+<p>This page already contains the full script. Click <strong>Copy Script</strong>, then paste it into Google Apps Script over the old code.</p>
+<div class="row"><button type="button" id="copyButton">Copy Script</button><a class="secondary" href="https://script.google.com/home/projects" target="_blank" rel="noopener">Open Google Apps Script</a><span class="status" id="status"></span></div>
+<textarea id="scriptText" spellcheck="false">const DRIVE_PARENT_FOLDER_ID = "1XhGOeZFdBnYnoMxc5UIJCTd0-IUZCtkJ";
 const CRM_SHEET_NAME = "D2 Dashboard Database";
 const D2_CALENDAR_NAME = "D2 Carpentry";
-const D2_CALENDAR_ALTERNATE_NAMES = ["d2carpentryanddesign@gmail.com", "D2 Schedule", "D2 Carpentry & Design"];
+const D2_CALENDAR_ALTERNATE_NAMES = ["d2carpentryanddesign@gmail.com", "D2 Schedule", "D2 Carpentry &amp; Design"];
 
 const SHEETS = {
   files: "Files",
@@ -27,13 +42,13 @@ function doPost(e) {
 
     return jsonResponse_(saveEstimateSubmission_(payload, parentFolder, spreadsheet));
   } catch (error) {
-    return jsonResponse_({ ok: false, error: String(error && error.message ? error.message : error) });
+    return jsonResponse_({ ok: false, error: String(error &amp;&amp; error.message ? error.message : error) });
   }
 }
 
 function doGet(e) {
   try {
-    const action = String(e && e.parameter && e.parameter.action || "");
+    const action = String(e &amp;&amp; e.parameter &amp;&amp; e.parameter.action || "");
     if (action === "dashboardData") {
       const parentFolder = DriveApp.getFolderById(DRIVE_PARENT_FOLDER_ID);
       const dashboard = loadLatestDashboardSync_(parentFolder);
@@ -53,8 +68,8 @@ function doGet(e) {
       .createTextOutput("D2 Dashboard Google Drive connection is live.")
       .setMimeType(ContentService.MimeType.TEXT);
   } catch (error) {
-    const response = { ok: false, error: String(error && error.message ? error.message : error) };
-    const callback = String(e && e.parameter && e.parameter.callback || "").trim();
+    const response = { ok: false, error: String(error &amp;&amp; error.message ? error.message : error) };
+    const callback = String(e &amp;&amp; e.parameter &amp;&amp; e.parameter.callback || "").trim();
     if (callback) return javascriptResponse_(callback, response);
     return jsonResponse_(response);
   }
@@ -77,7 +92,7 @@ function saveDashboardSync_(payload, parentFolder, spreadsheet) {
   backupFolder.createFile(`D2 Dashboard Sync - ${backupStamp}.json`, dashboardPayload, MimeType.PLAIN_TEXT);
 
   const fileSheet = getSheet_(spreadsheet, SHEETS.files, fileHeaders_());
-  replaceRows_(fileSheet, fileHeaders_(), files.map((file) => {
+  replaceRows_(fileSheet, fileHeaders_(), files.map((file) =&gt; {
     const folder = getOrCreateCustomerFolder_(parentFolder, file);
     createStandardSubfolders_(folder);
     upsertTextFile_(folder, "Dashboard File.json", JSON.stringify(file, null, 2), MimeType.PLAIN_TEXT);
@@ -165,8 +180,8 @@ function listCalendarEvents_(params) {
   const start = params.start ? new Date(`${params.start}T00:00:00`) : fallbackStart;
   const end = params.end ? new Date(`${params.end}T23:59:59`) : fallbackEnd;
   const timezone = Session.getScriptTimeZone();
-  return calendars.reduce((rows, calendar) => {
-    calendar.getEvents(start, end).forEach((event) => {
+  return calendars.reduce((rows, calendar) =&gt; {
+    calendar.getEvents(start, end).forEach((event) =&gt; {
       const eventStart = event.getStartTime();
       const eventEnd = event.getEndTime();
       const description = event.getDescription() || "";
@@ -193,8 +208,8 @@ function getD2Calendars_() {
   const names = [D2_CALENDAR_NAME].concat(D2_CALENDAR_ALTERNATE_NAMES);
   const calendars = [];
   const seen = {};
-  names.forEach((name) => {
-    CalendarApp.getCalendarsByName(name).forEach((calendar) => {
+  names.forEach((name) =&gt; {
+    CalendarApp.getCalendarsByName(name).forEach((calendar) =&gt; {
       if (seen[calendar.getId()]) return;
       seen[calendar.getId()] = true;
       calendars.push(calendar);
@@ -223,7 +238,7 @@ function saveEstimateSubmission_(payload, parentFolder, spreadsheet) {
   );
 
   const copies = payload.copies || {};
-  Object.keys(copies).forEach((key) => {
+  Object.keys(copies).forEach((key) =&gt; {
     const copy = copies[key] || {};
     if (!copy.html) return;
     upsertTextFile_(
@@ -297,13 +312,13 @@ function getSheet_(spreadsheet, sheetName, headers) {
 
 function ensureHeader_(sheet, headers) {
   const firstRow = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
-  const hasHeader = firstRow.some((value) => String(value || "").trim());
+  const hasHeader = firstRow.some((value) =&gt; String(value || "").trim());
   if (!hasHeader) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     sheet.setFrozenRows(1);
     return;
   }
-  headers.forEach((header, index) => {
+  headers.forEach((header, index) =&gt; {
     if (firstRow[index] !== header) sheet.getRange(1, index + 1).setValue(header);
   });
 }
@@ -320,9 +335,9 @@ function replaceRows_(sheet, headers, rows) {
 
 function upsertRowByKey_(sheet, headers, key, row) {
   const lastRow = sheet.getLastRow();
-  if (lastRow > 1) {
+  if (lastRow &gt; 1) {
     const keys = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
-    for (let index = 0; index < keys.length; index += 1) {
+    for (let index = 0; index &lt; keys.length; index += 1) {
       if (String(keys[index][0]) === String(key)) {
         sheet.getRange(index + 2, 1, 1, headers.length).setValues([row]);
         return;
@@ -346,7 +361,7 @@ function createStandardSubfolders_(customerFolder) {
     "04 Invoices and Payments",
     "05 Materials and Receipts",
     "06 Warranty",
-  ].forEach((name) => getOrCreateChildFolder_(customerFolder, name));
+  ].forEach((name) =&gt; getOrCreateChildFolder_(customerFolder, name));
 }
 
 function getOrCreateChildFolder_(parentFolder, name) {
@@ -365,9 +380,9 @@ function upsertTextFile_(folder, name, content, mimeType) {
 }
 
 function parsePayload_(e) {
-  const directPayload = e && e.parameter && e.parameter.payload;
+  const directPayload = e &amp;&amp; e.parameter &amp;&amp; e.parameter.payload;
   if (directPayload) return JSON.parse(directPayload);
-  const body = e && e.postData && e.postData.contents;
+  const body = e &amp;&amp; e.postData &amp;&amp; e.postData.contents;
   return body ? JSON.parse(body) : {};
 }
 
@@ -380,7 +395,7 @@ function jsonResponse_(data) {
 function cleanName_(value) {
   return String(value || "")
     .trim()
-    .replace(/[\\/:*?"<>|#%{}~&]/g, "-")
+    .replace(/[\\/:*?"&lt;&gt;|#%{}~&amp;]/g, "-")
     .replace(/\s+/g, " ")
     .slice(0, 120);
 }
@@ -493,3 +508,22 @@ function submissionRow_(payload, folderUrl) {
     folderUrl || "",
   ];
 }
+</textarea>
+</main>
+<script>
+const button=document.getElementById('copyButton');
+const status=document.getElementById('status');
+const textarea=document.getElementById('scriptText');
+button.addEventListener('click', async () => {
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+  let ok=false;
+  try { await navigator.clipboard.writeText(textarea.value); ok=true; } catch(e) {}
+  if (!ok) { try { ok=document.execCommand('copy'); } catch(e) {} }
+  button.textContent = ok ? 'Copied' : 'Selected - Press Command + C';
+  status.textContent = ok ? 'Now paste into Google Apps Script.' : 'The script is selected. Press Command + C.';
+});
+</script>
+</body>
+</html>
