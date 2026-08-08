@@ -714,6 +714,8 @@ textarea:focus {
 
 .material-summary {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   margin-top: 12px;
@@ -724,6 +726,30 @@ textarea:focus {
 
 .material-summary strong {
   color: var(--ink);
+}
+
+.compact-text-button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.checkbox-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 5px 0 7px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.checkbox-line input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--blue);
 }
 
 .line-actions {
@@ -891,6 +917,10 @@ textarea:focus {
 .client-block .inline-label {
   display: inline;
   color: var(--ink);
+  margin: 0 5px 0 0;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 table {
@@ -1554,7 +1584,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 @media print {
   @page {
     size: letter portrait;
-    margin: 0.45in;
+    margin: 0.35in;
   }
 
   html,
@@ -1572,10 +1602,13 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   }
 
   .topbar,
+  .toolbar-strip,
   .editor,
   .preview-heading,
-  .bottom-actions {
-    display: none;
+  .bottom-actions,
+  .payment-preview,
+  .assignment-preview {
+    display: none !important;
   }
 
   .app-shell {
@@ -1605,60 +1638,60 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
     box-shadow: none;
     min-height: auto;
     padding: 0;
-    width: 6.35in !important;
+    width: 7.55in !important;
     min-width: 0 !important;
-    max-width: 6.35in !important;
+    max-width: 7.55in !important;
     margin: 0 auto;
     overflow: visible;
     box-sizing: border-box;
   }
 
   .simple-sheet-header {
-    grid-template-columns: 1.25in minmax(0, 1fr) 2.12in;
-    gap: 0.05in;
+    grid-template-columns: 1.35in minmax(0, 1fr) 2.45in;
+    gap: 0.12in;
     border-bottom-color: #0d4a91 !important;
   }
 
   .logo-card {
-    width: 1.25in;
-    height: 0.96in;
+    width: 1.35in;
+    height: 1.03in;
   }
 
   .simple-title h2 {
-    font-size: 1.5rem;
+    font-size: 1.72rem;
     line-height: 1.05;
     white-space: normal;
   }
 
   .simple-title p:last-child {
-    font-size: 0.72rem;
+    font-size: 0.78rem;
   }
 
   .header-estimate-info {
-    width: 2.12in;
+    width: 2.45in;
   }
 
   .header-estimate-info h3 {
-    font-size: 1.08rem;
+    font-size: 1.18rem;
   }
 
   .header-estimate-info dd {
-    font-size: 0.5rem;
+    font-size: 0.58rem;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
   .header-estimate-info dl div {
-    grid-template-columns: 0.46in minmax(0, 1fr);
-    gap: 0.05in;
+    grid-template-columns: 0.58in minmax(0, 1fr);
+    gap: 0.06in;
   }
 
   .header-estimate-info dt {
-    font-size: 0.42rem;
+    font-size: 0.48rem;
   }
 
   #previewCompanyEmail {
-    font-size: 0.43rem;
+    font-size: 0.52rem;
     white-space: nowrap;
   }
 
@@ -1677,15 +1710,15 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
     width: 100% !important;
     max-width: 100% !important;
     table-layout: fixed;
-    font-size: 0.7rem;
+    font-size: 0.82rem;
   }
 
   .qty-column {
-    width: 0.36in;
+    width: 0.55in;
   }
 
   .total-column {
-    width: 0.7in;
+    width: 0.95in;
   }
 
   .estimate-sheet th,
@@ -1699,8 +1732,8 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   }
 
   .totals {
-    width: 1.85in;
-    font-size: 0.72rem;
+    width: 2.25in;
+    font-size: 0.84rem;
   }
 
   .project-image-grid {
@@ -1708,9 +1741,9 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   }
 
   .estimate-footer {
-    grid-template-columns: 1.25in minmax(0, 1fr) 2.1in;
+    grid-template-columns: 1.35in minmax(0, 1fr) 2.45in;
     gap: 0.1in;
-    font-size: 0.54rem;
+    font-size: 0.62rem;
     line-height: 1.22;
   }
 

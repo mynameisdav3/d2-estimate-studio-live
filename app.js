@@ -1013,7 +1013,8 @@ function calculateTotals() {
     return sum + (Number.parseFloat(item.qty) || 0) * (Number.parseFloat(item.price) || 0) * finishMultiplier;
   }, 0);
   const discountInput = $("discount").value.trim();
-  const taxInput = $("taxRate").value.trim();
+  const taxEnabled = $("taxEnabled") ? $("taxEnabled").checked : Boolean($("taxRate").value.trim());
+  const taxInput = taxEnabled ? $("taxRate").value.trim() : "";
   const depositInput = $("depositRate").value.trim();
   const flatTotalInput = $("flatTotal").value.trim();
   const flatTotal = flatTotalInput ? numberValue("flatTotal") : 0;
@@ -2329,6 +2330,7 @@ function serializeEstimate() {
   fields.forEach((field) => {
     data[field] = $(field).value;
   });
+  data.taxEnabled = $("taxEnabled") ? $("taxEnabled").checked : false;
   data.showEstimateNumber = $("showEstimateNumber").checked;
   data.useSpanishScope = $("useSpanishScope").checked;
   data.addFooterValueNote = $("addFooterValueNote").checked;
@@ -2597,6 +2599,7 @@ function applyEstimateData(data) {
     if (data[field] !== undefined) $(field).value = data[field];
   });
   if (!$("taxType").value) $("taxType").value = "percent";
+  if ($("taxEnabled")) $("taxEnabled").checked = data.taxEnabled === true || Boolean($("taxRate").value.trim());
   $("projectType").value = normalizeProjectType($("projectType").value);
   $("showEstimateNumber").checked = data.showEstimateNumber !== false;
   $("useSpanishScope").checked = data.useSpanishScope === true;
@@ -2947,6 +2950,7 @@ function resetEstimate() {
   $("discountType").value = "dollar";
   $("taxRate").value = "";
   $("taxType").value = "percent";
+  if ($("taxEnabled")) $("taxEnabled").checked = false;
   $("depositRate").value = "";
   $("invoiceInitialDeposit").value = "";
   $("invoiceSecondDeposit").value = "";
@@ -3006,6 +3010,23 @@ $("estimateNumber").addEventListener("input", () => {
 
 $("addLineItem").addEventListener("click", () => addLineItem());
 $("addMaterialItem").addEventListener("click", () => addMaterialItem());
+if ($("addMaterialSalesTax")) {
+  $("addMaterialSalesTax").addEventListener("click", () => {
+    if ($("taxEnabled")) $("taxEnabled").checked = true;
+    if (!$("taxRate").value.trim()) $("taxRate").value = "6.5";
+    $("taxType").value = "percent";
+    updatePreview();
+  });
+}
+if ($("taxEnabled")) {
+  $("taxEnabled").addEventListener("change", updatePreview);
+}
+if ($("taxRate")) {
+  $("taxRate").addEventListener("input", () => {
+    if ($("taxRate").value.trim() && $("taxEnabled")) $("taxEnabled").checked = true;
+    updatePreview();
+  });
+}
 $("photoUpload").addEventListener("change", (event) => {
   addPhotos(event.target.files);
   event.target.value = "";

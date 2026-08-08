@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Estimates">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=20260806-version-invoice-estimate-number">
+    <link rel="stylesheet" href="styles.css?v=20260807-print-tax-client-labels">
   </head>
   <body>
     <main class="app-shell">
@@ -213,6 +213,7 @@
             <div class="material-summary">
               <span>Estimated Material Cost</span>
               <strong id="materialCostTotal">$0.00</strong>
+              <button type="button" id="addMaterialSalesTax" class="compact-text-button">Add Sales Tax</button>
             </div>
           </section>
 
@@ -402,6 +403,10 @@
               </label>
               <label>
                 Tax
+                <span class="checkbox-line">
+                  <input id="taxEnabled" type="checkbox">
+                  Apply tax
+                </span>
                 <div class="unit-input">
                   <input id="taxRate" type="number" min="0" step="0.01">
                   <select id="taxType" aria-label="Tax type">
@@ -495,10 +500,10 @@
             <div class="client-block">
               <div>
                 <span>Client Information</span>
-                <strong id="previewClient">Client name</strong>
-                <p><a id="previewPhone"></a></p>
-                <p><a id="previewClientEmail"></a></p>
-                <p><a id="previewAddress" target="_blank" rel="noopener"></a></p>
+                <strong><span class="inline-label">Name</span> <span id="previewClient">Client name</span></strong>
+                <p><span class="inline-label">Phone</span> <a id="previewPhone"></a></p>
+                <p><span class="inline-label">Email</span> <a id="previewClientEmail"></a></p>
+                <p><span class="inline-label">Address</span> <a id="previewAddress" target="_blank" rel="noopener"></a></p>
               </div>
             </div>
 
@@ -619,6 +624,6 @@
     <script src="vendor/jspdf.umd.min.js"></script>
     <script src="vendor/html2canvas.min.js"></script>
     <script src="materials-database.js?v=20260804-price-update-2"></script>
-    <script src="app.js?v=20260806-version-invoice-estimate-number"></script>
+    <script src="app.js?v=20260807-print-tax-client-labels"></script>
   </body>
 </html>
