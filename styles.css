@@ -1584,7 +1584,7 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
 @media print {
   @page {
     size: letter portrait;
-    margin: 0.35in;
+    margin: 0.45in;
   }
 
   html,
@@ -1638,60 +1638,60 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
     box-shadow: none;
     min-height: auto;
     padding: 0;
-    width: 7.55in !important;
+    width: 6.35in !important;
     min-width: 0 !important;
-    max-width: 7.55in !important;
+    max-width: 6.35in !important;
     margin: 0 auto;
     overflow: visible;
     box-sizing: border-box;
   }
 
   .simple-sheet-header {
-    grid-template-columns: 1.35in minmax(0, 1fr) 2.45in;
-    gap: 0.12in;
+    grid-template-columns: 1.25in minmax(0, 1fr) 2.12in;
+    gap: 0.05in;
     border-bottom-color: #0d4a91 !important;
   }
 
   .logo-card {
-    width: 1.35in;
-    height: 1.03in;
+    width: 1.25in;
+    height: 0.96in;
   }
 
   .simple-title h2 {
-    font-size: 1.72rem;
+    font-size: 1.5rem;
     line-height: 1.05;
     white-space: normal;
   }
 
   .simple-title p:last-child {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
   }
 
   .header-estimate-info {
-    width: 2.45in;
+    width: 2.12in;
   }
 
   .header-estimate-info h3 {
-    font-size: 1.18rem;
+    font-size: 1.08rem;
   }
 
   .header-estimate-info dd {
-    font-size: 0.58rem;
+    font-size: 0.5rem;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
   .header-estimate-info dl div {
-    grid-template-columns: 0.58in minmax(0, 1fr);
-    gap: 0.06in;
+    grid-template-columns: 0.46in minmax(0, 1fr);
+    gap: 0.05in;
   }
 
   .header-estimate-info dt {
-    font-size: 0.48rem;
+    font-size: 0.42rem;
   }
 
   #previewCompanyEmail {
-    font-size: 0.52rem;
+    font-size: 0.43rem;
     white-space: nowrap;
   }
 
@@ -1710,15 +1710,15 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
     width: 100% !important;
     max-width: 100% !important;
     table-layout: fixed;
-    font-size: 0.82rem;
+    font-size: 0.7rem;
   }
 
   .qty-column {
-    width: 0.55in;
+    width: 0.36in;
   }
 
   .total-column {
-    width: 0.95in;
+    width: 0.7in;
   }
 
   .estimate-sheet th,
@@ -1732,8 +1732,8 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   }
 
   .totals {
-    width: 2.25in;
-    font-size: 0.84rem;
+    width: 1.85in;
+    font-size: 0.72rem;
   }
 
   .project-image-grid {
@@ -1741,9 +1741,9 @@ body[data-copy-mode="team"] .estimate-sheet td:first-child {
   }
 
   .estimate-footer {
-    grid-template-columns: 1.35in minmax(0, 1fr) 2.45in;
+    grid-template-columns: 1.25in minmax(0, 1fr) 2.1in;
     gap: 0.1in;
-    font-size: 0.62rem;
+    font-size: 0.54rem;
     line-height: 1.22;
   }
 
