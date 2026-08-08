@@ -876,6 +876,13 @@ textarea:focus {
   margin: 3px 0;
 }
 
+.client-block p {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+}
+
 .client-block p,
 .client-block a,
 .client-block em {
@@ -898,9 +905,7 @@ textarea:focus {
 }
 
 .client-field-label {
-  display: inline-block;
-  min-width: 58px;
-  margin-right: 8px;
+  display: block;
   color: var(--ink);
   font-size: 1rem;
   font-weight: 800;
