@@ -654,16 +654,26 @@ function isOpenCrmFile(file) {
   return !["Job Lost / Closed", "Closed / Paid"].includes(file.fileStatus);
 }
 
+function isClosedCrmFile(file) {
+  return ["Job Lost / Closed", "Closed / Paid"].includes(file.fileStatus);
+}
+
+function hasEstimateWorkflowDetail(file) {
+  return ["Estimate Attached", "Estimate Pending", "Estimate Sent"].includes(file.statusDetail)
+    || ["Pending", "Sent", "Approved"].includes(file.estimateStatus);
+}
+
 function isPendingEstimateFile(file) {
-  return (file.fileStatus === "Inspection Completed" && ["Estimate Pending", "Estimate Sent"].includes(file.statusDetail))
-    || (file.fileStatus === "Inspection Completed" && file.statusDetail === "Estimate Attached")
+  if (isClosedCrmFile(file) || file.fileStatus === "In Negotiation" || isActiveCrmFile(file)) return false;
+  return hasEstimateWorkflowDetail(file)
+    || file.fileStatus === "Inspection Completed"
     || (file.fileStatus === "Contact Established" && file.statusDetail === "Inspection Pending");
 }
 
 function isActiveCrmFile(file) {
   if (!isOpenCrmFile(file)) return false;
-  if (["New Lead", "Contact Established", "Contact Attempted", "In Negotiation"].includes(file.fileStatus)) return false;
-  return ["Inspection Completed", "Job Won", "In Progress", "Work Completed"].includes(file.fileStatus)
+  if (["New Lead", "Contact Established", "Contact Attempted", "Inspection Completed", "In Negotiation"].includes(file.fileStatus)) return false;
+  return ["Job Won", "In Progress", "Work Completed"].includes(file.fileStatus)
     || ["Scheduled", "In Progress", "Completed"].includes(file.projectStage);
 }
 
@@ -671,23 +681,23 @@ function visibleFiles() {
   const filter = $("crmFileFilter").value;
   const openFiles = crmFiles.filter(isOpenCrmFile);
   if (filter === "all") return crmFiles;
-  if (filter === "new") return openFiles.filter((file) => file.fileStatus === "New Lead");
+  if (filter === "new") return openFiles.filter((file) => file.fileStatus === "New Lead" && !hasEstimateWorkflowDetail(file));
   if (filter === "contact") return openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus) && !isPendingEstimateFile(file));
   if (filter === "estimate") return openFiles.filter(isPendingEstimateFile);
   if (filter === "negotiation") return openFiles.filter((file) => file.fileStatus === "In Negotiation");
   if (filter === "active") return openFiles.filter(isActiveCrmFile);
-  if (filter === "archive") return crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus));
+  if (filter === "archive") return crmFiles.filter(isClosedCrmFile);
   return openFiles;
 }
 
 function renderCounts() {
   const openFiles = crmFiles.filter(isOpenCrmFile);
-  $("newLeadCount").textContent = openFiles.filter((file) => file.fileStatus === "New Lead").length;
+  $("newLeadCount").textContent = openFiles.filter((file) => file.fileStatus === "New Lead" && !hasEstimateWorkflowDetail(file)).length;
   $("pendingContactCount").textContent = openFiles.filter((file) => ["Contact Established", "Contact Attempted"].includes(file.fileStatus) && !isPendingEstimateFile(file)).length;
   $("pendingEstimateCount").textContent = openFiles.filter(isPendingEstimateFile).length;
   $("negotiationCount").textContent = openFiles.filter((file) => file.fileStatus === "In Negotiation").length;
   $("activeJobCount").textContent = openFiles.filter(isActiveCrmFile).length;
-  $("archivedCount").textContent = crmFiles.filter((file) => ["Closed / Paid", "Job Lost / Closed"].includes(file.fileStatus)).length;
+  $("archivedCount").textContent = crmFiles.filter(isClosedCrmFile).length;
 }
 
 function renderFileList() {
@@ -740,8 +750,9 @@ function renderStatusDetailOptions(file) {
   const select = $("crmStatusDetail");
   if (!select) return;
   const status = $("crmFileStatus").value || file?.fileStatus || "New Lead";
-  const options = CRM_STATUS_DETAILS[status] || [""];
+  const options = [...(CRM_STATUS_DETAILS[status] || [""])];
   const current = file?.statusDetail || select.value || options[0] || "";
+  if (current && !options.includes(current)) options.push(current);
   select.innerHTML = options.map((option) => `<option>${escapeHtml(option)}</option>`).join("");
   select.value = options.includes(current) ? current : options[0] || "";
 }
