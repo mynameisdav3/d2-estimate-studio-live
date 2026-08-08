@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Estimates">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=20260807-print-tax-client-labels">
+    <link rel="stylesheet" href="styles.css?v=20260807-pdf-size-client-labels">
   </head>
   <body>
     <main class="app-shell">
@@ -500,10 +500,10 @@
             <div class="client-block">
               <div>
                 <span>Client Information</span>
-                <p id="previewClient">Client name</p>
-                <p><a id="previewPhone"></a></p>
-                <p><a id="previewClientEmail"></a></p>
-                <p><a id="previewAddress" target="_blank" rel="noopener"></a></p>
+                <p><b class="client-field-label">Name</b> <em id="previewClient">Client name</em></p>
+                <p><b class="client-field-label">Phone</b> <a id="previewPhone"></a></p>
+                <p><b class="client-field-label">Email</b> <a id="previewClientEmail"></a></p>
+                <p><b class="client-field-label">Address</b> <a id="previewAddress" target="_blank" rel="noopener"></a></p>
               </div>
             </div>
 
@@ -624,6 +624,6 @@
     <script src="vendor/jspdf.umd.min.js"></script>
     <script src="vendor/html2canvas.min.js"></script>
     <script src="materials-database.js?v=20260804-price-update-2"></script>
-    <script src="app.js?v=20260807-print-tax-client-labels"></script>
+    <script src="app.js?v=20260807-pdf-size-client-labels"></script>
   </body>
 </html>
