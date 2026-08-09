@@ -3673,23 +3673,56 @@ function visibleCrmCalendarEvents() {
 }
 
 function eventDateKey(event) {
-  return String(event.date || "").slice(0, 10);
+  const range = calendarEventRange(event);
+  return range ? dateKeyFromDate(range.start) : String(event.date || "").slice(0, 10);
 }
 
 function dateKeyFromDate(date) {
   return date.toISOString().slice(0, 10);
 }
 
+function dayStart(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function calendarEventRange(event = {}) {
+  const start = event.startIso ? new Date(event.startIso) : calendarDateTime(event.date, event.time);
+  if (!start || Number.isNaN(start.getTime())) return null;
+  let end = event.endIso ? new Date(event.endIso) : null;
+  if (!end || Number.isNaN(end.getTime()) || end < start) {
+    end = new Date(start.getTime() + 60 * 60 * 1000);
+  }
+  let endDay = dayStart(end);
+  if (end.getHours() === 0 && end.getMinutes() === 0 && end.getSeconds() === 0 && endDay > dayStart(start)) {
+    endDay = new Date(endDay.getTime() - 24 * 60 * 60 * 1000);
+  }
+  return {
+    start: dayStart(start),
+    end: endDay,
+    startTime: start,
+    endTime: end,
+  };
+}
+
+function calendarEventTouchesDate(event, dateKey) {
+  const range = calendarEventRange(event);
+  if (!range) return false;
+  const date = dayStart(new Date(`${dateKey}T12:00:00`));
+  return date >= range.start && date <= range.end;
+}
+
 function calendarEventsForDate(dateKey) {
-  return allCrmCalendarEvents().filter((event) => eventDateKey(event) === dateKey);
+  return allCrmCalendarEvents().filter((event) => calendarEventTouchesDate(event, dateKey));
 }
 
 function monthCalendarEvents() {
   const year = crmCalendarCursor.getFullYear();
   const month = crmCalendarCursor.getMonth();
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
   return allCrmCalendarEvents().filter((event) => {
-    const date = calendarDateTime(event.date, event.time);
-    return date && date.getFullYear() === year && date.getMonth() === month;
+    const range = calendarEventRange(event);
+    return range && range.start <= monthEnd && range.end >= monthStart;
   });
 }
 
@@ -3761,33 +3794,44 @@ function renderCalendarGrid() {
   start.setDate(firstDay.getDate() - firstDay.getDay());
   const todayKey = todayIso(0);
   const monthEvents = monthCalendarEvents();
-  const eventCounts = {};
-  monthEvents.forEach((event) => {
-    const key = eventDateKey(event);
-    eventCounts[key] = (eventCounts[key] || 0) + 1;
-  });
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const cells = [];
-  dayNames.forEach((day) => cells.push(`<div class="crm-calendar-weekday">${day}</div>`));
-  for (let index = 0; index < 42; index += 1) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    const key = dateKeyFromDate(date);
-    const events = calendarEventsForDate(key);
-    const isCurrentMonth = date.getMonth() === month;
-    const isToday = key === todayKey;
-    const isSelected = key === crmSelectedCalendarDate;
-    cells.push(`
-      <button type="button" class="crm-calendar-day${isCurrentMonth ? "" : " muted"}${isToday ? " today" : ""}${isSelected ? " selected" : ""}" data-calendar-day="${escapeHtml(key)}">
-        <span class="crm-calendar-day-number">${date.getDate()}</span>
-        <span class="crm-calendar-day-events">
-          ${events.slice(0, 3).map((event) => `<em class="crm-calendar-chip ${escapeHtml(event.type)}">${escapeHtml(event.typeLabel)} · ${escapeHtml(event.clientName || "Customer")}</em>`).join("")}
-          ${events.length > 3 ? `<em class="crm-calendar-more">+${events.length - 3} more</em>` : ""}
-        </span>
-      </button>
+  const parts = [`<div class="crm-calendar-weekdays">${dayNames.map((day) => `<div class="crm-calendar-weekday">${day}</div>`).join("")}</div>`];
+  for (let week = 0; week < 6; week += 1) {
+    const weekStart = new Date(start);
+    weekStart.setDate(start.getDate() + week * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    const days = [];
+    for (let day = 0; day < 7; day += 1) {
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + day);
+      const key = dateKeyFromDate(date);
+      const events = calendarEventsForDate(key);
+      const isCurrentMonth = date.getMonth() === month;
+      const isToday = key === todayKey;
+      const isSelected = key === crmSelectedCalendarDate;
+      days.push(`
+        <button type="button" class="crm-calendar-day${isCurrentMonth ? "" : " muted"}${isToday ? " today" : ""}${isSelected ? " selected" : ""}" data-calendar-day="${escapeHtml(key)}">
+          <span class="crm-calendar-day-number">${date.getDate()}</span>
+          <span class="crm-calendar-day-count">${events.length ? `${events.length} event${events.length === 1 ? "" : "s"}` : ""}</span>
+        </button>
+      `);
+    }
+    const bars = calendarEventBarsForWeek(monthEvents, weekStart, weekEnd);
+    parts.push(`
+      <div class="crm-calendar-week-row">
+        <div class="crm-calendar-week-days">${days.join("")}</div>
+        <div class="crm-calendar-week-bars">
+          ${bars.map((bar) => `
+            <button type="button" class="crm-calendar-chip crm-calendar-bar ${escapeHtml(bar.event.type)}" style="grid-column: ${bar.column} / span ${bar.span}; grid-row: ${bar.row};" data-calendar-event-day="${escapeHtml(bar.dateKey)}" title="${escapeHtml(bar.title)}">
+              ${escapeHtml(bar.title)}
+            </button>
+          `).join("")}
+        </div>
+      </div>
     `);
   }
-  grid.innerHTML = cells.join("");
+  grid.innerHTML = parts.join("");
   grid.querySelectorAll("[data-calendar-day]").forEach((button) => {
     button.addEventListener("click", () => {
       crmSelectedCalendarDate = button.dataset.calendarDay;
@@ -3796,6 +3840,45 @@ function renderCalendarGrid() {
       renderCalendarSelectedDay();
     });
   });
+  grid.querySelectorAll("[data-calendar-event-day]").forEach((button) => {
+    button.addEventListener("click", () => {
+      crmSelectedCalendarDate = button.dataset.calendarEventDay;
+      $("crmCalendarDate").value = crmSelectedCalendarDate;
+      renderCalendarGrid();
+      renderCalendarSelectedDay();
+    });
+  });
+}
+
+function calendarEventBarsForWeek(events, weekStart, weekEnd) {
+  const lanes = [];
+  return events
+    .map((event) => {
+      const range = calendarEventRange(event);
+      if (!range || range.end < weekStart || range.start > weekEnd) return null;
+      const spanStart = range.start < weekStart ? weekStart : range.start;
+      const spanEnd = range.end > weekEnd ? weekEnd : range.end;
+      const startOffset = Math.round((spanStart - weekStart) / (24 * 60 * 60 * 1000));
+      const endOffset = Math.round((spanEnd - weekStart) / (24 * 60 * 60 * 1000));
+      return {
+        event,
+        column: startOffset + 1,
+        span: Math.max(1, endOffset - startOffset + 1),
+        dateKey: dateKeyFromDate(spanStart),
+        title: `${event.typeLabel || "Event"} · ${event.clientName || event.title || "Calendar Event"}`,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.column - b.column || b.span - a.span)
+    .map((bar) => {
+      let rowIndex = lanes.findIndex((laneEnd) => laneEnd < bar.column);
+      if (rowIndex === -1) {
+        rowIndex = lanes.length;
+        lanes.push(0);
+      }
+      lanes[rowIndex] = bar.column + bar.span - 1;
+      return { ...bar, row: rowIndex + 1 };
+    });
 }
 
 function renderCalendarSelectedDay() {
