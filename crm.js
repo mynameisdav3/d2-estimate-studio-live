@@ -3791,10 +3791,10 @@ function renderCalendarGrid() {
   const month = crmCalendarCursor.getMonth();
   const firstDay = new Date(year, month, 1);
   const start = new Date(firstDay);
-  start.setDate(firstDay.getDate() - firstDay.getDay());
+  start.setDate(firstDay.getDate() - ((firstDay.getDay() + 6) % 7));
   const todayKey = todayIso(0);
   const monthEvents = monthCalendarEvents();
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const parts = [`<div class="crm-calendar-weekdays">${dayNames.map((day) => `<div class="crm-calendar-weekday">${day}</div>`).join("")}</div>`];
   for (let week = 0; week < 6; week += 1) {
     const weekStart = new Date(start);
@@ -3865,7 +3865,9 @@ function calendarEventBarsForWeek(events, weekStart, weekEnd) {
         column: startOffset + 1,
         span: Math.max(1, endOffset - startOffset + 1),
         dateKey: dateKeyFromDate(spanStart),
-        title: `${event.typeLabel || "Event"} · ${event.clientName || event.title || "Calendar Event"}`,
+        title: event.source === "google"
+          ? event.title || event.clientName || "Google Calendar Event"
+          : `${event.typeLabel || "Event"} · ${event.clientName || event.title || "Calendar Event"}`,
       };
     })
     .filter(Boolean)
